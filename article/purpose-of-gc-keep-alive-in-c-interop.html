@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purpose of GC.KeepAlive in C# Interop - cs</title>
+    <meta name="description" content="In C#, GC.KeepAlive is used to prevent the garbage collector from prematurely collecting an object while its unmanaged resources or raw pointers are still in use by native code. Because the .NET Just-In-Time (JIT) compiler aggressively optimizes variable">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/purpose-of-gc-keep-alive-in-c-interop">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Purpose of GC.KeepAlive in C# Interop - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/purpose-of-gc-keep-alive-in-c-interop" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, GC.KeepAlive is used to prevent the garbage collector from prematurely collecting an object while its unmanaged resources or raw pointers are still in use by native code. Because the .NET Just-In-Time (JIT) compiler aggressively optimizes variable" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="purpose-of-gckeepalive-in-c-interop">Purpose of GC.KeepAlive in
+C# Interop</h1>
+<p>In C#, <code>GC.KeepAlive</code> is used to prevent the garbage
+collector from prematurely collecting an object while its unmanaged
+resources or raw pointers are still in use by native code. Because the
+.NET Just-In-Time (JIT) compiler aggressively optimizes variable
+lifetimes, an object can be considered eligible for collection as soon
+as it is no longer referenced in managed execution, even if a native
+method invoked by that object is still actively running. Using
+<code>GC.KeepAlive</code> ensures the managed wrapper object—and any
+finalizer or disposal logic tied to it—remains alive until the unmanaged
+operation finishes.</p>
+<h3 id="the-problem-aggressive-garbage-collection">The Problem:
+Aggressive Garbage Collection</h3>
+<p>In managed environments, the garbage collector does not inspect the
+internal state of unmanaged functions called via Platform Invoke
+(P/Invoke). It only tracks references within managed code. If a managed
+object extracts an internal resource—such as an <code>IntPtr</code>
+handle—and passes that handle to an unmanaged function, the managed
+object itself is often no longer referenced in the remainder of the
+caller method.</p>
+<p>As a result, the JIT compiler can mark the managed object as dead
+while the native call is still executing. If a garbage collection occurs
+on another thread during that native call, the managed object might be
+finalized. If its finalizer frees the unmanaged handle, the native call
+will suddenly attempt to access invalid memory, causing an access
+violation or data corruption.</p>
+<h3 id="how-gckeepalive-resolves-premature-collection">How GC.KeepAlive
+Resolves Premature Collection</h3>
+<p>The <code>GC.KeepAlive</code> method acts as an artificial reference.
+When called, it informs the JIT compiler that the specified object must
+be considered "in use" from the beginning of the routine up to the exact
+line where <code>GC.KeepAlive</code> is called.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> NativeResourceWrapper</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> IntPtr _handle<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">NativeResourceWrapper</span><span class="op">()</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        _handle <span class="op">=</span> NativeMethods<span class="op">.</span><span class="fu">AllocateResource</span><span class="op">();</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessData</span><span class="op">()</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Native method takes the raw handle</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        NativeMethods<span class="op">.</span><span class="fu">DoWork</span><span class="op">(</span>_handle<span class="op">);</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Prevents wrapper from being finalized while DoWork runs</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        GC<span class="op">.</span><span class="fu">KeepAlive</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">~</span><span class="fu">NativeResourceWrapper</span><span class="op">()</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        NativeMethods<span class="op">.</span><span class="fu">FreeResource</span><span class="op">(</span>_handle<span class="op">);</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>At runtime, <code>GC.KeepAlive</code> does not perform any
+computation; it is essentially a no-op that prevents the JIT optimizer
+from dropping the object reference earlier in the method.</p>
+<h3 id="modern-alternative-safehandle">Modern Alternative:
+SafeHandle</h3>
+<p>While <code>GC.KeepAlive</code> is the standard solution for manually
+managed pointers, modern .NET development often uses
+<code>SafeHandle</code> classes (such as <code>SafeFileHandle</code>).
+The P/Invoke marshaler automatically increments and decrements the
+reference count of a <code>SafeHandle</code> around unmanaged calls.
+This guarantees that the underlying resource cannot be closed or
+collected during native execution, eliminating the need to manually
+invoke <code>GC.KeepAlive</code> in most standard interop scenarios.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/purpose-of-gc-keep-alive-in-c-interop';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

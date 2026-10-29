@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expression-Bodied Members in C# Explained - cs</title>
+    <meta name="description" content="Expression-bodied members in C# provide a clean and concise syntax for defining members whose implementations consist of a single expression. By using the lambda arrow operator (=&gt;), developers can eliminate boilerplate code such as braces and return stat">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/expression-bodied-members-in-c-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Expression-Bodied Members in C# Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/expression-bodied-members-in-c-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Expression-bodied members in C# provide a clean and concise syntax for defining members whose implementations consist of a single expression. By using the lambda arrow operator (=&gt;), developers can eliminate boilerplate code such as braces and return stat" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="expression-bodied-members-in-c-explained">Expression-Bodied
+Members in C# Explained</h1>
+<p>Expression-bodied members in C# provide a clean and concise syntax
+for defining members whose implementations consist of a single
+expression. By using the lambda arrow operator (<code>=&gt;</code>),
+developers can eliminate boilerplate code such as braces and
+<code>return</code> statements for methods, properties, and other class
+members. This article explains how expression-bodied members work,
+compares them to traditional block-bodied syntax, and demonstrates their
+usage in C# methods and properties.</p>
+<h2 id="understanding-expression-bodied-syntax">Understanding
+Expression-Bodied Syntax</h2>
+<p>In standard C# code, methods and properties are defined using block
+bodies enclosed by curly braces <code>{}</code>. When an implementation
+contains only one executable statement or expression, this traditional
+syntax can introduce unnecessary visual clutter. Expression-bodied
+members resolve this by replacing the block body and explicit
+<code>return</code> keywords with the fat arrow operator
+(<code>=&gt;</code>).</p>
+<p>Introduced in C# 6.0 and expanded in C# 7.0, this feature is purely
+syntactic sugar; the C# compiler generates the exact same Intermediate
+Language (IL) as it does for standard block-bodied implementations.</p>
+<h2 id="expression-bodied-methods">Expression-Bodied Methods</h2>
+<p>An expression-bodied method consists of a single expression that
+either evaluates to the return type or executes a single
+<code>void</code> operation.</p>
+<h3 id="methods-returning-a-value">Methods Returning a Value</h3>
+<p>Instead of declaring a body block and writing a <code>return</code>
+statement, place the arrow operator directly after the parameter
+list.</p>
+<p><strong>Traditional Block Body:</strong></p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">int</span> <span class="fu">Add</span><span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Expression-Bodied Syntax:</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">int</span> <span class="fu">Add</span><span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">)</span> <span class="op">=&gt;</span> a <span class="op">+</span> b<span class="op">;</span></span></code></pre></div>
+<h3 id="void-methods">Void Methods</h3>
+<p>Expression-bodied syntax also works with <code>void</code> methods,
+provided the operation is a valid statement expression, such as a method
+call or an assignment.</p>
+<p><strong>Traditional Block Body:</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">LogMessage</span><span class="op">(</span><span class="dt">string</span> message<span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[LOG]: {message}&quot;</span><span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Expression-Bodied Syntax:</strong></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">LogMessage</span><span class="op">(</span><span class="dt">string</span> message<span class="op">)</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[LOG]: {message}&quot;</span><span class="op">);</span></span></code></pre></div>
+<h2 id="expression-bodied-properties">Expression-Bodied Properties</h2>
+<p>Properties are one of the most common areas where expression-bodied
+members improve readability, especially for read-only calculated
+properties.</p>
+<h3 id="read-only-properties">Read-Only Properties</h3>
+<p>When a property only contains a <code>get</code> accessor that
+returns a single expression, the <code>get</code> keyword and the outer
+braces can be omitted entirely.</p>
+<p><strong>Traditional Block Body:</strong></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Person</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> FirstName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> LastName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> FullName</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        get</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> $<span class="st">&quot;{FirstName} {LastName}&quot;</span><span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Expression-Bodied Syntax:</strong></p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Person</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> FirstName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> LastName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> FullName <span class="op">=&gt;</span> $<span class="st">&quot;{FirstName} {LastName}&quot;</span><span class="op">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>In this form, <code>FullName</code> is a read-only property evaluated
+each time it is accessed.</p>
+<h3 id="readwrite-properties">Read/Write Properties</h3>
+<p>Starting in C# 7.0, individual <code>get</code> and <code>set</code>
+accessors inside a full property can be written as expression-bodied
+members.</p>
+<p><strong>Traditional Block Body:</strong></p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="dt">string</span> _username<span class="op">;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">string</span> Username</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    get</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> _username<span class="op">;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    set</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        _username <span class="op">=</span> value<span class="op">.</span><span class="fu">Trim</span><span class="op">();</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Expression-Bodied Syntax:</strong></p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="dt">string</span> _username<span class="op">;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">string</span> Username</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    get <span class="op">=&gt;</span> _username<span class="op">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    set <span class="op">=&gt;</span> _username <span class="op">=</span> value<span class="op">.</span><span class="fu">Trim</span><span class="op">();</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="key-considerations">Key Considerations</h2>
+<ul>
+<li><strong>Single Expression Limit:</strong> An expression-bodied
+member must contain exactly one expression. If the logic requires
+multiple statements, loops, or complex branching, a standard block body
+must be used.</li>
+<li><strong>Evaluation vs. Storage:</strong> An expression-bodied
+property like <code>public DateTime Now =&gt; DateTime.Now;</code>
+calculates the value on every access; it does not store the value like
+an auto-property initializer
+(<code>public DateTime Now { get; } = DateTime.Now;</code>).</li>
+<li><strong>Readability:</strong> Expression-bodied members are best
+suited for simple, one-line operations. Overly complex single
+expressions can harm readability and should be converted back to
+standard block bodies.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/expression-bodied-members-in-c-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

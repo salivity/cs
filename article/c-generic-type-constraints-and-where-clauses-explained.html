@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Generic Type Constraints and Where Clauses Explained - cs</title>
+    <meta name="description" content="Generic type constraints in C# allow developers to restrict the types of arguments that can be passed to a generic class, interface, method, or delegate. By using the where contextual keyword, you specify requirements such as requiring a type to implement">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-generic-type-constraints-and-where-clauses-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Generic Type Constraints and Where Clauses Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-generic-type-constraints-and-where-clauses-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Generic type constraints in C# allow developers to restrict the types of arguments that can be passed to a generic class, interface, method, or delegate. By using the where contextual keyword, you specify requirements such as requiring a type to implement" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-generic-type-constraints-and-where-clauses-explained">C#
+Generic Type Constraints and Where Clauses Explained</h1>
+<p>Generic type constraints in C# allow developers to restrict the types
+of arguments that can be passed to a generic class, interface, method,
+or delegate. By using the <code>where</code> contextual keyword, you
+specify requirements such as requiring a type to implement an interface,
+inherit from a specific base class, or provide a parameterless
+constructor. This article explains what generic constraints are, the
+primary types of constraints available in C#, and how to correctly
+implement <code>where</code> clauses in your code to ensure compile-time
+type safety.</p>
+<h2 id="what-are-generic-type-constraints">What Are Generic Type
+Constraints?</h2>
+<p>By default, generic type parameters in C# can be substituted with any
+type. However, when a generic type parameter is completely
+unconstrained, the compiler treats it as <code>System.Object</code>,
+limiting operations to basic methods like <code>ToString()</code>,
+<code>Equals()</code>, and <code>GetHashCode()</code>.</p>
+<p>Generic type constraints enforce rules on type arguments. When
+constraints are applied:</p>
+<ul>
+<li>The compiler checks at compile time that the provided type satisfies
+the specified conditions.</li>
+<li>Code inside the generic member can access methods, properties, and
+operators of the constrained type without runtime casting.</li>
+<li>Incompatible types are rejected during compilation rather than
+failing at runtime.</li>
+</ul>
+<h2 id="the-where-clause-syntax">The <code>where</code> Clause
+Syntax</h2>
+<p>Constraints are defined using the <code>where</code> keyword placed
+after the generic type or method declaration, followed by the type
+parameter name, a colon, and the constraint.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Repository<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> <span class="kw">class</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Implementation</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>For methods, the <code>where</code> clause appears after the method
+signature:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> ProcessItem<span class="op">&lt;</span>T<span class="op">&gt;(</span>T item<span class="op">)</span> where T <span class="op">:</span> IDisposable</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    item<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="primary-types-of-generic-constraints">Primary Types of Generic
+Constraints</h2>
+<p>C# supports several categories of constraints:</p>
+<h3 id="1-reference-type-constraint-class">1. Reference Type Constraint
+(<code>class</code>)</h3>
+<p>Ensures the type argument must be a reference type (class, interface,
+delegate, or array).</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DataStore<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> <span class="kw">class</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Reset</span><span class="op">(</span>T item<span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// T is guaranteed to be nullable via null assignment</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        item <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>You can also use <code>class?</code> to indicate that the type must
+be a reference type, but can be nullable.</p>
+<h3 id="2-value-type-constraint-struct">2. Value Type Constraint
+(<code>struct</code>)</h3>
+<p>Ensures the type argument must be a non-nullable value type.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> MathHelper<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> <span class="kw">struct</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// T cannot be null and must be a value type</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-parameterless-constructor-constraint-new">3. Parameterless
+Constructor Constraint (<code>new()</code>)</h3>
+<p>Ensures that the type argument has a public parameterless
+constructor. This allows the generic code to instantiate new instances
+of <code>T</code>.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Factory<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> <span class="kw">new</span><span class="op">()</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> T <span class="fu">CreateInstance</span><span class="op">()</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">new</span> <span class="fu">T</span><span class="op">();</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="4-base-class-constraint">4. Base Class Constraint</h3>
+<p>Ensures the type argument derives from a specified base class,
+allowing access to all public and protected members of that base
+class.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Entity</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Id <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> EntityRepository<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> Entity</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> <span class="fu">GetEntityId</span><span class="op">(</span>T entity<span class="op">)</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> entity<span class="op">.</span><span class="fu">Id</span><span class="op">;</span> <span class="co">// Accessed directly without casting</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="5-interface-constraint">5. Interface Constraint</h3>
+<p>Ensures that the type argument implements a specific interface.
+Multiple interface constraints can be combined.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Sorter<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> IComparable<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">bool</span> <span class="fu">IsGreater</span><span class="op">(</span>T left<span class="op">,</span> T right<span class="op">)</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> left<span class="op">.</span><span class="fu">CompareTo</span><span class="op">(</span>right<span class="op">)</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="6-additional-constraints">6. Additional Constraints</h3>
+<ul>
+<li><code>notnull</code>: Restricts the type to non-nullable reference
+or value types (C# 8.0+).</li>
+<li><code>unmanaged</code>: Restricts the type to types that are not
+reference types and do not contain reference fields at any level of
+nesting.</li>
+<li><code>default</code>: Used in generic method overrides to resolve
+ambiguity when overriding methods with unconstrained types.</li>
+</ul>
+<h2 id="applying-multiple-constraints">Applying Multiple
+Constraints</h2>
+<p>A single type parameter can have multiple constraints separated by
+commas. However, constraints must appear in a specific order:</p>
+<ol type="1">
+<li>Primary constraint (<code>class</code>, <code>struct</code>, or base
+class name)</li>
+<li>Secondary constraints (interfaces)</li>
+<li>Constructor constraint (<code>new()</code>)</li>
+</ol>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ServiceManager<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> BaseService<span class="op">,</span> IDisposable<span class="op">,</span> <span class="kw">new</span><span class="op">()</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Execute</span><span class="op">()</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        T service <span class="op">=</span> <span class="kw">new</span> <span class="fu">T</span><span class="op">();</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        service<span class="op">.</span><span class="fu">Run</span><span class="op">();</span>      <span class="co">// From BaseService</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        service<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span>  <span class="co">// From IDisposable</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="using-multiple-type-parameters">Using Multiple Type
+Parameters</h2>
+<p>When a generic definition contains more than one type parameter, each
+parameter requiring rules receives its own separate <code>where</code>
+clause.</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> KeyValueStore<span class="op">&lt;</span>TKey<span class="op">,</span> TValue<span class="op">&gt;</span> </span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    where TKey <span class="op">:</span> notnull<span class="op">,</span> IComparable<span class="op">&lt;</span>TKey<span class="op">&gt;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    where TValue <span class="op">:</span> <span class="kw">class</span><span class="op">,</span> <span class="kw">new</span><span class="op">()</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Add</span><span class="op">(</span>TKey key<span class="op">,</span> TValue value<span class="op">)</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Implementation</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="summary">Summary</h2>
+<p>Generic type constraints in C# bridge the gap between complete type
+abstraction and specific type functionality. Using <code>where</code>
+clauses guarantees that type arguments fulfill required contracts—such
+as inheriting base classes, implementing interfaces, or providing
+default constructors—delivering compile-time safety and clean, readable
+code.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-generic-type-constraints-and-where-clauses-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using Relational Patterns for Range Checks in C# - cs</title>
+    <meta name="description" content="Pattern matching in modern C# significantly improves code clarity, and the introduction of relational patterns provides an elegant way to evaluate numerical boundaries. This article explores how relational patterns streamline range validation inside switc">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/using-relational-patterns-for-range-checks-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using Relational Patterns for Range Checks in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/using-relational-patterns-for-range-checks-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Pattern matching in modern C# significantly improves code clarity, and the introduction of relational patterns provides an elegant way to evaluate numerical boundaries. This article explores how relational patterns streamline range validation inside switc" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-relational-patterns-for-range-checks-in-c">Using
+Relational Patterns for Range Checks in C</h1>
+<p>Pattern matching in modern C# significantly improves code clarity,
+and the introduction of relational patterns provides an elegant way to
+evaluate numerical boundaries. This article explores how relational
+patterns streamline range validation inside <code>switch</code>
+expressions, comparing traditional verbose approaches with the modern
+syntax that combines relational and logical patterns for cleaner, more
+maintainable code.</p>
+<h3 id="the-problem-with-traditional-range-checking">The Problem with
+Traditional Range Checking</h3>
+<p>Before relational patterns were introduced in C# 9, evaluating ranges
+inside switch constructs required verbose code. Developers typically
+relied on extensive <code>if-else</code> chains or switch expressions
+packed with repetitive <code>when</code> guard clauses:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Traditional approach using &#39;when&#39; clauses</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> <span class="fu">GetTemperatureDescription</span><span class="op">(</span><span class="dt">int</span> temp<span class="op">)</span> <span class="op">=&gt;</span> temp <span class="kw">switch</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> t when t <span class="op">&lt;</span> <span class="dv">0</span> <span class="op">=&gt;</span> <span class="st">&quot;Freezing&quot;</span><span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> t when t <span class="op">&gt;=</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> t <span class="op">&lt;=</span> <span class="dv">15</span> <span class="op">=&gt;</span> <span class="st">&quot;Cold&quot;</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> t when t <span class="op">&gt;</span> <span class="dv">15</span> <span class="op">&amp;&amp;</span> t <span class="op">&lt;=</span> <span class="dv">25</span> <span class="op">=&gt;</span> <span class="st">&quot;Comfortable&quot;</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    _ <span class="op">=&gt;</span> <span class="st">&quot;Hot&quot;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<p>This pattern required declaring a discarded variable (<code>t</code>)
+in every arm and repeating the comparison target, obscuring the actual
+business logic behind syntactic noise.</p>
+<h3 id="simplifying-with-relational-patterns">Simplifying with
+Relational Patterns</h3>
+<p>Relational patterns allow you to use standard comparison
+operators—<code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, and
+<code>&gt;=</code>—directly against the input value without declaring a
+temporary variable or using the <code>when</code> keyword.</p>
+<p>Here is the previous example rewritten using relational patterns:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Modern approach using relational and logical patterns</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> <span class="fu">GetTemperatureDescription</span><span class="op">(</span><span class="dt">int</span> temp<span class="op">)</span> <span class="op">=&gt;</span> temp <span class="kw">switch</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span> <span class="dv">0</span> <span class="op">=&gt;</span> <span class="st">&quot;Freezing&quot;</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;=</span> <span class="dv">0</span> and <span class="op">&lt;=</span> <span class="dv">15</span> <span class="op">=&gt;</span> <span class="st">&quot;Cold&quot;</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;</span> <span class="dv">15</span> and <span class="op">&lt;=</span> <span class="dv">25</span> <span class="op">=&gt;</span> <span class="st">&quot;Comfortable&quot;</span><span class="op">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    _ <span class="op">=&gt;</span> <span class="st">&quot;Hot&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<h3 id="combining-relational-and-logical-patterns">Combining Relational
+and Logical Patterns</h3>
+<p>Relational patterns become especially effective when combined with
+the logical pattern combinators <code>and</code>, <code>or</code>, and
+<code>not</code>. Instead of relying on C#'s traditional binary
+operators (<code>&amp;&amp;</code>, <code>||</code>, <code>!</code>),
+switch expressions use readable keywords to create expressive
+boundaries:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> <span class="fu">GetGrade</span><span class="op">(</span><span class="dt">double</span> score<span class="op">)</span> <span class="op">=&gt;</span> score <span class="kw">switch</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span> <span class="dv">0</span> or <span class="op">&gt;</span> <span class="dv">100</span> <span class="op">=&gt;</span> <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentOutOfRangeException</span><span class="op">(</span><span class="fu">nameof</span><span class="op">(</span>score<span class="op">)),</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;=</span> <span class="dv">90</span> <span class="op">=&gt;</span> <span class="st">&quot;A&quot;</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;=</span> <span class="dv">80</span> and <span class="op">&lt;</span> <span class="dv">90</span> <span class="op">=&gt;</span> <span class="st">&quot;B&quot;</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;=</span> <span class="dv">70</span> and <span class="op">&lt;</span> <span class="dv">80</span> <span class="op">=&gt;</span> <span class="st">&quot;C&quot;</span><span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;=</span> <span class="dv">60</span> and <span class="op">&lt;</span> <span class="dv">70</span> <span class="op">=&gt;</span> <span class="st">&quot;D&quot;</span><span class="op">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    _ <span class="op">=&gt;</span> <span class="st">&quot;F&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<h3 id="key-advantages">Key Advantages</h3>
+<ol type="1">
+<li><strong>Elimination of Boilerplate:</strong> You avoid naming
+temporary variables or writing redundant references to the tested
+expression.</li>
+<li><strong>Improved Readability:</strong> Range checks read like
+mathematical interval notations, making business rules immediately clear
+at a glance.</li>
+<li><strong>Compiler Diagnostics:</strong> The C# compiler can evaluate
+pattern combinations more effectively, warning you about unreachable
+switch arms or overlapping patterns that will never execute.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/using-relational-patterns-for-range-checks-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

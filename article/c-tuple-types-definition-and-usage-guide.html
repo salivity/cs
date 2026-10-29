@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Tuple Types: Definition and Usage Guide - cs</title>
+    <meta name="description" content="Tuples in C# provide a concise, lightweight syntax to group multiple data elements into a single data structure without defining explicit classes, records, or structs. This article explores what tuple types are, the evolution from reference-type tuples to">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-tuple-types-definition-and-usage-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Tuple Types: Definition and Usage Guide - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-tuple-types-definition-and-usage-guide" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Tuples in C# provide a concise, lightweight syntax to group multiple data elements into a single data structure without defining explicit classes, records, or structs. This article explores what tuple types are, the evolution from reference-type tuples to" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-tuple-types-definition-and-usage-guide">C# Tuple Types:
+Definition and Usage Guide</h1>
+<p>Tuples in C# provide a concise, lightweight syntax to group multiple
+data elements into a single data structure without defining explicit
+classes, records, or structs. This article explores what tuple types
+are, the evolution from reference-type tuples to value-type tuples, and
+practical examples of how to declare, return, and deconstruct them
+effectively in modern C# applications.</p>
+<h2 id="what-are-tuple-types">What Are Tuple Types?</h2>
+<p>A tuple is an ordered sequence of elements. In C#, tuple types allow
+you to package multiple values of varying types together on the fly.</p>
+<p>Historically, C# 4.0 introduced the <code>System.Tuple</code> class,
+which represented reference types (allocated on the heap), had
+cumbersome syntax, and relied on generic property names like
+<code>Item1</code>, <code>Item2</code>, etc.</p>
+<p>With C# 7.0, C# introduced
+<strong><code>System.ValueTuple</code></strong>, which is now the
+standard way to work with tuples. Unlike older tuples, value tuples:</p>
+<ul>
+<li>Are value types (<code>struct</code>), minimizing heap allocations
+and garbage collection overhead.</li>
+<li>Support semantic field names (e.g., <code>Name</code>,
+<code>Age</code>) rather than generic <code>Item1</code> and
+<code>Item2</code> labels.</li>
+<li>Support clean deconstruction syntax.</li>
+</ul>
+<h2 id="creating-and-initializing-tuples">Creating and Initializing
+Tuples</h2>
+<p>You can define a tuple using parentheses containing two or more
+comma-separated values:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Unnamed tuple (fields default to Item1, Item2)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> person <span class="op">=</span> <span class="op">(</span><span class="st">&quot;Alice&quot;</span><span class="op">,</span> <span class="dv">30</span><span class="op">);</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{person.Item1} is {person.Item2} years old.&quot;</span><span class="op">);</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Named tuple fields</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> user <span class="op">=</span> <span class="op">(</span>Name<span class="op">:</span> <span class="st">&quot;Bob&quot;</span><span class="op">,</span> Age<span class="op">:</span> <span class="dv">25</span><span class="op">);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{user.Name} is {user.Age} years old.&quot;</span><span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Explicit type declaration</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">(</span><span class="dt">string</span> Title<span class="op">,</span> <span class="dt">decimal</span> Price<span class="op">)</span> book <span class="op">=</span> <span class="op">(</span><span class="st">&quot;C# in Depth&quot;</span><span class="op">,</span> <span class="fl">45.99m</span><span class="op">);</span></span></code></pre></div>
+<p>Named fields exist at compile-time to improve code readability; at
+runtime, the compiler maps them to standard <code>Item1</code>,
+<code>Item2</code>, etc., fields.</p>
+<h2 id="returning-multiple-values-from-methods">Returning Multiple
+Values from Methods</h2>
+<p>One of the most common use cases for tuples is returning multiple
+values from a method without having to rely on <code>out</code>
+parameters or dedicated DTO (Data Transfer Object) classes.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="op">(</span><span class="dt">int</span> Min<span class="op">,</span> <span class="dt">int</span> Max<span class="op">)</span> <span class="fu">FindMinMax</span><span class="op">(</span><span class="dt">int</span><span class="op">[]</span> numbers<span class="op">)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>numbers <span class="op">==</span> <span class="kw">null</span> <span class="op">||</span> numbers<span class="op">.</span><span class="fu">Length</span> <span class="op">==</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentException</span><span class="op">(</span><span class="st">&quot;Array cannot be empty.&quot;</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> min <span class="op">=</span> numbers<span class="op">[</span><span class="dv">0</span><span class="op">];</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> max <span class="op">=</span> numbers<span class="op">[</span><span class="dv">0</span><span class="op">];</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> n <span class="kw">in</span> numbers<span class="op">)</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>n <span class="op">&lt;</span> min<span class="op">)</span> min <span class="op">=</span> n<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>n <span class="op">&gt;</span> max<span class="op">)</span> max <span class="op">=</span> n<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="op">(</span>min<span class="op">,</span> max<span class="op">);</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">// Consuming the method</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> result <span class="op">=</span> <span class="fu">FindMinMax</span><span class="op">(</span><span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">15</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">8</span><span class="op">,</span> <span class="dv">20</span> <span class="op">});</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Min: {result.Min}, Max: {result.Max}&quot;</span><span class="op">);</span></span></code></pre></div>
+<h2 id="tuple-deconstruction">Tuple Deconstruction</h2>
+<p>Deconstruction breaks a tuple apart into separate, distinct variables
+in a single operation:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> coordinates <span class="op">=</span> <span class="op">(</span>X<span class="op">:</span> <span class="fl">10.5</span><span class="op">,</span> Y<span class="op">:</span> <span class="fl">20.3</span><span class="op">);</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Deconstruct into explicit variables</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">(</span><span class="dt">double</span> x<span class="op">,</span> <span class="dt">double</span> y<span class="op">)</span> <span class="op">=</span> coordinates<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Deconstruct using type inference</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="op">(</span>posX<span class="op">,</span> posY<span class="op">)</span> <span class="op">=</span> coordinates<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Discard elements you don&#39;t need using the underscore (_)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="op">(</span>_<span class="op">,</span> onlyY<span class="op">)</span> <span class="op">=</span> coordinates<span class="op">;</span></span></code></pre></div>
+<h2 id="tuple-equality-and-comparison">Tuple Equality and
+Comparison</h2>
+<p><code>System.ValueTuple</code> types implement value equality using
+the <code>==</code> and <code>!=</code> operators. Two tuples are equal
+if they have the same number of elements, compatible types, and
+corresponding elements that evaluate to equal values:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> t1 <span class="op">=</span> <span class="op">(</span><span class="dv">1</span><span class="op">,</span> <span class="st">&quot;Apple&quot;</span><span class="op">);</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> t2 <span class="op">=</span> <span class="op">(</span><span class="dv">1</span><span class="op">,</span> <span class="st">&quot;Apple&quot;</span><span class="op">);</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> t3 <span class="op">=</span> <span class="op">(</span><span class="dv">2</span><span class="op">,</span> <span class="st">&quot;Orange&quot;</span><span class="op">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>t1 <span class="op">==</span> t2<span class="op">);</span> <span class="co">// True</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>t1 <span class="op">!=</span> t3<span class="op">);</span> <span class="co">// True</span></span></code></pre></div>
+<p>Field names are ignored when checking for equality; only the position
+and value of the elements matter:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> pointA <span class="op">=</span> <span class="op">(</span>X<span class="op">:</span> <span class="dv">5</span><span class="op">,</span> Y<span class="op">:</span> <span class="dv">10</span><span class="op">);</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> pointB <span class="op">=</span> <span class="op">(</span>Width<span class="op">:</span> <span class="dv">5</span><span class="op">,</span> Height<span class="op">:</span> <span class="dv">10</span><span class="op">);</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>pointA <span class="op">==</span> pointB<span class="op">);</span> <span class="co">// True</span></span></code></pre></div>
+<h2 id="tuples-in-pattern-matching">Tuples in Pattern Matching</h2>
+<p>Tuples integrate directly with C# switch expressions, allowing you to
+match against multiple conditions concurrently:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> <span class="fu">GetQuadrant</span><span class="op">(</span><span class="dt">int</span> x<span class="op">,</span> <span class="dt">int</span> y<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">(</span>x<span class="op">,</span> y<span class="op">)</span> <span class="kw">switch</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">(</span><span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">)</span> <span class="op">=&gt;</span> <span class="st">&quot;Origin&quot;</span><span class="op">,</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">(</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">,</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">=&gt;</span> <span class="st">&quot;Quadrant 1&quot;</span><span class="op">,</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">(</span> <span class="op">&lt;</span> <span class="dv">0</span><span class="op">,</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">=&gt;</span> <span class="st">&quot;Quadrant 2&quot;</span><span class="op">,</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">(</span> <span class="op">&lt;</span> <span class="dv">0</span><span class="op">,</span> <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">=&gt;</span> <span class="st">&quot;Quadrant 3&quot;</span><span class="op">,</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">(</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">,</span> <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">=&gt;</span> <span class="st">&quot;Quadrant 4&quot;</span><span class="op">,</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    _ <span class="op">=&gt;</span> <span class="st">&quot;On an Axis&quot;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<h2 id="when-to-use-tuples">When to Use Tuples</h2>
+<p>Tuples are best suited for:</p>
+<ul>
+<li><strong>Internal helper methods:</strong> Packaging temporary data
+across private or internal methods.</li>
+<li><strong>Multiple return values:</strong> Eliminating boilerplate
+code where a class would only be used once.</li>
+<li><strong>Dictionary keys:</strong> Grouping composite keys (e.g.,
+<code>Dictionary&lt;(int, string), User&gt;</code>).</li>
+</ul>
+<p>Tuples should generally be avoided in public APIs, complex business
+logic, or domain models where strong typing, encapsulation, and domain
+semantics via classes or records provide better long-term
+maintainability.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-tuple-types-definition-and-usage-guide';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Contracts and Precondition Checks in C# - cs</title>
+    <meta name="description" content="This article provides an overview of code contracts in C#, focusing specifically on how precondition checks establish software reliability. You will learn the core philosophy behind the Design by Contract approach, how precondition checks ensure methods r">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/code-contracts-and-precondition-checks-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Code Contracts and Precondition Checks in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/code-contracts-and-precondition-checks-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of code contracts in C#, focusing specifically on how precondition checks establish software reliability. You will learn the core philosophy behind the Design by Contract approach, how precondition checks ensure methods r" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="code-contracts-and-precondition-checks-in-c">Code Contracts and
+Precondition Checks in C</h1>
+<p>This article provides an overview of code contracts in C#, focusing
+specifically on how precondition checks establish software reliability.
+You will learn the core philosophy behind the Design by Contract
+approach, how precondition checks ensure methods receive valid inputs
+before execution, and the transition from the legacy
+<code>System.Diagnostics.Contracts</code> library to modern C#
+validation techniques.</p>
+<h2 id="what-are-code-contracts">What Are Code Contracts?</h2>
+<p>Code contracts are software engineering constructs based on the
+"Design by Contract" methodology developed by Bertrand Meyer. The
+concept treats the interaction between a caller and a callee as a formal
+agreement. A software component guarantees specific behavior only if the
+calling code satisfies certain obligations.</p>
+<p>In .NET, code contracts define programmatic specifications directly
+within source code through three primary mechanisms:</p>
+<ol type="1">
+<li><strong>Preconditions</strong>: Requirements that must be true
+before a method can execute.</li>
+<li><strong>Postconditions</strong>: Guarantees that must be true when a
+method finishes execution.</li>
+<li><strong>Object Invariants</strong>: Conditions that must remain true
+throughout the entire lifetime of an object instance, except while an
+internal state transition is occurring.</li>
+</ol>
+<p>Code contracts serve as both living documentation and automated
+verification tools, catching software defects during static analysis,
+runtime execution, and unit testing.</p>
+<h2 id="how-precondition-checks-work">How Precondition Checks Work</h2>
+<p>A precondition is an upfront assertion about the state of the program
+and the parameters supplied by the caller. If a caller fails to satisfy
+a precondition, the method should not proceed, because the fundamental
+assumptions required for correct execution are not met. In contract
+terminology, a precondition failure indicates a bug in the calling code,
+not in the receiving method.</p>
+<p>When a precondition check executes:</p>
+<ul>
+<li>It evaluates a boolean condition containing method arguments or
+object state.</li>
+<li>If the condition evaluates to <code>true</code>, the method
+execution proceeds normally.</li>
+<li>If the condition evaluates to <code>false</code>, the contract is
+violated, halting execution immediately by triggering a failure handler
+or throwing an exception (typically an <code>ArgumentException</code> or
+<code>ArgumentNullException</code>).</li>
+</ul>
+<h2 id="implementing-preconditions-in-c">Implementing Preconditions in
+C</h2>
+<h3 id="1-legacy-approach-systemdiagnosticscontracts">1. Legacy
+Approach: <code>System.Diagnostics.Contracts</code></h3>
+<p>Historically, .NET Framework 4.0 introduced native support via the
+<code>System.Diagnostics.Contracts</code> namespace using the static
+<code>Contract.Requires</code> method.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Diagnostics</span><span class="op">.</span><span class="fu">Contracts</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> BankAccount</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">decimal</span> Balance <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Deposit</span><span class="op">(</span><span class="dt">decimal</span> amount<span class="op">)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Precondition check</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        Contract<span class="op">.</span><span class="fu">Requires</span><span class="op">(</span>amount <span class="op">&gt;</span> <span class="dv">0</span><span class="op">,</span> <span class="st">&quot;Deposit amount must be positive.&quot;</span><span class="op">);</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        Balance <span class="op">+=</span> amount<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This implementation required a binary rewriter (CCRewrite) to inject
+runtime checks or perform static verification. Because the tooling
+lacked ongoing maintenance and integration issues arose with newer
+compilers, this specific framework is rarely used in modern .NET
+development.</p>
+<h3 id="2-modern-c-precondition-checks-guard-clauses">2. Modern C#
+Precondition Checks (Guard Clauses)</h3>
+<p>Modern C# applications implement precondition checks using explicit
+validation patterns and built-in runtime guard methods.</p>
+<h4 id="explicit-guard-clauses">Explicit Guard Clauses</h4>
+<p>Prior to recent .NET versions, developers explicitly wrote
+<code>if</code> conditions to throw standard exceptions:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessOrder</span><span class="op">(</span><span class="dt">string</span> orderId<span class="op">,</span> <span class="dt">decimal</span> total<span class="op">)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span><span class="dt">string</span><span class="op">.</span><span class="fu">IsNullOrWhiteSpace</span><span class="op">(</span>orderId<span class="op">))</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentException</span><span class="op">(</span><span class="st">&quot;Order ID cannot be null or empty.&quot;</span><span class="op">,</span> <span class="fu">nameof</span><span class="op">(</span>orderId<span class="op">));</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>total <span class="op">&lt;=</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentOutOfRangeException</span><span class="op">(</span><span class="fu">nameof</span><span class="op">(</span>total<span class="op">),</span> <span class="st">&quot;Total must be greater than zero.&quot;</span><span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Core logic proceeds here</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="modern-built-in-guard-methods-net-6">Modern Built-In Guard
+Methods (.NET 6+)</h4>
+<p>Modern .NET versions provide high-performance, standardized static
+methods that streamline precondition verification:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">UpdateUser</span><span class="op">(</span><span class="dt">string</span> username<span class="op">,</span> UserProfile profile<span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Modern precondition checks</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    ArgumentException<span class="op">.</span><span class="fu">ThrowIfNullOrWhiteSpace</span><span class="op">(</span>username<span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    ArgumentNullException<span class="op">.</span><span class="fu">ThrowIfNull</span><span class="op">(</span>profile<span class="op">);</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Core logic proceeds here</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-compile-time-preconditions-with-nullable-reference-types">3.
+Compile-Time Preconditions with Nullable Reference Types</h3>
+<p>Starting in C# 8.0, nullable reference types allow developers to
+enforce null-check preconditions at compile time rather than relying
+strictly on runtime checks:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>#nullable enable</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">PrintName</span><span class="op">(</span><span class="dt">string</span> name<span class="op">)</span> <span class="co">// Compiler warns if caller passes a null reference</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>name<span class="op">.</span><span class="fu">Length</span><span class="op">);</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>While compile-time warnings help eliminate null-related defects
+during development, combining them with runtime guard clauses remains
+the standard practice for public APIs and critical boundary checks.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/code-contracts-and-precondition-checks-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

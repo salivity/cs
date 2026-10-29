@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using Roslyn to Analyze and Rewrite C# Syntax Trees - cs</title>
+    <meta name="description" content="The .NET Compiler Platform, known as Roslyn, exposes powerful APIs that allow developers to parse, inspect, and transform C# source code programmatically. This guide demonstrates how to consume the Roslyn API to parse source text into an immutable syntax">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/using-roslyn-to-analyze-and-rewrite-c-syntax-trees">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using Roslyn to Analyze and Rewrite C# Syntax Trees - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/using-roslyn-to-analyze-and-rewrite-c-syntax-trees" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The .NET Compiler Platform, known as Roslyn, exposes powerful APIs that allow developers to parse, inspect, and transform C# source code programmatically. This guide demonstrates how to consume the Roslyn API to parse source text into an immutable syntax" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-roslyn-to-analyze-and-rewrite-c-syntax-trees">Using Roslyn
+to Analyze and Rewrite C# Syntax Trees</h1>
+<p>The .NET Compiler Platform, known as Roslyn, exposes powerful APIs
+that allow developers to parse, inspect, and transform C# source code
+programmatically. This guide demonstrates how to consume the Roslyn API
+to parse source text into an immutable syntax tree, inspect node
+structures using <code>CSharpSyntaxWalker</code>, and safely transform
+or refactor code using <code>CSharpSyntaxRewriter</code>.</p>
+<h3 id="prerequisites-and-installation">Prerequisites and
+Installation</h3>
+<p>To work with Roslyn syntax trees, install the core C# compiler
+package via NuGet:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> add package Microsoft.CodeAnalysis.CSharp</span></code></pre></div>
+<h3 id="1-parsing-code-into-a-syntax-tree">1. Parsing Code into a Syntax
+Tree</h3>
+<p>A syntax tree represents the lexical and syntactic structure of C#
+source code. Because syntax trees in Roslyn are fully fidelity and
+immutable, they represent every token, trivia (whitespace and comments),
+and syntactic construct.</p>
+<p>To parse a raw code string into a syntax tree:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">CodeAnalysis</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">CodeAnalysis</span><span class="op">.</span><span class="fu">CSharp</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">CodeAnalysis</span><span class="op">.</span><span class="fu">CSharp</span><span class="op">.</span><span class="fu">Syntax</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> programText <span class="op">=</span> @<span class="st">&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">namespace</span> SampleNamespace</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">class</span> SampleClass</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="dt">void</span> <span class="fu">SampleMethod</span><span class="op">()</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>                <span class="dt">int</span> number <span class="op">=</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span><span class="st">&quot;;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>SyntaxTree tree <span class="op">=</span> CSharpSyntaxTree<span class="op">.</span><span class="fu">ParseText</span><span class="op">(</span>programText<span class="op">);</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>CompilationUnitSyntax root <span class="op">=</span> tree<span class="op">.</span><span class="fu">GetCompilationUnitRoot</span><span class="op">();</span></span></code></pre></div>
+<h3 id="2-analyzing-the-syntax-tree-with-csharpsyntaxwalker">2.
+Analyzing the Syntax Tree with CSharpSyntaxWalker</h3>
+<p>To inspect code without modifying it, implement a custom class that
+inherits from <code>CSharpSyntaxWalker</code>. The walker uses the
+visitor pattern to traverse nodes in the tree.</p>
+<p>For example, to find all method declarations:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MethodAnalyzer <span class="op">:</span> CSharpSyntaxWalker</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> <span class="dt">void</span> <span class="fu">VisitMethodDeclaration</span><span class="op">(</span>MethodDeclarationSyntax node<span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Extract the method name</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> methodName <span class="op">=</span> node<span class="op">.</span><span class="fu">Identifier</span><span class="op">.</span><span class="fu">ValueText</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> returnType <span class="op">=</span> node<span class="op">.</span><span class="fu">ReturnType</span><span class="op">.</span><span class="fu">ToString</span><span class="op">();</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        System<span class="op">.</span><span class="fu">Console</span><span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Found method &#39;{methodName}&#39; with return type &#39;{returnType}&#39;.&quot;</span><span class="op">);</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Continue walking child nodes</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">base</span><span class="op">.</span><span class="fu">VisitMethodDeclaration</span><span class="op">(</span>node<span class="op">);</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To execute the analyzer against the syntax root:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> analyzer <span class="op">=</span> <span class="kw">new</span> <span class="fu">MethodAnalyzer</span><span class="op">();</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>analyzer<span class="op">.</span><span class="fu">Visit</span><span class="op">(</span>root<span class="op">);</span></span></code></pre></div>
+<h3 id="3-rewriting-the-syntax-tree-with-csharpsyntaxrewriter">3.
+Rewriting the Syntax Tree with CSharpSyntaxRewriter</h3>
+<p>Because syntax trees are immutable, nodes cannot be updated in place.
+Instead, you create a new tree by replacing existing nodes.
+<code>CSharpSyntaxRewriter</code> is a specialized visitor designed to
+return modified versions of visited nodes.</p>
+<p>The following example rewrites all integer literals by incrementing
+their values:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> IncrementLiteralRewriter <span class="op">:</span> CSharpSyntaxRewriter</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> SyntaxNode<span class="op">?</span> <span class="fu">VisitLiteralExpression</span><span class="op">(</span>LiteralExpressionSyntax node<span class="op">)</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Check if the literal is a numeric integer</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>node<span class="op">.</span><span class="fu">IsKind</span><span class="op">(</span>SyntaxKind<span class="op">.</span><span class="fu">NumericLiteralExpression</span><span class="op">)</span> <span class="op">&amp;&amp;</span> node<span class="op">.</span><span class="fu">Token</span><span class="op">.</span><span class="fu">Value</span> <span class="kw">is</span> <span class="dt">int</span> value<span class="op">)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Create a new literal token with incremented value</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>            <span class="dt">var</span> newToken <span class="op">=</span> SyntaxFactory<span class="op">.</span><span class="fu">Literal</span><span class="op">(</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>                node<span class="op">.</span><span class="fu">Token</span><span class="op">.</span><span class="fu">LeadingTrivia</span><span class="op">,</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>                <span class="op">(</span>value <span class="op">+</span> <span class="dv">1</span><span class="op">).</span><span class="fu">ToString</span><span class="op">(),</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>                value <span class="op">+</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>                node<span class="op">.</span><span class="fu">Token</span><span class="op">.</span><span class="fu">TrailingTrivia</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>            <span class="op">);</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Return the updated node</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> SyntaxFactory<span class="op">.</span><span class="fu">LiteralExpression</span><span class="op">(</span>SyntaxKind<span class="op">.</span><span class="fu">NumericLiteralExpression</span><span class="op">,</span> newToken<span class="op">);</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">base</span><span class="op">.</span><span class="fu">VisitLiteralExpression</span><span class="op">(</span>node<span class="op">);</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="4-applying-the-rewriter-and-generating-code">4. Applying the
+Rewriter and Generating Code</h3>
+<p>To apply the transformation, pass the root node to the rewriter and
+retrieve the new tree:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> rewriter <span class="op">=</span> <span class="kw">new</span> <span class="fu">IncrementLiteralRewriter</span><span class="op">();</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>SyntaxNode newRoot <span class="op">=</span> rewriter<span class="op">.</span><span class="fu">Visit</span><span class="op">(</span>root<span class="op">);</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Output the updated source code</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> modifiedCode <span class="op">=</span> newRoot<span class="op">.</span><span class="fu">ToFullString</span><span class="op">();</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>System<span class="op">.</span><span class="fu">Console</span><span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>modifiedCode<span class="op">);</span></span></code></pre></div>
+<p>The resulting <code>modifiedCode</code> string preserves the
+formatting and whitespace of the original source text while replacing
+<code>int number = 42;</code> with <code>int number = 43;</code>.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/using-roslyn-to-analyze-and-rewrite-c-syntax-trees';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

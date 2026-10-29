@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using Generic Math in C# for Numeric Algorithms - cs</title>
+    <meta name="description" content="Generic math, introduced in .NET 7 and C# 11, allows developers to write generalized numeric algorithms that work across multiple data types without duplicating code or sacrificing performance. Built upon static virtual interface members, generic math abs">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/using-generic-math-in-c-for-numeric-algorithms">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using Generic Math in C# for Numeric Algorithms - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/using-generic-math-in-c-for-numeric-algorithms" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Generic math, introduced in .NET 7 and C# 11, allows developers to write generalized numeric algorithms that work across multiple data types without duplicating code or sacrificing performance. Built upon static virtual interface members, generic math abs" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-generic-math-in-c-for-numeric-algorithms">Using Generic
+Math in C# for Numeric Algorithms</h1>
+<p>Generic math, introduced in .NET 7 and C# 11, allows developers to
+write generalized numeric algorithms that work across multiple data
+types without duplicating code or sacrificing performance. Built upon
+static virtual interface members, generic math abstracts arithmetic
+operations, constants, and numeric capabilities behind interfaces such
+as <code>INumber&lt;T&gt;</code> and
+<code>IFloatingPoint&lt;T&gt;</code>. This guide explains how to define
+type constraints, utilize built-in numeric interfaces, handle constants,
+and implement efficient numeric algorithms in C#.</p>
+<h2 id="the-foundation-static-abstract-interface-members">The
+Foundation: Static Abstract Interface Members</h2>
+<p>Prior to .NET 7, you could not use standard mathematical operators
+(<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>) on
+generic type parameters because operators are static methods. Generic
+math solves this using static abstract members in interfaces. The
+runtime delegates operator calls to the static methods implemented by
+the concrete type.</p>
+<p>The base interface for most algorithms is
+<code>INumber&lt;T&gt;</code>, which provides standard arithmetic
+operations, comparison capabilities, and common numeric constants.</p>
+<h2 id="constraining-generic-types-with-inumbert">Constraining Generic
+Types with <code>INumber&lt;T&gt;</code></h2>
+<p>To create a function that operates over any numeric type (such as
+<code>int</code>, <code>float</code>, <code>double</code>, or
+<code>decimal</code>), constrain your generic type parameter to
+<code>INumber&lt;T&gt;</code>.</p>
+<p>Here is an implementation of an algorithm that calculates the sum of
+a collection:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Numerics</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> MathUtilities</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> T Sum<span class="op">&lt;</span>T<span class="op">&gt;(</span>IEnumerable<span class="op">&lt;</span>T<span class="op">&gt;</span> numbers<span class="op">)</span> where T <span class="op">:</span> INumber<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        T total <span class="op">=</span> T<span class="op">.</span><span class="fu">Zero</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> number <span class="kw">in</span> numbers<span class="op">)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            total <span class="op">+=</span> number<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> total<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>In this example:</p>
+<ul>
+<li><code>where T : INumber&lt;T&gt;</code> guarantees that type
+<code>T</code> implements addition, equality, and common
+properties.</li>
+<li><code>T.Zero</code> accesses the static property of the interface to
+retrieve the zero-value representation for whatever type <code>T</code>
+represents.</li>
+</ul>
+<h2 id="choosing-the-right-generic-math-interface">Choosing the Right
+Generic Math Interface</h2>
+<p>The <code>System.Numerics</code> namespace provides a hierarchy of
+interfaces tailored to specific capabilities:</p>
+<ul>
+<li><strong><code>INumber&lt;T&gt;</code></strong>: Represents numbers
+supporting basic arithmetic, comparison, parsing, and formatting.</li>
+<li><strong><code>IBinaryInteger&lt;T&gt;</code></strong>: For integer
+types (<code>int</code>, <code>long</code>, <code>BigInteger</code>),
+exposing bitwise operations, shifts, and integer division.</li>
+<li><strong><code>IFloatingPoint&lt;T&gt;</code></strong>: For real
+numbers (<code>float</code>, <code>double</code>, <code>decimal</code>,
+<code>Half</code>), exposing rounding, IEEE 754 compliance, and sign
+manipulation.</li>
+<li><strong><code>IRootFunctions&lt;T&gt;</code></strong>,
+<strong><code>ITrigonometricFunctions&lt;T&gt;</code></strong>,
+<strong><code>ILogarithmicFunctions&lt;T&gt;</code></strong>: Expose
+specialized mathematical operations like <code>Sqrt</code>,
+<code>Sin</code>, and <code>Log</code>.</li>
+</ul>
+<h3 id="example-advanced-math-with-ifloatingpointt">Example: Advanced
+Math with <code>IFloatingPoint&lt;T&gt;</code></h3>
+<p>If an algorithm requires non-integer capabilities, such as
+calculating the Euclidean distance between two points, constrain the
+type to <code>IFloatingPointI&lt;T&gt;</code> (which includes
+<code>IRootFunctions&lt;T&gt;</code>):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Numerics</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> Geometry</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> T Distance<span class="op">&lt;</span>T<span class="op">&gt;(</span>T x1<span class="op">,</span> T y1<span class="op">,</span> T x2<span class="op">,</span> T y2<span class="op">)</span> where T <span class="op">:</span> IFloatingPoint<span class="op">&lt;</span>T<span class="op">&gt;,</span> IRootFunctions<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        T deltaX <span class="op">=</span> x2 <span class="op">-</span> x1<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        T deltaY <span class="op">=</span> y2 <span class="op">-</span> y1<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> T<span class="op">.</span><span class="fu">Sqrt</span><span class="op">((</span>deltaX <span class="op">*</span> deltaX<span class="op">)</span> <span class="op">+</span> <span class="op">(</span>deltaY <span class="op">*</span> deltaY<span class="op">));</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This method works interchangeably with <code>float</code>,
+<code>double</code>, or custom high-precision floating-point types
+without casting or code duplication.</p>
+<h2 id="type-conversions-and-constants">Type Conversions and
+Constants</h2>
+<p>Numeric algorithms frequently require numeric literals (like
+<code>2</code> or <code>0.5</code>) or conversions between different
+types. Because generic types cannot be directly assigned integer
+literals, use <code>T.CreateChecked</code>,
+<code>T.CreateTruncating</code>, or <code>T.CreateSaturating</code>.</p>
+<p>Here is a generic calculation of the arithmetic mean:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Numerics</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> Statistics</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> T Mean<span class="op">&lt;</span>T<span class="op">&gt;(</span>ReadOnlySpan<span class="op">&lt;</span>T<span class="op">&gt;</span> values<span class="op">)</span> where T <span class="op">:</span> INumber<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>values<span class="op">.</span><span class="fu">IsEmpty</span><span class="op">)</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentException</span><span class="op">(</span><span class="st">&quot;Collection must not be empty.&quot;</span><span class="op">,</span> <span class="fu">nameof</span><span class="op">(</span>values<span class="op">));</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        T sum <span class="op">=</span> T<span class="op">.</span><span class="fu">Zero</span><span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> value <span class="kw">in</span> values<span class="op">)</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            sum <span class="op">+=</span> value<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Convert the count (int) into type T safely</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        T count <span class="op">=</span> T<span class="op">.</span><span class="fu">CreateChecked</span><span class="op">(</span>values<span class="op">.</span><span class="fu">Length</span><span class="op">);</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> sum <span class="op">/</span> count<span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<ul>
+<li><code>T.CreateChecked(value)</code> throws an
+<code>OverflowException</code> if the value cannot be represented by
+<code>T</code>.</li>
+<li><code>T.CreateTruncating(value)</code> discards excess bits if the
+value is too large.</li>
+<li><code>T.CreateSaturating(value)</code> clamps the value to the
+minimum or maximum bounds of <code>T</code>.</li>
+</ul>
+<h2 id="benefits-and-performance">Benefits and Performance</h2>
+<p>Generic math algorithms compile down to highly optimized machine code
+through JIT specialization. For value types like <code>int</code> and
+<code>double</code>, the .NET JIT compiler eliminates virtual dispatch
+overhead, inlining the static calls directly. This yields performance
+equivalent to hand-written, type-specific overloads while maintaining a
+single, reusable codebase.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/using-generic-math-in-c-for-numeric-algorithms';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# 12 Primary Constructors in Classes and Structs - cs</title>
+    <meta name="description" content="C# 12 expands primary constructors beyond record types, allowing developers to define constructor parameters directly on any class or struct declaration. This article explains how primary constructors work for regular classes and structs, how they differ">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-12-primary-constructors-in-classes-and-structs">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# 12 Primary Constructors in Classes and Structs - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-12-primary-constructors-in-classes-and-structs" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="C# 12 expands primary constructors beyond record types, allowing developers to define constructor parameters directly on any class or struct declaration. This article explains how primary constructors work for regular classes and structs, how they differ" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-12-primary-constructors-in-classes-and-structs">C# 12 Primary
+Constructors in Classes and Structs</h1>
+<p>C# 12 expands primary constructors beyond record types, allowing
+developers to define constructor parameters directly on any class or
+struct declaration. This article explains how primary constructors work
+for regular classes and structs, how they differ from record
+constructors, and how they simplify dependency injection and boilerplate
+field initialization.</p>
+<h3 id="syntax-and-basic-usage">Syntax and Basic Usage</h3>
+<p>In traditional C#, declaring a constructor requires declaring backing
+fields, setting up parameters in a dedicated constructor block, and
+assigning those parameters manually. With C# 12, parameters are placed
+directly in parentheses following the type name:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> <span class="fu">UserService</span><span class="op">(</span>IUserRepository userRepository<span class="op">,</span> ILogger logger<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">DeleteUser</span><span class="op">(</span><span class="dt">int</span> id<span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        logger<span class="op">.</span><span class="fu">Log</span><span class="op">(</span>$<span class="st">&quot;Deleting user {id}&quot;</span><span class="op">);</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        userRepository<span class="op">.</span><span class="fu">Delete</span><span class="op">(</span>id<span class="op">);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The parameters <code>userRepository</code> and <code>logger</code>
+are available throughout the body of the class, including inside
+methods, properties, and initializers.</p>
+<h3 id="key-characteristics-and-scope">Key Characteristics and
+Scope</h3>
+<p>Unlike records, primary constructor parameters in standard classes
+and structs do not automatically become public properties. Instead,
+their behavior is governed by the following rules:</p>
+<ul>
+<li><strong>Capture Semantics:</strong> If a primary constructor
+parameter is used inside a method, local function, or property accessor,
+the compiler automatically generates a hidden private backing field to
+store the value. If it is only used during object initialization (such
+as initializing a property), no field is generated.</li>
+<li><strong>Mutability:</strong> The parameters behave like mutable
+variables within the class scope. If you reassign a primary constructor
+parameter within a method, the captured state updates. However, it is
+standard practice to treat them as read-only.</li>
+<li><strong>Inheritance and Base Calls:</strong> If a derived class uses
+a primary constructor, it must pass arguments to the base constructor
+directly on the class declaration line:</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> <span class="fu">BaseService</span><span class="op">(</span><span class="dt">string</span> serviceName<span class="op">)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> <span class="fu">CustomService</span><span class="op">(</span><span class="dt">string</span> serviceName<span class="op">,</span> <span class="dt">int</span> timeout<span class="op">)</span> </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">:</span> <span class="fu">BaseService</span><span class="op">(</span>serviceName<span class="op">)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="chaining-auxiliary-constructors">Chaining Auxiliary
+Constructors</h3>
+<p>If a class or struct requires additional, overloaded constructors,
+each auxiliary constructor must explicitly invoke the primary
+constructor using <code>this(...)</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> <span class="fu">Point</span><span class="op">(</span><span class="dt">int</span> x<span class="op">,</span> <span class="dt">int</span> y<span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Auxiliary constructor chaining to the primary constructor</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Point</span><span class="op">()</span> <span class="op">:</span> <span class="kw">this</span><span class="op">(</span><span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="primary-constructors-vs-records">Primary Constructors vs.
+Records</h3>
+<p>The core distinction between primary constructors in standard types
+versus records comes down to public interface generation:</p>
+<ul>
+<li><strong>Records:</strong> Parameters generate public, init-only
+properties (<code>public int X { get; init; }</code>) by default, along
+with compiler-generated equality members and deconstructors.</li>
+<li><strong>Classes and Structs:</strong> Parameters do not generate
+public properties. They simply act as in-scope arguments across the type
+definition, primarily serving to eliminate repetitive private field
+boilerplate.</li>
+</ul>
+<h3 id="primary-benefits">Primary Benefits</h3>
+<ol type="1">
+<li><strong>Reduced Boilerplate:</strong> Eliminates repetitive field
+declarations and constructor assignments.</li>
+<li><strong>Cleaner Dependency Injection:</strong> Makes declaring
+dependencies in services concise and readable.</li>
+<li><strong>Consistency:</strong> Unifies parameter initialization
+syntax across records, classes, and structs.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-12-primary-constructors-in-classes-and-structs';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

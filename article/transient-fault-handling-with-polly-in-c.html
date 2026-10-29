@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transient Fault Handling with Polly in C# - cs</title>
+    <meta name="description" content="This article provides a practical guide on implementing resilience and transient fault handling in C# applications using the Polly library. You will learn the core concepts of transient errors, how to install and configure modern Polly (v8+) resilience pi">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/transient-fault-handling-with-polly-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Transient Fault Handling with Polly in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/transient-fault-handling-with-polly-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a practical guide on implementing resilience and transient fault handling in C# applications using the Polly library. You will learn the core concepts of transient errors, how to install and configure modern Polly (v8+) resilience pi" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="transient-fault-handling-with-polly-in-c">Transient Fault
+Handling with Polly in C</h1>
+<p>This article provides a practical guide on implementing resilience
+and transient fault handling in C# applications using the Polly library.
+You will learn the core concepts of transient errors, how to install and
+configure modern Polly (v8+) resilience pipelines, and how to implement
+essential patterns including Retry with exponential backoff, Circuit
+Breakers, and Fallbacks, as well as integrating them with .NET's
+<code>IHttpClientFactory</code>.</p>
+<h2 id="understanding-transient-faults-and-polly">Understanding
+Transient Faults and Polly</h2>
+<p>Transient faults are temporary errors—such as brief network drops,
+momentary service unavailability, or HTTP 503 Service Unavailable
+responses—that typically resolve themselves quickly. Instead of letting
+an application fail immediately when encountering these issues,
+resilience frameworks allow operations to be retried or rerouted
+gracefully.</p>
+<p>Polly is the standard .NET resilience and transient fault-handling
+library. Starting with Polly v8, the library uses a unified
+<code>ResiliencePipeline</code> architecture designed for high
+performance, zero allocations, and seamless integration with the modern
+.NET ecosystem.</p>
+<h2 id="installing-polly">Installing Polly</h2>
+<p>To get started, install the Polly core package via the .NET CLI:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> add package Polly.Core</span></code></pre></div>
+<p>If you are working with <code>HttpClient</code> in ASP.NET Core or
+generic hosts, install the official Microsoft integration package:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> add package Microsoft.Extensions.Http.Resilience</span></code></pre></div>
+<h2 id="creating-a-resilience-pipeline">Creating a Resilience
+Pipeline</h2>
+<p>In modern Polly, resilience strategies are configured and executed
+through a <code>ResiliencePipelineBuilder</code>.</p>
+<h3 id="1-the-retry-strategy">1. The Retry Strategy</h3>
+<p>The Retry strategy automatically re-executes a failed action. Using
+exponential backoff with jitter prevents overwhelming a recovering
+downstream service (the "thundering herd" problem).</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">.</span><span class="fu">Retry</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> pipeline <span class="op">=</span> <span class="kw">new</span> <span class="fu">ResiliencePipelineBuilder</span><span class="op">()</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddRetry</span><span class="op">(</span><span class="kw">new</span> RetryStrategyOptions</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        ShouldHandle <span class="op">=</span> <span class="kw">new</span> <span class="fu">PredicateBuilder</span><span class="op">().</span><span class="fu">Handle</span><span class="op">&lt;</span>HttpRequestException<span class="op">&gt;(),</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        MaxRetryAttempts <span class="op">=</span> <span class="dv">3</span><span class="op">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        Delay <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">1</span><span class="op">),</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        BackoffType <span class="op">=</span> DelayBackoffType<span class="op">.</span><span class="fu">Exponential</span><span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        UseJitter <span class="op">=</span> <span class="kw">true</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Executing code through the pipeline</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>await pipeline<span class="op">.</span><span class="fu">ExecuteAsync</span><span class="op">(</span>async cancellationToken <span class="op">=&gt;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    await <span class="fu">CallExternalServiceAsync</span><span class="op">(</span>cancellationToken<span class="op">);</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<h3 id="2-the-circuit-breaker-strategy">2. The Circuit Breaker
+Strategy</h3>
+<p>The Circuit Breaker pattern prevents an application from repeatedly
+attempting an operation that is almost certain to fail. When failures
+exceed a defined threshold, the circuit "opens," failing immediately for
+a specified duration before allowing test traffic through again.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">.</span><span class="fu">CircuitBreaker</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> pipeline <span class="op">=</span> <span class="kw">new</span> <span class="fu">ResiliencePipelineBuilder</span><span class="op">()</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddCircuitBreaker</span><span class="op">(</span><span class="kw">new</span> HttpCircuitBreakerStrategyOptions</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        FailureRatio <span class="op">=</span> <span class="fl">0.5</span><span class="op">,</span> <span class="co">// Break if 50% of requests fail</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        SamplingDuration <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">30</span><span class="op">),</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        MinimumThroughput <span class="op">=</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        BreakDuration <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">15</span><span class="op">)</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span></code></pre></div>
+<h3 id="3-the-fallback-strategy">3. The Fallback Strategy</h3>
+<p>The Fallback strategy substitutes an alternative value or action when
+an execution fails, ensuring that user flows are not entirely
+disrupted.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">.</span><span class="fu">Fallback</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> pipeline <span class="op">=</span> <span class="kw">new</span> ResiliencePipelineBuilder<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;()</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddFallback</span><span class="op">(</span><span class="kw">new</span> FallbackStrategyOptions<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        ShouldHandle <span class="op">=</span> <span class="kw">new</span> PredicateBuilder<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;().</span><span class="fu">Handle</span><span class="op">&lt;</span>Exception<span class="op">&gt;(),</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        FallbackAction <span class="op">=</span> <span class="kw">static</span> args <span class="op">=&gt;</span> Outcome<span class="op">.</span><span class="fu">FromResultAsValueTask</span><span class="op">(</span><span class="st">&quot;Default cached data&quot;</span><span class="op">)</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> result <span class="op">=</span> await pipeline<span class="op">.</span><span class="fu">ExecuteAsync</span><span class="op">(</span>async cancellationToken <span class="op">=&gt;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> await <span class="fu">FetchUnstableDataAsync</span><span class="op">(</span>cancellationToken<span class="op">);</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<h2 id="combining-strategies-into-a-composite-pipeline">Combining
+Strategies into a Composite Pipeline</h2>
+<p>Resilience strategies are most effective when combined. The standard
+order of operations is typically: Fallback (outermost) -&gt; Total
+Timeout -&gt; Retry -&gt; Circuit Breaker -&gt; Attempt Timeout
+(innermost).</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">.</span><span class="fu">Timeout</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">.</span><span class="fu">Retry</span><span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Polly<span class="op">.</span><span class="fu">CircuitBreaker</span><span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> pipeline <span class="op">=</span> <span class="kw">new</span> <span class="fu">ResiliencePipelineBuilder</span><span class="op">()</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddTimeout</span><span class="op">(</span>TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">30</span><span class="op">))</span> <span class="co">// Overall operation timeout</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddRetry</span><span class="op">(</span><span class="kw">new</span> RetryStrategyOptions</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        ShouldHandle <span class="op">=</span> <span class="kw">new</span> <span class="fu">PredicateBuilder</span><span class="op">().</span><span class="fu">Handle</span><span class="op">&lt;</span>HttpRequestException<span class="op">&gt;(),</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        MaxRetryAttempts <span class="op">=</span> <span class="dv">3</span><span class="op">,</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        BackoffType <span class="op">=</span> DelayBackoffType<span class="op">.</span><span class="fu">Exponential</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddCircuitBreaker</span><span class="op">(</span><span class="kw">new</span> CircuitBreakerStrategyOptions</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        FailureRatio <span class="op">=</span> <span class="fl">0.3</span><span class="op">,</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        SamplingDuration <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">10</span><span class="op">),</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        BreakDuration <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">5</span><span class="op">)</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddTimeout</span><span class="op">(</span>TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">5</span><span class="op">))</span> <span class="co">// Timeout per attempt</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span></code></pre></div>
+<h2 id="integration-with-httpclient-in-aspnet-core">Integration with
+HttpClient in ASP.NET Core</h2>
+<p>For modern .NET web applications, the
+<code>Microsoft.Extensions.Http.Resilience</code> package provides
+pre-configured standard pipelines that apply retries, circuit breakers,
+and timeouts automatically to HTTP requests.</p>
+<p>In <code>Program.cs</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">Extensions</span><span class="op">.</span><span class="fu">DependencyInjection</span><span class="op">;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Adds an HttpClient with recommended resilience defaults:</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Retries, Circuit Breaker, Total and Attempt Timeouts</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddHttpClient</span><span class="op">(</span><span class="st">&quot;ExternalService&quot;</span><span class="op">)</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddStandardResilienceHandler</span><span class="op">(</span>options <span class="op">=&gt;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        options<span class="op">.</span><span class="fu">Retry</span><span class="op">.</span><span class="fu">MaxRetryAttempts</span> <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        options<span class="op">.</span><span class="fu">Retry</span><span class="op">.</span><span class="fu">BackoffType</span> <span class="op">=</span> DelayBackoffType<span class="op">.</span><span class="fu">Exponential</span><span class="op">;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        options<span class="op">.</span><span class="fu">CircuitBreaker</span><span class="op">.</span><span class="fu">SamplingDuration</span> <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">10</span><span class="op">);</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">});</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span></code></pre></div>
+<p>To consume this client, inject <code>IHttpClientFactory</code> into
+your services:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ApiConsumer</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> HttpClient _client<span class="op">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">ApiConsumer</span><span class="op">(</span>IHttpClientFactory httpClientFactory<span class="op">)</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        _client <span class="op">=</span> httpClientFactory<span class="op">.</span><span class="fu">CreateClient</span><span class="op">(</span><span class="st">&quot;ExternalService&quot;</span><span class="op">);</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> <span class="fu">GetDataAsync</span><span class="op">(</span>CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> response <span class="op">=</span> await _client<span class="op">.</span><span class="fu">GetAsync</span><span class="op">(</span><span class="st">&quot;https://api.example.com/data&quot;</span><span class="op">,</span> cancellationToken<span class="op">);</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>        response<span class="op">.</span><span class="fu">EnsureSuccessStatusCode</span><span class="op">();</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> await response<span class="op">.</span><span class="fu">Content</span><span class="op">.</span><span class="fu">ReadAsStringAsync</span><span class="op">(</span>cancellationToken<span class="op">);</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>By setting up these resilience strategies, your C# application will
+automatically absorb transient disruptions, isolate downstream outages,
+and ensure consistent availability.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/transient-fault-handling-with-polly-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

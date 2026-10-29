@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Ref Readonly Parameters: Optimize Large Structs - cs</title>
+    <meta name="description" content="This article provides a comprehensive overview of ref readonly parameters in C#, detailing how they enable high-performance memory management when handling large value types. You will learn the mechanics behind passing arguments by reference without sacri">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-ref-readonly-parameters-optimize-large-structs">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Ref Readonly Parameters: Optimize Large Structs - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-ref-readonly-parameters-optimize-large-structs" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comprehensive overview of ref readonly parameters in C#, detailing how they enable high-performance memory management when handling large value types. You will learn the mechanics behind passing arguments by reference without sacri" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-ref-readonly-parameters-optimize-large-structs">C# Ref
+Readonly Parameters: Optimize Large Structs</h1>
+<p>This article provides a comprehensive overview of
+<code>ref readonly</code> parameters in C#, detailing how they enable
+high-performance memory management when handling large value types. You
+will learn the mechanics behind passing arguments by reference without
+sacrificing immutability, the differences between standard value
+passing, the <code>in</code> modifier, and <code>ref readonly</code>,
+and how to effectively eliminate expensive stack-copying operations in
+performance-critical applications.</p>
+<hr />
+<h3 id="the-problem-value-types-and-large-structs">The Problem: Value
+Types and Large Structs</h3>
+<p>In C#, structs are value types. When a struct is passed to a method
+as a standard argument, the runtime creates a full bitwise copy of the
+entire data structure on the call stack.</p>
+<p>For small structs (such as <code>System.Drawing.Point</code> with two
+4-byte integers), copying overhead is negligible and often fits within
+CPU registers. However, when structs grow larger—such as 4x4
+transformation matrices, custom physics vectors, or large memory buffers
+exceeding 16 bytes—copying the entire payload across multiple method
+boundaries introduces significant CPU and memory bandwidth overhead.</p>
+<h3 id="what-are-ref-readonly-parameters">What are
+<code>ref readonly</code> Parameters?</h3>
+<p>Introduced in modern C# to refine memory semantics, the
+<code>ref readonly</code> parameter modifier specifies that an argument
+is passed by reference (avoiding copies) while strictly enforcing
+read-only access within the called method (preventing mutation).</p>
+<p>Under the hood:</p>
+<ul>
+<li><strong>Reference Passing:</strong> Instead of copying the 32-, 64-,
+or 128-byte struct, the runtime passes a managed pointer (4 bytes on
+32-bit runtimes, 8 bytes on 64-bit runtimes).</li>
+<li><strong>Read-Only Enforcement:</strong> The compiler treats the
+parameter as a variable that cannot be assigned to, modified, or passed
+to other methods that accept writable <code>ref</code> or
+<code>out</code> arguments.</li>
+</ul>
+<h3 id="ref-readonly-vs-in-parameters"><code>ref readonly</code> vs.
+<code>in</code> Parameters</h3>
+<p>While <code>in</code> and <code>ref readonly</code> both declare
+parameters passed by read-only reference, they differ in how strictly
+they handle call-site variables and compiler-generated defensive
+copies:</p>
+<ol type="1">
+<li><strong><code>in</code> Modifier:</strong>
+<ul>
+<li>Callers are not required to specify <code>in</code> at the call
+site.</li>
+<li>If the argument passed is an rvalue (such as a method return value,
+an expression, or a literal), the compiler silently creates a temporary
+variable on the stack and passes a reference to that temporary
+copy.</li>
+<li>If the struct is not declared as a <code>readonly struct</code>,
+calling any member on an <code>in</code> parameter causes the compiler
+to generate a defensive copy to prevent unintended state mutations.</li>
+</ul></li>
+<li><strong><code>ref readonly</code> Modifier:</strong>
+<ul>
+<li>Enforces explicit intent. Callers can explicitly write
+<code>ref readonly</code> at the call site to document that passing by
+reference is mandatory.</li>
+<li>Prevents passing temporary values unless explicitly permitted by
+overloads, eliminating hidden allocations and accidental copy
+operations.</li>
+</ul></li>
+</ol>
+<h3 id="practical-implementation">Practical Implementation</h3>
+<p>The following example demonstrates how to define a large struct and
+consume it using <code>ref readonly</code> to avoid stack copies:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">readonly</span> <span class="kw">struct</span> Matrix4x4</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">readonly</span> <span class="dt">float</span> M11<span class="op">,</span> M12<span class="op">,</span> M13<span class="op">,</span> M14<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">readonly</span> <span class="dt">float</span> M21<span class="op">,</span> M22<span class="op">,</span> M23<span class="op">,</span> M24<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">readonly</span> <span class="dt">float</span> M31<span class="op">,</span> M32<span class="op">,</span> M33<span class="op">,</span> M34<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">readonly</span> <span class="dt">float</span> M41<span class="op">,</span> M42<span class="op">,</span> M43<span class="op">,</span> M44<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Matrix4x4</span><span class="op">(</span><span class="dt">float</span> initialValue<span class="op">)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        M11 <span class="op">=</span> M12 <span class="op">=</span> M13 <span class="op">=</span> M14 <span class="op">=</span> initialValue<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        M21 <span class="op">=</span> M22 <span class="op">=</span> M23 <span class="op">=</span> M24 <span class="op">=</span> initialValue<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        M31 <span class="op">=</span> M32 <span class="op">=</span> M33 <span class="op">=</span> M34 <span class="op">=</span> initialValue<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        M41 <span class="op">=</span> M42 <span class="op">=</span> M43 <span class="op">=</span> M44 <span class="op">=</span> initialValue<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Renderer</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Accepts the 64-byte struct by read-only reference</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="dt">float</span> <span class="fu">CalculateDeterminant</span><span class="op">(</span><span class="kw">ref</span> <span class="kw">readonly</span> Matrix4x4 matrix<span class="op">)</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Compiler error if mutation is attempted:</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">// matrix.M11 = 5.0f; </span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> matrix<span class="op">.</span><span class="fu">M11</span> <span class="op">*</span> matrix<span class="op">.</span><span class="fu">M22</span> <span class="op">*</span> matrix<span class="op">.</span><span class="fu">M33</span> <span class="op">*</span> matrix<span class="op">.</span><span class="fu">M44</span><span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Run</span><span class="op">()</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> worldMatrix <span class="op">=</span> <span class="kw">new</span> <span class="fu">Matrix4x4</span><span class="op">(</span><span class="fl">1.0f</span><span class="op">);</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Passed by reference; zero memory copying occurs</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        <span class="dt">float</span> det <span class="op">=</span> <span class="fu">CalculateDeterminant</span><span class="op">(</span><span class="kw">ref</span> <span class="kw">readonly</span> worldMatrix<span class="op">);</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="performance-benefits-and-when-to-use">Performance Benefits and
+When to Use</h3>
+<ul>
+<li><strong>Threshold for Optimization:</strong> Use
+<code>ref readonly</code> when structs exceed
+<code>IntPtr.Size * 2</code> (16 bytes on 64-bit systems). Below this
+threshold, passing by value often performs faster because the struct can
+fit directly into processor registers without pointer
+dereferencing.</li>
+<li><strong>Pair with <code>readonly struct</code>:</strong> Always
+declare the target struct as <code>readonly struct</code>. This
+guarantees to the compiler that no methods, properties, or fields within
+the struct can mutate state, completely eliminating hidden defensive
+copies when accessing members.</li>
+<li><strong>High-Throughput Scenarios:</strong> Ideal for game engines,
+high-frequency trading platforms, graphics pipelines, and scientific
+computing where methods are invoked millions of times per frame or
+second.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-ref-readonly-parameters-optimize-large-structs';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

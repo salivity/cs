@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saga Pattern for Distributed Transactions in C# - cs</title>
+    <meta name="description" content="This article provides a practical overview of the Saga pattern for maintaining data consistency across distributed C# microservices. You will learn the fundamental mechanisms of the pattern, the differences between choreography and orchestration, how comp">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/saga-pattern-for-distributed-transactions-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Saga Pattern for Distributed Transactions in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/saga-pattern-for-distributed-transactions-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a practical overview of the Saga pattern for maintaining data consistency across distributed C# microservices. You will learn the fundamental mechanisms of the pattern, the differences between choreography and orchestration, how comp" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="saga-pattern-for-distributed-transactions-in-c">Saga Pattern for
+Distributed Transactions in C</h1>
+<p>This article provides a practical overview of the Saga pattern for
+maintaining data consistency across distributed C# microservices. You
+will learn the fundamental mechanisms of the pattern, the differences
+between choreography and orchestration, how compensating transactions
+replace traditional two-phase commits, and how to implement Sagas in
+.NET using modern frameworks like MassTransit.</p>
+<h3 id="the-problem-with-distributed-transactions">The Problem with
+Distributed Transactions</h3>
+<p>In a monolithic architecture, a single database can rely on ACID
+transactions to guarantee that all operations either succeed together or
+fail together. In a distributed microservices architecture, however,
+each service owns its private database. A business process spanning
+multiple services—such as an e-commerce checkout involving ordering,
+payment processing, and inventory allocation—cannot use a single
+database transaction.</p>
+<p>Traditional distributed solutions like the Two-Phase Commit (2PC)
+protocol introduce high latency and tight coupling. They lock database
+rows across networks, creating bottlenecks and single points of failure
+that harm availability and scalability.</p>
+<h3 id="what-is-the-saga-pattern">What Is the Saga Pattern?</h3>
+<p>The Saga pattern addresses this challenge by breaking a large,
+distributed transaction into a sequence of smaller, local transactions.
+Each local transaction updates the database within a single service and
+publishes an event or message to trigger the next transaction in the
+sequence.</p>
+<p>Because there is no global lock, the Saga pattern relies on
+<strong>eventual consistency</strong>. If any step in the sequence
+fails, the Saga executes a series of <strong>compensating
+transactions</strong> to reverse the changes made by the preceding
+steps, returning the system to a consistent state.</p>
+<h3 id="saga-execution-approaches">Saga Execution Approaches</h3>
+<p>There are two primary ways to coordinate a Saga:</p>
+<h4 id="1-choreography">1. Choreography</h4>
+<p>In a choreographed Saga, there is no central coordinator. Each
+service performs its local transaction and publishes an event. Other
+services listen to these events and execute their local tasks
+accordingly.</p>
+<ul>
+<li><strong>Pros:</strong> Simple to set up for workflows with few
+steps; no central point of coordination.</li>
+<li><strong>Cons:</strong> Can become difficult to track and maintain as
+the workflow grows; cyclic dependencies can arise; testing the
+end-to-end flow is complex.</li>
+</ul>
+<h4 id="2-orchestration">2. Orchestration</h4>
+<p>In an orchestrated Saga, a centralized coordinator (an orchestrator)
+manages the entire workflow. The orchestrator tells each participant
+service what action to execute by sending commands and listening for
+response events.</p>
+<ul>
+<li><strong>Pros:</strong> Centralized business logic; easy to
+understand workflow state; clear separation of concerns; avoids complex
+event graphs.</li>
+<li><strong>Cons:</strong> Requires managing the coordinator
+infrastructure; can inadvertently centralize too much domain logic if
+not designed carefully.</li>
+</ul>
+<h3 id="implementing-sagas-in-c">Implementing Sagas in C</h3>
+<p>While you can write custom coordination logic using background
+services and message brokers like RabbitMQ or Azure Service Bus, the
+.NET ecosystem provides robust open-source libraries that handle Saga
+persistence, state tracking, and retries natively.</p>
+<h4 id="masstransit-state-machine-automatonymous">MassTransit State
+Machine (Automatonymous)</h4>
+<p>MassTransit is one of the most widely used message-based frameworks
+in C# for orchestrating Sagas. It allows you to define a Saga state
+machine using a fluent API.</p>
+<p>Consider an order workflow:</p>
+<ol type="1">
+<li><code>OrderService</code> submits a new order request and creates an
+instance of <code>OrderSagaState</code>.</li>
+<li>The orchestrator sends a <code>ProcessPayment</code> command to
+<code>PaymentService</code>.</li>
+<li>If <code>PaymentService</code> succeeds, the orchestrator issues a
+<code>ReserveInventory</code> command to
+<code>InventoryService</code>.</li>
+<li>If <code>InventoryService</code> fails (e.g., out of stock), the
+orchestrator triggers a compensating command: <code>RefundPayment</code>
+sent to <code>PaymentService</code>, followed by marking the order as
+<code>Cancelled</code>.</li>
+</ol>
+<p>In C#, a MassTransit state machine typically looks like this:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OrderState <span class="op">:</span> SagaStateMachineInstance</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Guid CorrelationId <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> CurrentState <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Guid OrderId <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OrderStateMachine <span class="op">:</span> MassTransitStateMachine<span class="op">&lt;</span>OrderState<span class="op">&gt;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> State ProcessingPayment <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> State ReservingInventory <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Event<span class="op">&lt;</span>OrderSubmitted<span class="op">&gt;</span> OrderSubmitted <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Event<span class="op">&lt;</span>PaymentCompleted<span class="op">&gt;</span> PaymentCompleted <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Event<span class="op">&lt;</span>PaymentFailed<span class="op">&gt;</span> PaymentFailed <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Event<span class="op">&lt;</span>InventoryAllocationFailed<span class="op">&gt;</span> InventoryFailed <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">OrderStateMachine</span><span class="op">()</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="fu">InstanceState</span><span class="op">(</span>x <span class="op">=&gt;</span> x<span class="op">.</span><span class="fu">CurrentState</span><span class="op">);</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Initially</span><span class="op">(</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>            <span class="fu">When</span><span class="op">(</span>OrderSubmitted<span class="op">)</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">Then</span><span class="op">(</span>context <span class="op">=&gt;</span> context<span class="op">.</span><span class="fu">Saga</span><span class="op">.</span><span class="fu">OrderId</span> <span class="op">=</span> context<span class="op">.</span><span class="fu">Message</span><span class="op">.</span><span class="fu">OrderId</span><span class="op">)</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">Publish</span><span class="op">(</span>context <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">ProcessPayment</span><span class="op">(</span>context<span class="op">.</span><span class="fu">Saga</span><span class="op">.</span><span class="fu">OrderId</span><span class="op">))</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">TransitionTo</span><span class="op">(</span>ProcessingPayment<span class="op">)</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        <span class="fu">During</span><span class="op">(</span>ProcessingPayment<span class="op">,</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>            <span class="fu">When</span><span class="op">(</span>PaymentCompleted<span class="op">)</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">Publish</span><span class="op">(</span>context <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">ReserveInventory</span><span class="op">(</span>context<span class="op">.</span><span class="fu">Saga</span><span class="op">.</span><span class="fu">OrderId</span><span class="op">))</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">TransitionTo</span><span class="op">(</span>ReservingInventory<span class="op">),</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>            <span class="fu">When</span><span class="op">(</span>PaymentFailed<span class="op">)</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">Publish</span><span class="op">(</span>context <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">CancelOrder</span><span class="op">(</span>context<span class="op">.</span><span class="fu">Saga</span><span class="op">.</span><span class="fu">OrderId</span><span class="op">))</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">Finalize</span><span class="op">()</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        <span class="fu">During</span><span class="op">(</span>ReservingInventory<span class="op">,</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>            <span class="fu">When</span><span class="op">(</span>InventoryFailed<span class="op">)</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">Publish</span><span class="op">(</span>context <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">RefundPayment</span><span class="op">(</span>context<span class="op">.</span><span class="fu">Saga</span><span class="op">.</span><span class="fu">OrderId</span><span class="op">))</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">Publish</span><span class="op">(</span>context <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">CancelOrder</span><span class="op">(</span>context<span class="op">.</span><span class="fu">Saga</span><span class="op">.</span><span class="fu">OrderId</span><span class="op">))</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">Finalize</span><span class="op">()</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="critical-design-considerations">Critical Design
+Considerations</h3>
+<p>To build resilient Sagas in C#, keep the following technical
+requirements in mind:</p>
+<ul>
+<li><strong>Idempotency:</strong> Network partitions and retries mean
+services may receive duplicate messages. Every local transaction and
+compensating transaction handler must be idempotent.</li>
+<li><strong>Correlation IDs:</strong> Every message, event, and command
+within a Saga lifecycle must carry a shared identifier (such as
+<code>CorrelationId</code>) to map incoming events back to the active
+Saga instance.</li>
+<li><strong>Semantic Rollbacks:</strong> Compensating transactions do
+not restore the database to its exact prior state via a snapshot; they
+apply forward-moving operations that logically undo previous actions
+(e.g., creating a credit entry instead of deleting a debit entry).</li>
+<li><strong>State Persistence:</strong> In orchestration, the Saga's
+current state must be persisted reliably (using databases like SQL
+Server, PostgreSQL, or MongoDB) to survive service crashes and
+restarts.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/saga-pattern-for-distributed-transactions-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

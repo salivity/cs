@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Is ASP.NET Core Middleware and How to Write It - cs</title>
+    <meta name="description" content="This article explains the concept of middleware in ASP.NET Core, illustrates how the HTTP request pipeline operates, and provides practical C# code examples for creating and registering custom middleware to process requests and responses. --- Middleware i">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/what-is-asp-net-core-middleware-and-how-to-write-it">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Is ASP.NET Core Middleware and How to Write It - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/what-is-asp-net-core-middleware-and-how-to-write-it" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the concept of middleware in ASP.NET Core, illustrates how the HTTP request pipeline operates, and provides practical C# code examples for creating and registering custom middleware to process requests and responses. --- Middleware i" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-is-aspnet-core-middleware-and-how-to-write-it">What Is
+ASP.NET Core Middleware and How to Write It</h1>
+<p>This article explains the concept of middleware in ASP.NET Core,
+illustrates how the HTTP request pipeline operates, and provides
+practical C# code examples for creating and registering custom
+middleware to process requests and responses.</p>
+<hr />
+<h3 id="what-is-middleware-in-aspnet-core">What Is Middleware in ASP.NET
+Core?</h3>
+<p>Middleware is software assembled into an application pipeline to
+handle incoming HTTP requests and outgoing responses. Each middleware
+component in ASP.NET Core:</p>
+<ul>
+<li>Decides whether to pass the request to the next component in the
+pipeline.</li>
+<li>Performs logic both before and after the next component is
+invoked.</li>
+</ul>
+<p>The sequence of middleware components executes in the order they are
+defined in <code>Program.cs</code>. When a request enters the
+application, it travels through the middleware chain sequentially. Once
+a terminating middleware handles the request (or execution finishes),
+the response travels back out through the same components in reverse
+order.</p>
+<p>Common built-in middleware includes authentication, authorization,
+static file serving, routing, and exception handling.</p>
+<hr />
+<h3 id="the-middleware-execution-model">The Middleware Execution
+Model</h3>
+<p>The pipeline relies on a <code>RequestDelegate</code>—a function that
+processes an <code>HttpContext</code>. Three primary extension methods
+configure middleware in ASP.NET Core:</p>
+<ul>
+<li><strong><code>app.Use(...)</code></strong>: Chained middleware that
+executes code and calls the <code>next</code> delegate to continue the
+pipeline.</li>
+<li><strong><code>app.Run(...)</code></strong>: Terminal middleware that
+handles the request and ends the pipeline without calling subsequent
+components.</li>
+<li><strong><code>app.Map(...)</code></strong>: Branches the request
+pipeline based on matching request paths.</li>
+</ul>
+<hr />
+<h3 id="writing-inline-middleware">Writing Inline Middleware</h3>
+<p>For simple operations, you can register inline middleware directly in
+<code>Program.cs</code> using <code>app.Use</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">Use</span><span class="op">(</span><span class="fu">async</span> <span class="op">(</span>context<span class="op">,</span> next<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Code executed before the next middleware</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Request: {context.Request.Method} {context.Request.Path}&quot;</span><span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    await <span class="fu">next</span><span class="op">(</span>context<span class="op">);</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Code executed after the next middleware</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Response: {context.Response.StatusCode}&quot;</span><span class="op">);</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapGet</span><span class="op">(</span><span class="st">&quot;/&quot;</span><span class="op">,</span> <span class="op">()</span> <span class="op">=&gt;</span> <span class="st">&quot;Hello World&quot;</span><span class="op">);</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">Run</span><span class="op">();</span></span></code></pre></div>
+<hr />
+<h3 id="writing-class-based-custom-middleware">Writing Class-Based
+Custom Middleware</h3>
+<p>For maintainability, complex logic should reside in dedicated
+middleware classes. Standard middleware adheres to the convention-based
+pattern:</p>
+<ol type="1">
+<li>A public constructor accepting a <code>RequestDelegate</code>.</li>
+<li>A public method named <code>InvokeAsync</code> or
+<code>Invoke</code> taking an <code>HttpContext</code> and returning a
+<code>Task</code>.</li>
+</ol>
+<h4 id="step-1-create-the-middleware-class">Step 1: Create the
+Middleware Class</h4>
+<p>The following example defines a custom middleware class that
+calculates and logs the execution duration of an HTTP request:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Diagnostics</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> PerformanceTrackingMiddleware</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> RequestDelegate _next<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> ILogger<span class="op">&lt;</span>PerformanceTrackingMiddleware<span class="op">&gt;</span> _logger<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">PerformanceTrackingMiddleware</span><span class="op">(</span>RequestDelegate next<span class="op">,</span> ILogger<span class="op">&lt;</span>PerformanceTrackingMiddleware<span class="op">&gt;</span> logger<span class="op">)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        _next <span class="op">=</span> next<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        _logger <span class="op">=</span> logger<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task <span class="fu">InvokeAsync</span><span class="op">(</span>HttpContext context<span class="op">)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> stopwatch <span class="op">=</span> Stopwatch<span class="op">.</span><span class="fu">StartNew</span><span class="op">();</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Call the next middleware in the pipeline</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>            await <span class="fu">_next</span><span class="op">(</span>context<span class="op">);</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>        <span class="kw">finally</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>            stopwatch<span class="op">.</span><span class="fu">Stop</span><span class="op">();</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>            <span class="dt">var</span> elapsedMs <span class="op">=</span> stopwatch<span class="op">.</span><span class="fu">ElapsedMilliseconds</span><span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>            _logger<span class="op">.</span><span class="fu">LogInformation</span><span class="op">(</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;HTTP {Method} {Path} completed in {Elapsed} ms with status code {StatusCode}&quot;</span><span class="op">,</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>                context<span class="op">.</span><span class="fu">Request</span><span class="op">.</span><span class="fu">Method</span><span class="op">,</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>                context<span class="op">.</span><span class="fu">Request</span><span class="op">.</span><span class="fu">Path</span><span class="op">,</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>                elapsedMs<span class="op">,</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>                context<span class="op">.</span><span class="fu">Response</span><span class="op">.</span><span class="fu">StatusCode</span><span class="op">);</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="step-2-create-an-extension-method">Step 2: Create an Extension
+Method</h4>
+<p>Expose an extension method on <code>IApplicationBuilder</code> to
+cleanly integrate the middleware into the pipeline:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> PerformanceTrackingMiddlewareExtensions</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> IApplicationBuilder <span class="fu">UsePerformanceTracking</span><span class="op">(</span><span class="kw">this</span> IApplicationBuilder builder<span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> builder<span class="op">.</span><span class="fu">UseMiddleware</span><span class="op">&lt;</span>PerformanceTrackingMiddleware<span class="op">&gt;();</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="step-3-register-the-middleware-in-the-pipeline">Step 3: Register
+the Middleware in the Pipeline</h4>
+<p>Add the middleware in <code>Program.cs</code>. Ensure placement
+reflects the intended execution order relative to routing,
+authentication, and endpoints:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Register custom middleware early in the pipeline</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">UsePerformanceTracking</span><span class="op">();</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">UseRouting</span><span class="op">();</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapGet</span><span class="op">(</span><span class="st">&quot;/&quot;</span><span class="op">,</span> <span class="op">()</span> <span class="op">=&gt;</span> <span class="st">&quot;Pipeline processed successfully.&quot;</span><span class="op">);</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">Run</span><span class="op">();</span></span></code></pre></div>
+<hr />
+<h3 id="key-considerations-for-custom-middleware">Key Considerations for
+Custom Middleware</h3>
+<ul>
+<li><strong>Pipeline Order</strong>: Position matters. For instance,
+security middleware should precede endpoint execution, while
+error-handling middleware should run near the start of the pipeline to
+catch unhandled exceptions from downstream components.</li>
+<li><strong>Scoped Services</strong>: Middleware constructors only
+inject Singleton services because middleware instances are instantiated
+once at application startup. To use Scoped services (such as an Entity
+Framework <code>DbContext</code>), inject them directly into the
+<code>InvokeAsync</code> method signature.</li>
+<li><strong>Short-Circuiting</strong>: Omit calling
+<code>await _next(context)</code> to short-circuit the pipeline if
+validation fails, request limits are exceeded, or unauthorized access is
+detected.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/what-is-asp-net-core-middleware-and-how-to-write-it';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

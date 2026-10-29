@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test-Driven Development Workflow in C# - cs</title>
+    <meta name="description" content="Test-Driven Development (TDD) is a software development methodology where automated tests are written before the functional code. This article provides a comprehensive overview of the TDD workflow within the C# and .NET ecosystem, outlining the classic Re">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/test-driven-development-workflow-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Test-Driven Development Workflow in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/test-driven-development-workflow-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Test-Driven Development (TDD) is a software development methodology where automated tests are written before the functional code. This article provides a comprehensive overview of the TDD workflow within the C# and .NET ecosystem, outlining the classic Re" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="test-driven-development-workflow-in-c">Test-Driven Development
+Workflow in C</h1>
+<p>Test-Driven Development (TDD) is a software development methodology
+where automated tests are written before the functional code. This
+article provides a comprehensive overview of the TDD workflow within the
+C# and .NET ecosystem, outlining the classic Red-Green-Refactor cycle,
+demonstrating its practical implementation with code examples using
+xUnit, and detailing how this process improves software architecture and
+reliability.</p>
+<hr />
+<h3 id="the-red-green-refactor-cycle">The Red-Green-Refactor Cycle</h3>
+<p>The foundation of TDD is a short, iterative feedback loop known as
+the Red-Green-Refactor cycle:</p>
+<ol type="1">
+<li><strong>Red (Write a Failing Test):</strong> Write a unit test that
+defines the expected behavior of a new feature or method. Run the test
+and verify that it fails (or fails to compile), confirming that the test
+works and the feature does not yet exist.</li>
+<li><strong>Green (Make the Test Pass):</strong> Write the simplest,
+most minimal amount of C# code necessary to make the test pass. Do not
+focus on perfection, performance, or clean architecture at this
+stage.</li>
+<li><strong>Refactor (Clean the Code):</strong> Improve the internal
+structure of both the production code and the test suite while keeping
+all tests passing. Remove duplication, improve naming, apply design
+patterns, and ensure readability.</li>
+</ol>
+<hr />
+<h3 id="step-by-step-tdd-example-in-c">Step-by-Step TDD Example in
+C</h3>
+<p>To see TDD in practice, consider implementing a simple
+<code>DiscountCalculator</code> that applies a percentage discount to an
+order amount.</p>
+<h4 id="step-1-the-red-phase-write-the-failing-test">Step 1: The Red
+Phase (Write the Failing Test)</h4>
+<p>Create a test project using a framework like xUnit, NUnit, or MSTest.
+Define the test based on the requirement: applying a 10% discount to an
+order of $100 should return $90.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Xunit<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DiscountCalculatorTests</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">CalculateDiscount_WithValidDiscount_ReturnsDiscountedPrice</span><span class="op">()</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Arrange</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> calculator <span class="op">=</span> <span class="kw">new</span> <span class="fu">DiscountCalculator</span><span class="op">();</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">decimal</span> originalPrice <span class="op">=</span> <span class="dv">100</span>m<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="dt">decimal</span> discountPercentage <span class="op">=</span> <span class="dv">10</span>m<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Act</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">decimal</span> result <span class="op">=</span> calculator<span class="op">.</span><span class="fu">CalculateDiscount</span><span class="op">(</span>originalPrice<span class="op">,</span> discountPercentage<span class="op">);</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Assert</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        Assert<span class="op">.</span><span class="fu">Equal</span><span class="op">(</span><span class="dv">90</span>m<span class="op">,</span> result<span class="op">);</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>At this stage, the code fails to compile because the
+<code>DiscountCalculator</code> class and the
+<code>CalculateDiscount</code> method do not exist. In TDD, a
+compilation failure counts as a failing test (Red).</p>
+<h4 id="step-2-the-green-phase-make-the-test-pass">Step 2: The Green
+Phase (Make the Test Pass)</h4>
+<p>Write the minimum production code needed to satisfy the test.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DiscountCalculator</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">decimal</span> <span class="fu">CalculateDiscount</span><span class="op">(</span><span class="dt">decimal</span> originalPrice<span class="op">,</span> <span class="dt">decimal</span> discountPercentage<span class="op">)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> originalPrice <span class="op">-</span> <span class="op">(</span>originalPrice <span class="op">*</span> <span class="op">(</span>discountPercentage <span class="op">/</span> <span class="dv">100</span>m<span class="op">));</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Run the test runner via the CLI (<code>dotnet test</code>) or through
+an IDE test runner. The test passes (Green).</p>
+<h4 id="step-3-the-refactor-phase">Step 3: The Refactor Phase</h4>
+<p>Examine the code for improvements. Add edge cases by repeating the
+cycle. For instance, what happens if the discount percentage is
+negative?</p>
+<ol type="1">
+<li><strong>Red:</strong> Write a test expecting an
+<code>ArgumentOutOfRangeException</code>.</li>
+<li><strong>Green:</strong> Add validation in the method.</li>
+<li><strong>Refactor:</strong> Extract validation logic or simplify
+expressions.</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// New failing test</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">CalculateDiscount_WithNegativeDiscount_ThrowsArgumentOutOfRangeException</span><span class="op">()</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> calculator <span class="op">=</span> <span class="kw">new</span> <span class="fu">DiscountCalculator</span><span class="op">();</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    Assert<span class="op">.</span><span class="fu">Throws</span><span class="op">&lt;</span>ArgumentOutOfRangeException<span class="op">&gt;(()</span> <span class="op">=&gt;</span> calculator<span class="op">.</span><span class="fu">CalculateDiscount</span><span class="op">(</span><span class="dv">100</span>m<span class="op">,</span> <span class="op">-</span><span class="dv">5</span>m<span class="op">));</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Updated production code to pass the test</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DiscountCalculator</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">decimal</span> <span class="fu">CalculateDiscount</span><span class="op">(</span><span class="dt">decimal</span> originalPrice<span class="op">,</span> <span class="dt">decimal</span> discountPercentage<span class="op">)</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>discountPercentage <span class="op">&lt;</span> <span class="dv">0</span> <span class="op">||</span> discountPercentage <span class="op">&gt;</span> <span class="dv">100</span><span class="op">)</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentOutOfRangeException</span><span class="op">(</span><span class="fu">nameof</span><span class="op">(</span>discountPercentage<span class="op">),</span> <span class="st">&quot;Discount must be between 0 and 100.&quot;</span><span class="op">);</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="dt">decimal</span> discountAmount <span class="op">=</span> originalPrice <span class="op">*</span> <span class="op">(</span>discountPercentage <span class="op">/</span> <span class="dv">100</span>m<span class="op">);</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> originalPrice <span class="op">-</span> discountAmount<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Run all tests again to verify that both the original functionality
+and the new edge-case handling pass without regressions.</p>
+<hr />
+<h3 id="essential-practices-for-tdd-in-c">Essential Practices for TDD in
+C</h3>
+<ul>
+<li><strong>Isolate Dependencies:</strong> Use interfaces and mocking
+libraries like Moq or NSubstitute to isolate the system under test (SUT)
+from databases, external APIs, and file systems.</li>
+<li><strong>Write Meaningful Test Names:</strong> Follow clear naming
+conventions, such as
+<code>MethodName_StateUnderTest_ExpectedBehavior</code>, to document
+code behavior through tests.</li>
+<li><strong>Keep Tests Fast:</strong> Unit tests must execute in
+milliseconds. Fast test suites encourage developers to run tests
+continuously after every minor change.</li>
+<li><strong>Refactor Tests Too:</strong> Test code is production code.
+Keep it maintainable, remove duplication, and avoid hardcoded magic
+numbers when they obscure intent.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/test-driven-development-workflow-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

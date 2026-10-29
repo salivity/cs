@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aspect-Oriented Programming in C# Guide - cs</title>
+    <meta name="description" content="This article provides an overview of Aspect-Oriented Programming (AOP), explains the concept of cross-cutting concerns, and demonstrates practical methods for implementing AOP in C#. You will learn how AOP eliminates boilerplate code, the primary architec">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/aspect-oriented-programming-in-c-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Aspect-Oriented Programming in C# Guide - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/aspect-oriented-programming-in-c-guide" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of Aspect-Oriented Programming (AOP), explains the concept of cross-cutting concerns, and demonstrates practical methods for implementing AOP in C#. You will learn how AOP eliminates boilerplate code, the primary architec" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="aspect-oriented-programming-in-c-guide">Aspect-Oriented
+Programming in C# Guide</h1>
+<p>This article provides an overview of Aspect-Oriented Programming
+(AOP), explains the concept of cross-cutting concerns, and demonstrates
+practical methods for implementing AOP in C#. You will learn how AOP
+eliminates boilerplate code, the primary architectural approaches
+available in the .NET ecosystem, and how to implement method
+interception using dynamic proxies.</p>
+<h3
+id="understanding-aspect-oriented-programming-and-cross-cutting-concerns">Understanding
+Aspect-Oriented Programming and Cross-Cutting Concerns</h3>
+<p>Aspect-Oriented Programming (AOP) is a programming paradigm designed
+to increase modularity by enabling the separation of cross-cutting
+concerns. In traditional Object-Oriented Programming (OOP), code is
+organized into hierarchical classes. However, certain requirements—such
+as logging, caching, authorization, exception handling, and performance
+monitoring—do not fit cleanly into a single class hierarchy. Instead,
+these requirements "cut across" multiple layers and modules of an
+application.</p>
+<p>Without AOP, cross-cutting concerns lead to two major architectural
+issues:</p>
+<ul>
+<li><strong>Code Scattering:</strong> The same boilerplate logic (e.g.,
+opening a database transaction or logging method entry/exit) is
+duplicated across numerous methods and classes.</li>
+<li><strong>Code Tangling:</strong> Business logic becomes obscured
+because it is mixed directly with infrastructure code.</li>
+</ul>
+<p>AOP resolves these problems by encapsulating cross-cutting concerns
+into standalone modules called <strong>aspects</strong>, allowing you to
+apply them declaratively to business logic without modifying the
+underlying methods.</p>
+<h3 id="approaches-to-implementing-aop-in-c">Approaches to Implementing
+AOP in C</h3>
+<p>The C# language does not have native, syntax-level keywords for AOP,
+but the .NET ecosystem provides three primary ways to implement it:</p>
+<ol type="1">
+<li><strong>Design-Pattern-Based Interception (Decorators and
+Middleware):</strong> Using the Decorator pattern or ASP.NET Core Action
+Filters and Middleware to wrap requests or dependencies. This approach
+requires no external tooling but can introduce architectural
+ceremony.</li>
+<li><strong>Compile-Time Weaving:</strong> Modifying the compiled
+Intermediate Language (IL) or generating code during compilation using
+tools like PostSharp, Metalama, or C# Roslyn Source Generators. This
+incurs no runtime performance penalty.</li>
+<li><strong>Runtime Interception (Dynamic Proxies):</strong> Wrapping
+objects dynamically at runtime using tools like
+<code>Castle.Core</code>'s <code>DynamicProxy</code>. Method calls to an
+interface or virtual method are intercepted by a proxy before reaching
+the actual implementation.</li>
+</ol>
+<h3 id="implementing-aop-in-c-using-castle-dynamicproxy">Implementing
+AOP in C# Using Castle DynamicProxy</h3>
+<p>The most common, flexible approach for standard dependency-injected
+services in .NET is runtime interception using
+<code>Castle.DynamicProxy</code>.</p>
+<h4 id="step-1-define-an-interceptor">Step 1: Define an Interceptor</h4>
+<p>An interceptor encapsulates the cross-cutting concern. The following
+example demonstrates a performance-logging aspect:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Diagnostics</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Castle<span class="op">.</span><span class="fu">DynamicProxy</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> PerformanceInterceptor <span class="op">:</span> IInterceptor</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Intercept</span><span class="op">(</span>IInvocation invocation<span class="op">)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> stopwatch <span class="op">=</span> Stopwatch<span class="op">.</span><span class="fu">StartNew</span><span class="op">();</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[AOP] Executing: {invocation.Method.Name}&quot;</span><span class="op">);</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Execute the actual method</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            invocation<span class="op">.</span><span class="fu">Proceed</span><span class="op">();</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">finally</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>            stopwatch<span class="op">.</span><span class="fu">Stop</span><span class="op">();</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[AOP] Finished: {invocation.Method.Name} in {stopwatch.ElapsedMilliseconds}ms&quot;</span><span class="op">);</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="step-2-define-the-service-and-interface">Step 2: Define the
+Service and Interface</h4>
+<p>To enable proxy generation, services should implement interfaces or
+mark target methods as <code>virtual</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IOrderService</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">ProcessOrder</span><span class="op">(</span><span class="dt">int</span> orderId<span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OrderService <span class="op">:</span> IOrderService</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessOrder</span><span class="op">(</span><span class="dt">int</span> orderId<span class="op">)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Pure business logic without logging or timing clutter</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        System<span class="op">.</span><span class="fu">Threading</span><span class="op">.</span><span class="fu">Thread</span><span class="op">.</span><span class="fu">Sleep</span><span class="op">(</span><span class="dv">150</span><span class="op">);</span> <span class="co">// Simulate work</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Processing order {orderId}...&quot;</span><span class="op">);</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="step-3-generate-the-proxied-instance">Step 3: Generate the
+Proxied Instance</h4>
+<p>Use the <code>ProxyGenerator</code> to wrap the business logic
+instance with the interceptor:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Program</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> generator <span class="op">=</span> <span class="kw">new</span> <span class="fu">ProxyGenerator</span><span class="op">();</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> interceptor <span class="op">=</span> <span class="kw">new</span> <span class="fu">PerformanceInterceptor</span><span class="op">();</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Wrap the real service in a proxy implementing IOrderService</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        IOrderService orderService <span class="op">=</span> generator<span class="op">.</span><span class="fu">CreateInterfaceProxyWithTarget</span><span class="op">&lt;</span>IOrderService<span class="op">&gt;(</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>            <span class="kw">new</span> <span class="fu">OrderService</span><span class="op">(),</span> </span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            interceptor</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Execute the method; the interceptor executes transparently</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        orderService<span class="op">.</span><span class="fu">ProcessOrder</span><span class="op">(</span><span class="dv">101</span><span class="op">);</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="summary-of-benefits">Summary of Benefits</h3>
+<p>Implementing cross-cutting concerns via AOP in C# ensures:</p>
+<ul>
+<li><strong>Single Responsibility Principle (SRP):</strong> Business
+services only handle domain logic.</li>
+<li><strong>Maintainability:</strong> Infrastructure logic (such as
+auditing or error handling) is modified in one centralized location
+rather than across dozens of endpoints.</li>
+<li><strong>Readability:</strong> Core algorithms remain clean, concise,
+and focused on business rules.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/aspect-oriented-programming-in-c-guide';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

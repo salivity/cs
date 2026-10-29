@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskScheduler.Default vs Custom Schedulers in C# - cs</title>
+    <meta name="description" content="In .NET, task scheduling determines how and where asynchronous operations and parallel tasks are executed. TaskScheduler.Default queues work directly to the standard .NET ThreadPool, making it the optimal choice for the vast majority of general-purpose an">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/task-scheduler-default-vs-custom-schedulers-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TaskScheduler.Default vs Custom Schedulers in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/task-scheduler-default-vs-custom-schedulers-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In .NET, task scheduling determines how and where asynchronous operations and parallel tasks are executed. TaskScheduler.Default queues work directly to the standard .NET ThreadPool, making it the optimal choice for the vast majority of general-purpose an" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="taskschedulerdefault-vs-custom-schedulers-in-c">TaskScheduler.Default
+vs Custom Schedulers in C</h1>
+<p>In .NET, task scheduling determines how and where asynchronous
+operations and parallel tasks are executed.
+<code>TaskScheduler.Default</code> queues work directly to the standard
+.NET ThreadPool, making it the optimal choice for the vast majority of
+general-purpose and CPU-bound operations. In contrast, custom task
+schedulers allow developers to override this default behavior to control
+concurrency limits, enforce thread affinity, support task
+prioritization, or integrate with specific threading models like UI
+dispatchers.</p>
+<h3 id="understanding-taskschedulerdefault">Understanding
+TaskScheduler.Default</h3>
+<p><code>TaskScheduler.Default</code> is the engine behind
+<code>Task.Run</code> and standard asynchronous operations. When a task
+is queued using the default scheduler, it relies internally on the .NET
+ThreadPool.</p>
+<p>Key characteristics of <code>TaskScheduler.Default</code>:</p>
+<ul>
+<li><strong>ThreadPool Backed:</strong> Work items are processed by
+global and local thread pool queues using a work-stealing algorithm to
+maximize CPU utilization across all available cores.</li>
+<li><strong>Dynamic Scaling:</strong> The thread pool automatically
+manages the number of active threads, injecting or retiring threads
+based on workload, blocking operations, and processor architecture.</li>
+<li><strong>Low Overhead:</strong> Reusing existing thread pool threads
+minimizes the performance cost associated with thread creation and
+destruction.</li>
+<li><strong>Lack of Strict Sequencing:</strong> Tasks are generally
+scheduled in a FIFO or LIFO manner depending on local queue dynamics,
+meaning execution order is not guaranteed.</li>
+</ul>
+<h3 id="understanding-custom-task-schedulers">Understanding Custom Task
+Schedulers</h3>
+<p>A custom task scheduler is created by deriving a class from
+<code>System.Threading.Tasks.TaskScheduler</code>. By overriding its
+core abstract methods—<code>QueueTask</code>,
+<code>TryExecuteTaskInline</code>, and
+<code>GetScheduledTasks</code>—you gain complete control over task
+execution pipelines.</p>
+<p>Common implementations of custom schedulers include:</p>
+<ul>
+<li><strong>Limited Concurrency Schedulers:</strong> Schedulers that
+restrict execution to a maximum number of concurrent operations (e.g.,
+limiting database access to five simultaneous tasks) regardless of how
+many CPU cores are available.</li>
+<li><strong>Ordered / FIFO Schedulers:</strong> Schedulers that enforce
+strict, sequential single-threaded execution to prevent race conditions
+without needing manual locking inside every task.</li>
+<li><strong>SynchronizationContext Schedulers:</strong> Schedulers
+created using
+<code>TaskScheduler.FromCurrentSynchronizationContext()</code>, which
+post tasks back to a specific thread, such as the UI thread in WPF,
+WinForms, or MAUI.</li>
+<li><strong>Priority-Based Schedulers:</strong> Custom queues that sort
+pending tasks by priority levels before handing them off to
+workers.</li>
+</ul>
+<h3 id="core-differences">Core Differences</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>TaskScheduler.Default</code></th>
+<th style="text-align: left;">Custom Task Scheduler</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Execution Target</strong></td>
+<td style="text-align: left;">The global .NET ThreadPool.</td>
+<td style="text-align: left;">Any target: ThreadPool, dedicated threads,
+or UI contexts.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Concurrency Limits</strong></td>
+<td style="text-align: left;">Dynamically adjusted by the runtime based
+on load and core count.</td>
+<td style="text-align: left;">Explicitly defined by the developer (e.g.,
+max degree of parallelism).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Order</strong></td>
+<td style="text-align: left;">Non-deterministic; relies on thread pool
+work-stealing queues.</td>
+<td style="text-align: left;">Fully customizable (FIFO, LIFO,
+Priority-based).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Implementation</strong></td>
+<td style="text-align: left;">Built-in, requires zero setup or
+boilerplate code.</td>
+<td style="text-align: left;">Requires subclassing
+<code>TaskScheduler</code> and managing synchronization.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Inline Execution</strong></td>
+<td style="text-align: left;">Controlled by the runtime to optimize
+short-lived tasks.</td>
+<td style="text-align: left;">Explicitly accepted or rejected via
+<code>TryExecuteTaskInline</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="when-to-use-which">When to Use Which</h3>
+<p><strong>Use <code>TaskScheduler.Default</code> when:</strong></p>
+<ul>
+<li>You are executing standard asynchronous code, Web API requests, or
+general CPU-bound processing.</li>
+<li>You do not need to restrict concurrent operations at the scheduler
+level.</li>
+<li>You are writing code inside modern
+<code>async</code>/<code>await</code> patterns where context switching
+is handled via <code>SynchronizationContext</code> or
+<code>ConfigureAwait(false)</code>.</li>
+</ul>
+<p><strong>Use a custom scheduler when:</strong></p>
+<ul>
+<li>You must interact with legacy single-threaded components (e.g., COM
+objects requiring STA threads).</li>
+<li>You need to update user interface controls from background
+operations using
+<code>TaskScheduler.FromCurrentSynchronizationContext()</code>.</li>
+<li>You need to limit resource consumption at an architectural level by
+restricting concurrency across a collection of tasks using tools like
+the <code>ConcurrentExclusiveSchedulerPair</code>.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/task-scheduler-default-vs-custom-schedulers-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

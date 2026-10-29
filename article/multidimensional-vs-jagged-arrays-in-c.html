@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multidimensional vs Jagged Arrays in C# - cs</title>
+    <meta name="description" content="In C#, multi-axis data can be represented using either multidimensional arrays or jagged arrays. This guide explains how to declare, instantiate, and initialize both array structures, compares their memory footprints and access patterns, and clarifies the">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/multidimensional-vs-jagged-arrays-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Multidimensional vs Jagged Arrays in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/multidimensional-vs-jagged-arrays-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, multi-axis data can be represented using either multidimensional arrays or jagged arrays. This guide explains how to declare, instantiate, and initialize both array structures, compares their memory footprints and access patterns, and clarifies the" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="multidimensional-vs-jagged-arrays-in-c">Multidimensional vs
+Jagged Arrays in C</h1>
+<p>In C#, multi-axis data can be represented using either
+multidimensional arrays or jagged arrays. This guide explains how to
+declare, instantiate, and initialize both array structures, compares
+their memory footprints and access patterns, and clarifies the
+functional and performance differences between them.</p>
+<h2 id="multidimensional-arrays">Multidimensional Arrays</h2>
+<p>A multidimensional array (often called a rectangular array)
+represents a fixed grid where every row has the exact same number of
+columns. It is declared using commas inside a single set of square
+brackets (<code>[,]</code>).</p>
+<h3 id="declaration-and-initialization">Declaration and
+Initialization</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Declaration and instantiation with fixed dimensions (2 rows, 3 columns)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[,]</span> matrix <span class="op">=</span> <span class="kw">new</span> <span class="dt">int</span><span class="op">[</span><span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">];</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Declaration with inline initialization</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[,]</span> grid <span class="op">=</span> <span class="kw">new</span> <span class="dt">int</span><span class="op">[</span><span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">]</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span> <span class="op">},</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">6</span> <span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Accessing and modifying values</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>grid<span class="op">[</span><span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">]</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span>        <span class="co">// Sets row 0, column 1 to 10</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> val <span class="op">=</span> grid<span class="op">[</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">];</span>   <span class="co">// Reads row 1, column 2 (returns 6)</span></span></code></pre></div>
+<p>In memory, a multidimensional array is allocated as a single
+contiguous block of memory. This ensures compact memory usage and
+minimal garbage collection overhead, as only one object is allocated on
+the heap.</p>
+<h2 id="jagged-arrays">Jagged Arrays</h2>
+<p>A jagged array is an "array of arrays." Unlike rectangular arrays,
+each nested row is an independent array instance, meaning rows can have
+varying lengths. It is declared using multiple sets of brackets
+(<code>[][]</code>).</p>
+<h3 id="declaration-and-initialization-1">Declaration and
+Initialization</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Declaration of an array containing 3 arrays</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[][]</span> jagged <span class="op">=</span> <span class="kw">new</span> <span class="dt">int</span><span class="op">[</span><span class="dv">3</span><span class="op">][];</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Instantiating the internal arrays with different lengths</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>jagged<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">=</span> <span class="kw">new</span> <span class="dt">int</span><span class="op">[</span><span class="dv">2</span><span class="op">]</span> <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span> <span class="op">};</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>jagged<span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">=</span> <span class="kw">new</span> <span class="dt">int</span><span class="op">[</span><span class="dv">4</span><span class="op">]</span> <span class="op">{</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">6</span> <span class="op">};</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>jagged<span class="op">[</span><span class="dv">2</span><span class="op">]</span> <span class="op">=</span> <span class="kw">new</span> <span class="dt">int</span><span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">{</span> <span class="dv">7</span> <span class="op">};</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Accessing and modifying values</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>jagged<span class="op">[</span><span class="dv">0</span><span class="op">][</span><span class="dv">1</span><span class="op">]</span> <span class="op">=</span> <span class="dv">20</span><span class="op">;</span>        <span class="co">// Sets index 1 of the first array to 20</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> val <span class="op">=</span> jagged<span class="op">[</span><span class="dv">1</span><span class="op">][</span><span class="dv">2</span><span class="op">];</span>   <span class="co">// Reads index 2 of the second array (returns 5)</span></span></code></pre></div>
+<p>In memory, the top-level array stores references pointing to separate
+array objects on the heap. This allows for irregular, non-rectangular
+shapes, but results in multiple memory allocations.</p>
+<h2 id="key-differences">Key Differences</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Multidimensional Arrays
+(<code>[,]</code>)</th>
+<th style="text-align: left;">Jagged Arrays (<code>[][]</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Structure</strong></td>
+<td style="text-align: left;">Uniform rectangular grid</td>
+<td style="text-align: left;">Irregular "array of arrays"</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Row Lengths</strong></td>
+<td style="text-align: left;">Fixed; every row must match</td>
+<td style="text-align: left;">Variable; rows can differ in size</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Memory Allocation</strong></td>
+<td style="text-align: left;">Single contiguous block</td>
+<td style="text-align: left;">Multiple independent allocations</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Access Syntax</strong></td>
+<td style="text-align: left;"><code>array[row, col]</code></td>
+<td style="text-align: left;"><code>array[row][col]</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>CLR Optimization</strong></td>
+<td style="text-align: left;">Slower indexing instructions</td>
+<td style="text-align: left;">Faster (standard single-dimension
+optimizations)</td>
+</tr>
+</tbody>
+</table>
+<p>While multidimensional arrays offer a cleaner syntax for fixed
+matrices, jagged arrays often deliver superior performance in execution
+speed because the .NET Common Language Runtime (CLR) heavily optimizes
+single-dimensional array operations.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/multidimensional-vs-jagged-arrays-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

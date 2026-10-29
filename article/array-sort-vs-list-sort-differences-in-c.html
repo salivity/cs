@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Array.Sort vs List.Sort Differences in C# - cs</title>
+    <meta name="description" content="Developers frequently wonder whether Array.Sort and List&lt;T&gt;.Sort rely on different sorting algorithms in C# to achieve optimal performance. In modern .NET implementations, both methods use the exact same underlying algorithm: IntroSort (Introspective Sort">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/array-sort-vs-list-sort-differences-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Array.Sort vs List.Sort Differences in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/array-sort-vs-list-sort-differences-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Developers frequently wonder whether Array.Sort and List&lt;T&gt;.Sort rely on different sorting algorithms in C# to achieve optimal performance. In modern .NET implementations, both methods use the exact same underlying algorithm: IntroSort (Introspective Sort" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="arraysort-vs-listsort-differences-in-c">Array.Sort vs List.Sort
+Differences in C</h1>
+<p>Developers frequently wonder whether <code>Array.Sort</code> and
+<code>List&lt;T&gt;.Sort</code> rely on different sorting algorithms in
+C# to achieve optimal performance. In modern .NET implementations, both
+methods use the exact same underlying algorithm:
+<strong>IntroSort</strong> (Introspective Sort). This article breaks
+down how this algorithm works, how <code>List&lt;T&gt;.Sort</code> is
+connected to <code>Array.Sort</code>, and the few practical distinctions
+between using the two APIs.</p>
+<h3 id="the-underlying-algorithm-introsort">The Underlying Algorithm:
+IntroSort</h3>
+<p>Both <code>Array.Sort</code> and <code>List&lt;T&gt;.Sort</code>
+utilize IntroSort, a hybrid comparison-based sorting algorithm.
+IntroSort dynamically selects among three algorithms based on the state
+of the data:</p>
+<ol type="1">
+<li><strong>QuickSort</strong>: The algorithm begins with a standard
+dual-pivot or median-of-three QuickSort, which provides fast
+average-case performance of <span class="math inline">\(O(n \log
+n)\)</span>.</li>
+<li><strong>HeapSort</strong>: If the recursion depth exceeds a
+threshold (typically <span class="math inline">\(2 \times
+\log_2(n)\)</span>), IntroSort switches to HeapSort. This avoids
+QuickSort's worst-case time complexity of <span
+class="math inline">\(O(n^2)\)</span> and guarantees an upper bound of
+<span class="math inline">\(O(n \log n)\)</span>.</li>
+<li><strong>InsertionSort</strong>: When a partition becomes small
+(typically 16 elements or fewer), the algorithm switches to
+InsertionSort, which runs faster on small arrays due to minimal overhead
+and high cache locality.</li>
+</ol>
+<h3 id="how-listsort-relies-on-arraysort">How List.Sort Relies on
+Array.Sort</h3>
+<p><code>List&lt;T&gt;</code> in .NET is a wrapper around an internal
+array named <code>_items</code>. When you call
+<code>List&lt;T&gt;.Sort()</code>, the runtime does not execute a
+distinct sorting algorithm. Instead, it directly invokes
+<code>Array.Sort</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Internal .NET implementation detail of List&lt;T&gt;.Sort</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Array<span class="op">.</span><span class="fu">Sort</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">_items</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="kw">this</span><span class="op">.</span><span class="fu">_size</span><span class="op">,</span> comparer<span class="op">);</span></span></code></pre></div>
+<p>Because of this direct delegation, <code>List&lt;T&gt;.Sort</code>
+and <code>Array.Sort&lt;T&gt;</code> share identical algorithmic
+execution paths, theoretical time complexities, and memory usage
+characteristics.</p>
+<h3 id="key-practical-differences">Key Practical Differences</h3>
+<p>While the algorithms are identical, there are operational differences
+to consider:</p>
+<ul>
+<li><strong>API Design</strong>: <code>Array.Sort</code> is a static
+method on the <code>System.Array</code> class, requiring the target
+array to be passed as an argument. <code>List&lt;T&gt;.Sort</code> is an
+instance method that modifies the list directly.</li>
+<li><strong>Non-Generic Overloads</strong>: <code>Array.Sort</code>
+provides legacy non-generic overloads that operate on weakly typed
+<code>System.Array</code> references. These overloads require runtime
+type checking and boxing/unboxing for value types, making them
+significantly slower than the generic <code>Array.Sort&lt;T&gt;</code>
+or <code>List&lt;T&gt;.Sort</code>.</li>
+<li><strong>Span Support</strong>: Modern .NET provides
+<code>MemoryExtensions.Sort</code>, allowing you to sort
+<code>Span&lt;T&gt;</code> and <code>ReadOnlySpan&lt;T&gt;</code> using
+the same IntroSort engine. This offers zero-allocation sorting over
+subsets of arrays without needing to pass separate index and length
+parameters.</li>
+</ul>
+<h3 id="stability-and-alternatives">Stability and Alternatives</h3>
+<p>Neither <code>Array.Sort</code> nor <code>List&lt;T&gt;.Sort</code>
+is a stable sort. If two elements have equal keys, their relative order
+is not guaranteed to be preserved after sorting.</p>
+<p>If stability is required, developers must use LINQ's
+<code>OrderBy</code> or <code>OrderByDescending</code> methods instead.
+Note that LINQ sorting performs an out-of-place, stable sort that
+allocates additional memory and yields <span class="math inline">\(O(n
+\log n)\)</span> performance, trading execution speed and memory
+efficiency for order preservation.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/array-sort-vs-list-sort-differences-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use AsyncLocal in C# for Async State Flow - cs</title>
+    <meta name="description" content="In modern asynchronous C# programming, managing ambient context across multiple threads can be challenging. This article explains what AsyncLocal&lt;T&gt; is, why traditional thread-local storage fails in asynchronous workflows, how AsyncLocal&lt;T&gt; leverages the">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-use-async-local-in-c-for-async-state-flow">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use AsyncLocal in C# for Async State Flow - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-use-async-local-in-c-for-async-state-flow" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In modern asynchronous C# programming, managing ambient context across multiple threads can be challenging. This article explains what AsyncLocal&lt;T&gt; is, why traditional thread-local storage fails in asynchronous workflows, how AsyncLocal&lt;T&gt; leverages the" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-asynclocal-in-c-for-async-state-flow">How to Use
+AsyncLocal in C# for Async State Flow</h1>
+<p>In modern asynchronous C# programming, managing ambient context
+across multiple threads can be challenging. This article explains what
+<code>AsyncLocal&lt;T&gt;</code> is, why traditional thread-local
+storage fails in asynchronous workflows, how
+<code>AsyncLocal&lt;T&gt;</code> leverages the .NET
+<code>ExecutionContext</code> to persist data across <code>await</code>
+boundaries, and the underlying copy-on-write mechanics that govern its
+behavior.</p>
+<h2 id="the-problem-with-threadlocal-in-async-code">The Problem with
+ThreadLocal in Async Code</h2>
+<p>Before <code>AsyncLocal&lt;T&gt;</code>, developers relied on
+<code>ThreadLocal&lt;T&gt;</code> to store contextual data specific to
+the executing thread. However, asynchronous programming using
+<code>async</code> and <code>await</code> fundamentally breaks the
+assumption of single-thread execution:</p>
+<ul>
+<li>When an <code>await</code> yields execution, the calling thread is
+returned to the <code>ThreadPool</code>.</li>
+<li>When the awaited task completes, the continuation may resume on an
+entirely different thread.</li>
+<li>Because <code>ThreadLocal&lt;T&gt;</code> is strictly tied to an
+individual managed thread ID, any state stored inside it is lost or
+swapped when execution resumes on a different thread.</li>
+</ul>
+<h2 id="what-is-asynclocalt">What is AsyncLocal&lt;T&gt;?</h2>
+<p>Introduced in .NET 4.6, <code>AsyncLocal&lt;T&gt;</code> represents
+ambient data that is local to a specific asynchronous control flow
+rather than a specific physical thread.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="kw">static</span> <span class="kw">readonly</span> AsyncLocal<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> _correlationId <span class="op">=</span> <span class="kw">new</span> AsyncLocal<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;();</span></span></code></pre></div>
+<p>Regardless of how many times execution yields or which thread pool
+threads are assigned to run the continuations, the data stored inside
+<code>_correlationId.Value</code> remains accessible throughout that
+logical path of execution.</p>
+<h2 id="how-asynclocal-flows-across-await-boundaries">How AsyncLocal
+Flows Across <code>await</code> Boundaries</h2>
+<p>The persistence of <code>AsyncLocal&lt;T&gt;</code> values is powered
+by the .NET <strong><code>ExecutionContext</code></strong>.</p>
+<ol type="1">
+<li><strong>Context Capture</strong>: When an asynchronous method begins
+or invokes an <code>await</code> expression, the runtime captures the
+current <code>ExecutionContext</code>. This context contains an internal
+dictionary holding references to all active
+<code>AsyncLocal&lt;T&gt;</code> values.</li>
+<li><strong>Context Restoration</strong>: When the awaited operation
+completes and a thread becomes available to run the continuation, the
+runtime restores the captured <code>ExecutionContext</code> onto that
+thread before executing the remaining code.</li>
+<li><strong>Thread Transparency</strong>: Because the context travels
+with the delegate representing the continuation, your code observes the
+same <code>AsyncLocal&lt;T&gt;</code> values even if execution resumes
+on a different thread.</li>
+</ol>
+<h2 id="flow-mechanics-downward-flow-and-copy-on-write">Flow Mechanics:
+Downward Flow and Copy-on-Write</h2>
+<p><code>AsyncLocal&lt;T&gt;</code> follows a "flow down, not up" model
+governed by copy-on-write semantics.</p>
+<ul>
+<li><strong>Parent to Child (Downward)</strong>: A child asynchronous
+method inherits the <code>AsyncLocal&lt;T&gt;</code> values set by its
+caller.</li>
+<li><strong>Child to Parent (Upward Isolation)</strong>: If a child
+method modifies an <code>AsyncLocal&lt;T&gt;.Value</code>, that mutation
+only affects the child's local context. The parent's context remains
+unchanged when execution returns to the parent.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> async Task <span class="fu">ProcessAsync</span><span class="op">()</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    _correlationId<span class="op">.</span><span class="fu">Value</span> <span class="op">=</span> <span class="st">&quot;Initial&quot;</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    await <span class="fu">ModifyContextAsync</span><span class="op">();</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Output is still &quot;Initial&quot; because child modifications do not flow upward.</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>_correlationId<span class="op">.</span><span class="fu">Value</span><span class="op">);</span> </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> async Task <span class="fu">ModifyContextAsync</span><span class="op">()</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The child starts with &quot;Initial&quot;, but reassigning creates a fork.</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    _correlationId<span class="op">.</span><span class="fu">Value</span> <span class="op">=</span> <span class="st">&quot;Modified&quot;</span><span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    await Task<span class="op">.</span><span class="fu">Yield</span><span class="op">();</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><em>Note on Reference Types</em>: If the value stored in
+<code>AsyncLocal&lt;T&gt;</code> is a mutable reference type (such as a
+<code>class</code> or <code>List&lt;T&gt;</code>), mutating properties
+or items of that object <em>will</em> be visible across both parent and
+child, because both contexts hold references pointing to the same
+instance in memory. To avoid unexpected side effects, store immutable
+objects or value types in <code>AsyncLocal&lt;T&gt;</code>.</p>
+<h2 id="suppressing-context-flow">Suppressing Context Flow</h2>
+<p>In high-throughput scenarios, capturing and restoring the
+<code>ExecutionContext</code> carries a minor performance cost. If you
+spawn a background task that does not need ambient state, you can
+suppress context flow:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> <span class="op">(</span>ExecutionContext<span class="op">.</span><span class="fu">SuppressFlow</span><span class="op">())</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    Task<span class="op">.</span><span class="fu">Run</span><span class="op">(()</span> <span class="op">=&gt;</span> </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// _correlationId.Value will be null here</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">});</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Context flow is automatically restored when leaving the using scope</span></span></code></pre></div>
+<h2 id="monitoring-changes-with-asynclocalvaluechangedargs">Monitoring
+Changes with AsyncLocalValueChangedArgs</h2>
+<p><code>AsyncLocal&lt;T&gt;</code> provides a constructor that accepts
+a callback delegate. This delegate triggers whenever the ambient value
+changes, whether due to direct assignment or because the context was
+restored:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="kw">static</span> <span class="kw">readonly</span> AsyncLocal<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> _traceId <span class="op">=</span> <span class="kw">new</span> AsyncLocal<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;(</span>args <span class="op">=&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Previous: {args.PreviousValue}, Current: {args.CurrentValue}, Thread Context Changed: {args.ThreadContextChanged}&quot;</span><span class="op">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<p>This feature is particularly useful for profiling, cleanup, or
+synchronizing native tracking contexts.</p>
+<h2 id="common-use-cases">Common Use Cases</h2>
+<ul>
+<li><strong>Distributed Tracing</strong>: Storing Correlation IDs or
+Trace Identifiers across HTTP pipelines and background jobs.</li>
+<li><strong>Security Contexts</strong>: Propagating user identity,
+claims, or tenancy identifiers across asynchronous business logic
+layers.</li>
+<li><strong>Ambient Scopes</strong>: Managing database transactions or
+diagnostic activity scopes without passing context objects manually
+through every method signature.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-use-async-local-in-c-for-async-state-flow';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

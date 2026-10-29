@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generic Structs and Heap Allocation in C# - cs</title>
+    <meta name="description" content="Generic structs in C# allow developers to build reusable, type-safe value types without sacrificing runtime performance. Understanding their interaction with memory is essential for writing low-allocation, high-throughput applications. This article explai">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/generic-structs-and-heap-allocation-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Generic Structs and Heap Allocation in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/generic-structs-and-heap-allocation-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Generic structs in C# allow developers to build reusable, type-safe value types without sacrificing runtime performance. Understanding their interaction with memory is essential for writing low-allocation, high-throughput applications. This article explai" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="generic-structs-and-heap-allocation-in-c">Generic Structs and
+Heap Allocation in C</h1>
+<p>Generic structs in C# allow developers to build reusable, type-safe
+value types without sacrificing runtime performance. Understanding their
+interaction with memory is essential for writing low-allocation,
+high-throughput applications. This article explains what generic structs
+are, how the .NET Common Language Runtime (CLR) handles them in memory,
+and the specific conditions under which they prevent or inadvertently
+cause heap allocations.</p>
+<h2 id="what-are-generic-structs">What Are Generic Structs?</h2>
+<p>A generic struct is a value type defined with one or more type
+parameters. Like standard structs, generic structs are typically
+allocated inline wherever they are declared—either on the execution
+stack for local variables or within the heap memory of an enclosing
+reference type.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> KeyValuePair<span class="op">&lt;</span>TKey<span class="op">,</span> TValue<span class="op">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> TKey Key <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> TValue Value <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">KeyValuePair</span><span class="op">(</span>TKey key<span class="op">,</span> TValue value<span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        Key <span class="op">=</span> key<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        Value <span class="op">=</span> value<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The CLR handles generic value types differently than generic
+reference types (classes). When a generic struct is instantiated with a
+value type (such as <code>int</code> or <code>float</code>), the
+Just-In-Time (JIT) compiler generates a dedicated, specialized machine
+code implementation. If it is instantiated with a reference type (like
+<code>string</code> or custom classes), the JIT shares the code
+implementation among all reference-type arguments because references are
+pointer-sized values, but the struct itself remains a value type.</p>
+<h2 id="how-generic-structs-affect-heap-allocation">How Generic Structs
+Affect Heap Allocation</h2>
+<h3 id="1-eliminating-boxing-through-type-specialization">1. Eliminating
+Boxing Through Type Specialization</h3>
+<p>The primary performance benefit of generic structs is the elimination
+of boxing. In non-generic C# code, passing a value type to an
+abstraction often requires converting it to an <code>object</code> or a
+non-generic interface, copying the data from the stack to a newly
+allocated object on the managed heap.</p>
+<p>Because the JIT creates specialized native code for each unique value
+type parameter, operations on
+<code>KeyValuePair&lt;int, double&gt;</code> run without allocating any
+heap memory. Fields of type <code>T</code> are stored directly within
+the struct layout, maintaining value-type semantics and keeping
+allocations at zero.</p>
+<h3 id="2-interface-calls-and-generic-constraints">2. Interface Calls
+and Generic Constraints</h3>
+<p>When a struct implements an interface, invoking that interface can
+inadvertently cause a heap allocation if not handled via generic
+constraints.</p>
+<ul>
+<li><p><strong>Allocating (Boxing):</strong> Passing a struct to a
+parameter typed directly as an interface causes boxing.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">Process</span><span class="op">(</span>IDisposable disposable<span class="op">)</span> <span class="co">// Boxing occurs if a struct is passed</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    disposable<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+<li><p><strong>Non-Allocating:</strong> Using a generic constraint
+allows the JIT to invoke interface methods directly via the struct's
+method table without boxing.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> Process<span class="op">&lt;</span>T<span class="op">&gt;(</span>T disposable<span class="op">)</span> where T <span class="op">:</span> <span class="kw">struct</span><span class="op">,</span> IDisposable</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    disposable<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span> <span class="co">// No boxing; direct call via specialized code</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+</ul>
+<h3 id="3-array-and-collection-allocations">3. Array and Collection
+Allocations</h3>
+<p>When generic structs are stored in arrays or generic collections like
+<code>List&lt;T&gt;</code>, they are packed contiguously in memory.</p>
+<p>For an array of structs (<code>MyStruct&lt;int&gt;[]</code>), the
+runtime allocates a single block of heap memory for the array object
+itself, and all struct elements reside inline within that continuous
+memory block. This contrasts with an array of reference types
+(<code>MyClass&lt;int&gt;[]</code>), where the array contains only
+pointers, requiring separate heap allocations for each object
+instance.</p>
+<h2
+id="common-scenarios-where-generic-structs-cause-heap-allocations">Common
+Scenarios Where Generic Structs Cause Heap Allocations</h2>
+<p>Despite being value types, generic structs can still trigger heap
+allocations in several scenarios:</p>
+<ul>
+<li><strong>Implicit Boxing to <code>object</code>:</strong> Calling
+non-overridden methods inherited from <code>System.Object</code> (such
+as <code>ToString()</code>, <code>Equals()</code>, or
+<code>GetHashCode()</code>) causes the runtime to box the struct.</li>
+<li><strong>Calling <code>GetType()</code>:</strong> The
+<code>GetType()</code> method is non-virtual and cannot be overridden;
+invoking it on a struct always allocates an object on the heap.</li>
+<li><strong>Captured Variables in Closures:</strong> If a generic struct
+is captured by a lambda expression, local function, or used within an
+<code>async</code> state machine, the compiler elevates the variable to
+a field inside a compiler-generated heap-allocated class.</li>
+<li><strong>Casting to <code>ValueType</code> or
+<code>Enum</code>:</strong> Any conversion from a generic struct to
+<code>System.ValueType</code> or <code>System.Enum</code> triggers
+boxing.</li>
+</ul>
+<h2 id="best-practices-for-zero-allocation">Best Practices for Zero
+Allocation</h2>
+<ol type="1">
+<li><strong>Implement <code>IEquatable&lt;T&gt;</code>:</strong> Always
+implement <code>IEquatable&lt;T&gt;</code> and override
+<code>GetHashCode()</code> and <code>Equals(object)</code> on generic
+structs to avoid boxing during equality checks and hashing.</li>
+<li><strong>Use the <code>readonly</code> Modifier:</strong> Mark
+generic structs as <code>readonly struct</code> whenever possible to
+guarantee immutability and allow the compiler to eliminate defensive
+copying.</li>
+<li><strong>Pass by Reference with <code>in</code>:</strong> For larger
+generic structs, pass them using the <code>in</code> parameter modifier
+or <code>ref readonly</code> to avoid copying data across method
+boundaries without moving the data to the heap.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/generic-structs-and-heap-allocation-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

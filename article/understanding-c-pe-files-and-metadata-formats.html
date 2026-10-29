@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding C# PE Files and Metadata Formats - cs</title>
+    <meta name="description" content="When C# source code compiles, it does not produce native machine code directly; instead, it generates a managed Portable Executable (PE) file containing Common Intermediate Language (CIL) instructions and a comprehensive metadata structure. This article e">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/understanding-c-pe-files-and-metadata-formats">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding C# PE Files and Metadata Formats - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/understanding-c-pe-files-and-metadata-formats" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When C# source code compiles, it does not produce native machine code directly; instead, it generates a managed Portable Executable (PE) file containing Common Intermediate Language (CIL) instructions and a comprehensive metadata structure. This article e" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-c-pe-files-and-metadata-formats">Understanding C#
+PE Files and Metadata Formats</h1>
+<p>When C# source code compiles, it does not produce native machine code
+directly; instead, it generates a managed Portable Executable (PE) file
+containing Common Intermediate Language (CIL) instructions and a
+comprehensive metadata structure. This article explains the internal
+composition of managed PE files, details the underlying CLI metadata
+tables and heap systems, and demonstrates how the Common Language
+Runtime (CLR) uses these components to execute code securely and
+efficiently.</p>
+<h3 id="what-is-a-managed-portable-executable-pe-file">What Is a Managed
+Portable Executable (PE) File?</h3>
+<p>A Portable Executable (PE) file is the standard binary format used by
+Windows operating systems for executable files (<code>.exe</code>) and
+dynamic-link libraries (<code>.dll</code>). While native applications
+compile directly to platform-specific machine code, C# projects target
+the Common Language Infrastructure (CLI).</p>
+<p>A compiled C# binary retains standard Windows PE structures to ensure
+backward compatibility with the operating system loader, but it embeds
+an execution payload tailored for the CLR. The standard structure
+includes:</p>
+<ul>
+<li><strong>DOS Header and Stub:</strong> A legacy 16-bit header
+enabling the file to display a compatibility message if executed in
+MS-DOS.</li>
+<li><strong>PE Header:</strong> Contains basic execution requirements,
+such as CPU architecture targets (x86, x64, AnyCPU), subsystem
+specifications, and timestamps.</li>
+<li><strong>Section Headers:</strong> Pointers to the binary's actual
+contents, typically mapped into memory sections such as
+<code>.text</code> (read-only code and data) and <code>.rsrc</code>
+(resources like application icons).</li>
+<li><strong>CLR Header (<code>IMAGE_COR20_HEADER</code>):</strong>
+Located inside the <code>.text</code> section, this unique header marks
+the binary as managed code. It holds runtime version requirements, flags
+(such as strong-naming or IL-only execution), the entry-point token, and
+the Relative Virtual Address (RVA) of the CLI metadata.</li>
+</ul>
+<p>When launched, the native operating system loader reads the entry
+point specified in the PE header, which typically points to a stub
+function (<code>_CorExeMain</code> or <code>_CorDllMain</code>) that
+boots the CLR runtime to manage further execution.</p>
+<h3 id="the-role-of-metadata-in-net-binaries">The Role of Metadata in
+.NET Binaries</h3>
+<p>In traditional native compilation (like C++), type definitions,
+parameter types, and function names are stripped out during the build
+process, leaving raw memory offsets. In contrast, C# binaries are fully
+self-describing through metadata.</p>
+<p>Metadata eliminates the need for separate C/C++ header files
+(<code>.h</code>) or interface definition languages (IDL). It provides
+the CLR with full information about:</p>
+<ol type="1">
+<li><strong>Assembly Manifest:</strong> Information regarding the
+assembly identity (name, version, culture, public key token) and its
+external dependencies.</li>
+<li><strong>Type Declarations:</strong> Names, base types, visibility
+flags, and implemented interfaces for all classes, structs, enums, and
+delegates.</li>
+<li><strong>Member Definitions:</strong> Method signatures, fields,
+properties, events, and their associated data types.</li>
+<li><strong>Attributes:</strong> Custom metadata applied to code
+constructs (e.g., <code>[Serializable]</code>,
+<code>[Obsolete]</code>).</li>
+</ol>
+<h3 id="internal-architecture-of-net-metadata">Internal Architecture of
+.NET Metadata</h3>
+<p>The metadata within a C# PE binary is organized into a compact,
+relational-style database composed of two primary structures:
+<strong>heaps</strong> and <strong>tables</strong>.</p>
+<h4 id="1-the-metadata-heaps">1. The Metadata Heaps</h4>
+<p>Raw variable-length data is stored in specialized heaps to optimize
+space and minimize redundancy:</p>
+<ul>
+<li><strong><code>#Strings</code>:</strong> Stores null-terminated UTF-8
+strings representing identifiers such as type names, method names, and
+namespace definitions.</li>
+<li><strong><code>#US</code> (User Strings):</strong> Stores hardcoded
+string literals defined in the source code as UTF-16 arrays.</li>
+<li><strong><code>#Blob</code>:</strong> Contains raw binary data,
+including method signatures, default parameter values, and custom
+attribute payload bytes.</li>
+<li><strong><code>#GUID</code>:</strong> Stores 128-bit Globally Unique
+Identifiers used for COM interoperability and assembly
+identification.</li>
+</ul>
+<h4 id="2-the-metadata-tables-streams--or--">2. The Metadata Tables
+(Streams <code>#~</code> or <code>#-</code>)</h4>
+<p>Metadata tables hold structural records. Instead of embedding names
+directly, rows in these tables store numeric indexes (tokens) pointing
+to other tables or into the heaps. Key tables include:</p>
+<ul>
+<li><strong><code>TypeDef</code>:</strong> Defines every class,
+interface, and struct within the binary, referencing its base type,
+flags, and lists of methods and fields.</li>
+<li><strong><code>TypeRef</code>:</strong> References types defined in
+external assemblies.</li>
+<li><strong><code>MethodDef</code>:</strong> Defines methods, linking to
+parameter lists, signatures in the <code>#Blob</code> heap, and the
+memory offset (RVA) of the actual CIL instructions.</li>
+<li><strong><code>MemberRef</code>:</strong> Identifies external methods
+or fields invoked by the local code.</li>
+<li><strong><code>Assembly</code> and <code>AssemblyRef</code>:</strong>
+Contain identity and cryptographic data for the local assembly and
+external dependencies, respectively.</li>
+</ul>
+<h3 id="execution-and-metadata-integration">Execution and Metadata
+Integration</h3>
+<p>During runtime, the Just-In-Time (JIT) compiler utilizes this
+structural arrangement to convert CIL into machine code:</p>
+<ol type="1">
+<li><strong>Token Resolution:</strong> The CIL code uses 4-byte metadata
+tokens (e.g., <code>0x06000001</code> for a <code>MethodDef</code>) to
+represent operations rather than direct memory addresses.</li>
+<li><strong>Type Safety and Verification:</strong> The CLR inspects the
+metadata tables to verify that argument counts, parameter types, and
+memory allocations are legal before compilation.</li>
+<li><strong>JIT Compilation:</strong> The runtime resolves the token via
+the <code>MethodDef</code> table to locate the raw CIL bytes, compiles
+those instructions for the host CPU, and replaces the call address with
+the native instruction pointer.</li>
+</ol>
+<p>This tightly coupled system of PE containers, intermediate
+instructions, and relational metadata enables core .NET features such as
+reflection, garbage collection tracking, dynamic type loading, and
+cross-language interoperability.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/understanding-c-pe-files-and-metadata-formats';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

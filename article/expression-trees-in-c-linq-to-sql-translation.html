@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expression Trees in C# LINQ to SQL Translation - cs</title>
+    <meta name="description" content="In C# development, expression trees serve as the critical bridge that enables Language Integrated Query (LINQ) to translate high-level C# code into relational database queries. Rather than compiling lambda expressions into executable machine code (Interme">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/expression-trees-in-c-linq-to-sql-translation">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Expression Trees in C# LINQ to SQL Translation - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/expression-trees-in-c-linq-to-sql-translation" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C# development, expression trees serve as the critical bridge that enables Language Integrated Query (LINQ) to translate high-level C# code into relational database queries. Rather than compiling lambda expressions into executable machine code (Interme" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="expression-trees-in-c-linq-to-sql-translation">Expression Trees
+in C# LINQ to SQL Translation</h1>
+<p>In C# development, expression trees serve as the critical bridge that
+enables Language Integrated Query (LINQ) to translate high-level C# code
+into relational database queries. Rather than compiling lambda
+expressions into executable machine code (Intermediate Language), the C#
+compiler can represent them as structured, in-memory data structures
+known as expression trees. This article explains how LINQ query
+providers intercept these syntax trees, analyze their components using
+the Visitor pattern, and map C# logic directly into equivalent SQL
+statements for remote database execution.</p>
+<h2 id="the-core-concept-code-as-data">The Core Concept: Code as
+Data</h2>
+<p>To understand their role, it is essential to distinguish between
+standard delegates and expression trees:</p>
+<ul>
+<li><strong>Delegates (<code>Func&lt;T, bool&gt;</code>):</strong> When
+using standard LINQ to Objects (<code>IEnumerable&lt;T&gt;</code>),
+lambda expressions compile directly into executable code (Intermediate
+Language). The execution happens inside the application's memory space
+on loaded objects.</li>
+<li><strong>Expression Trees
+(<code>Expression&lt;Func&lt;T, bool&gt;&gt;</code>):</strong> When
+targeting a query provider like LINQ to SQL or Entity Framework
+(<code>IQueryable&lt;T&gt;</code>), the compiler wraps the lambda inside
+an <code>Expression&lt;TDelegate&gt;</code>. Instead of executable
+instructions, it creates an Abstract Syntax Tree (AST) representing the
+query logic as data.</li>
+</ul>
+<p>Because the query is represented as data, an external engine can
+read, inspect, and modify it at runtime.</p>
+<h2 id="structure-of-an-expression-tree">Structure of an Expression
+Tree</h2>
+<p>An expression tree models code hierarchically, breaking down
+expressions into distinct nodes:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example query</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> query <span class="op">=</span> context<span class="op">.</span><span class="fu">Users</span><span class="op">.</span><span class="fu">Where</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">Age</span> <span class="op">&gt;=</span> <span class="dv">18</span> <span class="op">&amp;&amp;</span> u<span class="op">.</span><span class="fu">IsActive</span><span class="op">);</span></span></code></pre></div>
+<p>In this query, the lambda
+<code>u =&gt; u.Age &gt;= 18 &amp;&amp; u.IsActive</code> is broken into
+nodes:</p>
+<ol type="1">
+<li><strong>BinaryExpression (<code>AndAlso</code>):</strong> The root
+node representing <code>&amp;&amp;</code>.
+<ul>
+<li><strong>Left Subtree (BinaryExpression
+<code>GreaterThanOrEqual</code>):</strong> Represents
+<code>&gt;=</code>.
+<ul>
+<li><strong>MemberExpression:</strong> Accessing
+<code>u.Age</code>.</li>
+<li><strong>ConstantExpression:</strong> The value <code>18</code>.</li>
+</ul></li>
+<li><strong>Right Subtree (MemberExpression):</strong> Accessing
+<code>u.IsActive</code>.</li>
+</ul></li>
+<li><strong>ParameterExpression:</strong> The parameter <code>u</code>
+representing an instance of <code>User</code>.</li>
+</ol>
+<h2 id="how-the-linq-provider-translates-trees-to-sql">How the LINQ
+Provider Translates Trees to SQL</h2>
+<p>The translation from C# to SQL involves three primary architectural
+components:</p>
+<h3 id="1-iqueryable-and-iqueryprovider">1. <code>IQueryable</code> and
+<code>IQueryProvider</code></h3>
+<p>The <code>IQueryable</code> interface holds the reference to the
+expression tree, while the <code>IQueryProvider</code> is responsible
+for parsing it. When a terminal operation (such as
+<code>ToList()</code>, <code>FirstOrDefault()</code>, or enumeration) is
+called, the provider initiates translation via its <code>Execute</code>
+method.</p>
+<h3 id="2-traversing-with-the-expressionvisitor">2. Traversing with the
+<code>ExpressionVisitor</code></h3>
+<p>LINQ providers use subclasses of <code>ExpressionVisitor</code> to
+traverse the tree recursively:</p>
+<ul>
+<li><strong>Node Inspection:</strong> The visitor encounters nodes
+sequentially (e.g., <code>VisitBinary</code>, <code>VisitMember</code>,
+<code>VisitConstant</code>).</li>
+<li><strong>Dialect Mapping:</strong> C# operations are mapped to
+relational operators:
+<ul>
+<li><code>ExpressionType.Equal</code> (<code>==</code>) becomes
+<code>=</code>.</li>
+<li><code>ExpressionType.AndAlso</code> (<code>&amp;&amp;</code>)
+becomes <code>AND</code>.</li>
+<li><code>string.Contains("abc")</code> becomes
+<code>LIKE '%abc%'</code>.</li>
+<li><code>string.StartsWith("abc")</code> becomes
+<code>LIKE 'abc%'</code>.</li>
+</ul></li>
+<li><strong>Parameter Handling:</strong> Member access to local
+variables is evaluated into parameterized values (e.g.,
+<code>@p0</code>, <code>@p1</code>) to prevent SQL injection and enable
+query plan caching on the database server.</li>
+</ul>
+<h3 id="3-emitting-the-sql-command">3. Emitting the SQL Command</h3>
+<p>Once the visitor completes its tree traversal, the provider compiles
+the extracted fragments into a valid SQL string:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> [t0].[<span class="kw">Id</span>], [t0].[Name], [t0].[Age], [t0].[IsActive]</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span> [Users] <span class="kw">AS</span> [t0]</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> ([t0].[Age] <span class="op">&gt;=</span> <span class="dv">18</span>) <span class="kw">AND</span> ([t0].[IsActive] <span class="op">=</span> <span class="dv">1</span>)</span></code></pre></div>
+<h2 id="execution-and-object-materialization">Execution and Object
+Materialization</h2>
+<p>After translating the expression tree, the role shifts to execution.
+The LINQ provider sends the generated SQL and its bound parameters via
+ADO.NET to the database engine. When the database returns the tabular
+result set via a data reader, the provider maps the columns back to the
+properties of the C# <code>User</code> entities, completing the
+lifecycle from C# syntax to relational data retrieval.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/expression-trees-in-c-linq-to-sql-translation';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

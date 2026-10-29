@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use DefaultIfEmpty in C# LINQ - cs</title>
+    <meta name="description" content="In C# LINQ, querying empty collections with methods like First, Single, or Average often throws an InvalidOperationException. The DefaultIfEmpty extension method solves this by providing a fallback element if the source sequence contains no items. This ar">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-use-default-if-empty-in-c-linq">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use DefaultIfEmpty in C# LINQ - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-use-default-if-empty-in-c-linq" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C# LINQ, querying empty collections with methods like First, Single, or Average often throws an InvalidOperationException. The DefaultIfEmpty extension method solves this by providing a fallback element if the source sequence contains no items. This ar" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-defaultifempty-in-c-linq">How to Use DefaultIfEmpty
+in C# LINQ</h1>
+<p>In C# LINQ, querying empty collections with methods like
+<code>First</code>, <code>Single</code>, or <code>Average</code> often
+throws an <code>InvalidOperationException</code>. The
+<code>DefaultIfEmpty</code> extension method solves this by providing a
+fallback element if the source sequence contains no items. This article
+explains how <code>DefaultIfEmpty</code> works, how to specify custom
+fallback values, and how to use it to implement left outer joins in LINQ
+queries.</p>
+<h3 id="what-is-defaultifempty">What is DefaultIfEmpty?</h3>
+<p>The <code>DefaultIfEmpty</code> method checks whether an
+<code>IEnumerable&lt;T&gt;</code> sequence contains any elements. If the
+sequence has data, it returns the original sequence untouched. If the
+sequence is empty, it returns a new sequence containing a single element
+representing a default value.</p>
+<h3 id="basic-usage-with-type-defaults">Basic Usage with Type
+Defaults</h3>
+<p>When called without parameters, <code>DefaultIfEmpty()</code>
+supplies <code>default(T)</code> for the underlying type—<code>0</code>
+for numeric types, <code>false</code> for booleans, and
+<code>null</code> for reference types.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Collections</span><span class="op">.</span><span class="fu">Generic</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Linq</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> numbers <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;();</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// numbers is empty, so DefaultIfEmpty() yields a sequence with one element: 0</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> firstNumber <span class="op">=</span> numbers<span class="op">.</span><span class="fu">DefaultIfEmpty</span><span class="op">().</span><span class="fu">First</span><span class="op">();</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>firstNumber<span class="op">);</span> <span class="co">// Output: 0</span></span></code></pre></div>
+<p>Without <code>DefaultIfEmpty()</code>, calling
+<code>numbers.First()</code> on an empty collection would throw an
+<code>InvalidOperationException</code>.</p>
+<h3 id="providing-a-custom-default-value">Providing a Custom Default
+Value</h3>
+<p>You can specify a meaningful fallback value by passing an argument to
+the method overload <code>DefaultIfEmpty(TDefault)</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> names <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;();</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Returns &quot;Unknown&quot; instead of the default null</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> displayName <span class="op">=</span> names<span class="op">.</span><span class="fu">DefaultIfEmpty</span><span class="op">(</span><span class="st">&quot;Unknown&quot;</span><span class="op">).</span><span class="fu">First</span><span class="op">();</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>displayName<span class="op">);</span> <span class="co">// Output: Unknown</span></span></code></pre></div>
+<p>This is particularly useful when working with user interfaces, logs,
+or reporting where <code>null</code> or <code>0</code> does not provide
+enough context.</p>
+<h3 id="safe-aggregations">Safe Aggregations</h3>
+<p>Certain LINQ aggregation methods, such as <code>Average()</code>,
+fail when invoked on empty sets. Using <code>DefaultIfEmpty</code>
+ensures these calculations execute without throwing exceptions:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span> scores <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;();</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Avoids exception by averaging a sequence of [0.0]</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="dt">double</span> averageScore <span class="op">=</span> scores<span class="op">.</span><span class="fu">DefaultIfEmpty</span><span class="op">(</span><span class="fl">0.0</span><span class="op">).</span><span class="fu">Average</span><span class="op">();</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>averageScore<span class="op">);</span> <span class="co">// Output: 0</span></span></code></pre></div>
+<h3 id="performing-left-outer-joins">Performing Left Outer Joins</h3>
+<p>In relational database operations, a left outer join returns all rows
+from the primary table regardless of whether there is a matching row in
+the secondary table. In LINQ, this is achieved by combining
+<code>GroupJoin</code> with <code>SelectMany</code> and
+<code>DefaultIfEmpty</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> departments <span class="op">=</span> <span class="kw">new</span><span class="op">[]</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> <span class="op">{</span> Id <span class="op">=</span> <span class="dv">1</span><span class="op">,</span> Name <span class="op">=</span> <span class="st">&quot;Engineering&quot;</span> <span class="op">},</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> <span class="op">{</span> Id <span class="op">=</span> <span class="dv">2</span><span class="op">,</span> Name <span class="op">=</span> <span class="st">&quot;Marketing&quot;</span> <span class="op">}</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> employees <span class="op">=</span> <span class="kw">new</span><span class="op">[]</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Alice&quot;</span><span class="op">,</span> DepartmentId <span class="op">=</span> <span class="dv">1</span> <span class="op">}</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> leftJoinQuery <span class="op">=</span> from dept <span class="kw">in</span> departments</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>                    join emp <span class="kw">in</span> employees on dept<span class="op">.</span><span class="fu">Id</span> equals emp<span class="op">.</span><span class="fu">DepartmentId</span> into empGroup</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                    from emp <span class="kw">in</span> empGroup<span class="op">.</span><span class="fu">DefaultIfEmpty</span><span class="op">()</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>                    select <span class="kw">new</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>                    <span class="op">{</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>                        Department <span class="op">=</span> dept<span class="op">.</span><span class="fu">Name</span><span class="op">,</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>                        Employee <span class="op">=</span> emp <span class="op">!=</span> <span class="kw">null</span> <span class="op">?</span> emp<span class="op">.</span><span class="fu">Name</span> <span class="op">:</span> <span class="st">&quot;No Employee&quot;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>                    <span class="op">};</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> item <span class="kw">in</span> leftJoinQuery<span class="op">)</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{item.Department}: {item.Employee}&quot;</span><span class="op">);</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co">// Output:</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="co">// Engineering: Alice</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="co">// Marketing: No Employee</span></span></code></pre></div>
+<p>By calling <code>empGroup.DefaultIfEmpty()</code>, the query ensures
+departments without any matching employees still generate a result row
+where <code>emp</code> is set to <code>null</code>.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-use-default-if-empty-in-c-linq';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

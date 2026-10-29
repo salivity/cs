@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Pass Delegates for Callbacks in C# - cs</title>
+    <meta name="description" content="In C#, passing delegates as method parameters is a standard way to implement the callback pattern, allowing a method to notify callers or execute custom logic upon completing a task. This article provides a straightforward guide on how to implement callba">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-pass-delegates-for-callbacks-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Pass Delegates for Callbacks in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-pass-delegates-for-callbacks-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, passing delegates as method parameters is a standard way to implement the callback pattern, allowing a method to notify callers or execute custom logic upon completing a task. This article provides a straightforward guide on how to implement callba" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-pass-delegates-for-callbacks-in-c">How to Pass Delegates
+for Callbacks in C</h1>
+<p>In C#, passing delegates as method parameters is a standard way to
+implement the callback pattern, allowing a method to notify callers or
+execute custom logic upon completing a task. This article provides a
+straightforward guide on how to implement callbacks using both standard
+built-in delegates like <code>Action</code> and <code>Func</code>, as
+well as custom-defined delegates, along with best practices for safe
+execution using null-conditional operators and lambda expressions.</p>
+<h2 id="understanding-delegates-as-callbacks">Understanding Delegates as
+Callbacks</h2>
+<p>A delegate is a type-safe function pointer that defines a method
+signature. When you pass a delegate to a method, you are passing
+executable code that the receiving method can call at an appropriate
+time. This decouples the execution logic from the caller's reaction to
+the result.</p>
+<h2 id="using-built-in-delegates-action-and-func">Using Built-In
+Delegates: <code>Action</code> and <code>Func</code></h2>
+<p>In modern C#, you rarely need to declare custom delegate types. The
+framework provides built-in generic delegates:</p>
+<ul>
+<li><strong><code>Action</code></strong>: Used for callbacks that do not
+return a value (<code>void</code>).</li>
+<li><strong><code>Func</code></strong>: Used for callbacks that return a
+value.</li>
+</ul>
+<h3 id="implementing-a-void-callback-with-action">Implementing a Void
+Callback with <code>Action</code></h3>
+<p>Use <code>Action&lt;T&gt;</code> when the calling method needs to
+send data back to the caller without expecting a return value.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DataProcessor</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The method accepts an Action delegate as a callback parameter</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessData</span><span class="op">(</span><span class="dt">int</span> data<span class="op">,</span> Action<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> onCompleted<span class="op">)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Simulate work</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> result <span class="op">=</span> $<span class="st">&quot;Processed data: {data * 2}&quot;</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Invoke the callback safely using the null-conditional operator</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        onCompleted<span class="op">?.</span><span class="fu">Invoke</span><span class="op">(</span>result<span class="op">);</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>You can call this method by passing an existing method or an inline
+lambda expression:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> processor <span class="op">=</span> <span class="kw">new</span> <span class="fu">DataProcessor</span><span class="op">();</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Passing an inline lambda expression as the callback</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>processor<span class="op">.</span><span class="fu">ProcessData</span><span class="op">(</span><span class="dv">10</span><span class="op">,</span> <span class="op">(</span>message<span class="op">)</span> <span class="op">=&gt;</span> </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Callback received: {message}&quot;</span><span class="op">);</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<h3
+id="implementing-a-callback-with-a-return-value-using-func">Implementing
+a Callback with a Return Value using <code>Func</code></h3>
+<p>Use <code>Func&lt;T, TResult&gt;</code> when the processing method
+requires the callback to perform an evaluation and return a result back
+to the caller.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> FilterService</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The method takes a Func delegate that receives a string and returns a boolean</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">FilterNames</span><span class="op">(</span>List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> names<span class="op">,</span> Func<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> predicate<span class="op">)</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> name <span class="kw">in</span> names<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(</span>predicate <span class="op">!=</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> <span class="fu">predicate</span><span class="op">(</span>name<span class="op">))</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Matched: {name}&quot;</span><span class="op">);</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Call the method using a lambda expression:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> service <span class="op">=</span> <span class="kw">new</span> <span class="fu">FilterService</span><span class="op">();</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> names <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> <span class="op">{</span> <span class="st">&quot;Alice&quot;</span><span class="op">,</span> <span class="st">&quot;Bob&quot;</span><span class="op">,</span> <span class="st">&quot;Charlie&quot;</span> <span class="op">};</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Pass a delegate that checks if the name starts with &#39;A&#39;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>service<span class="op">.</span><span class="fu">FilterNames</span><span class="op">(</span>names<span class="op">,</span> name <span class="op">=&gt;</span> name<span class="op">.</span><span class="fu">StartsWith</span><span class="op">(</span><span class="st">&quot;A&quot;</span><span class="op">));</span></span></code></pre></div>
+<h2 id="using-custom-delegates">Using Custom Delegates</h2>
+<p>If you require explicit parameter names for clarity or need to
+support legacy codebases, you can declare a custom delegate type using
+the <code>delegate</code> keyword.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Declare the delegate signature</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">delegate</span> <span class="dt">void</span> <span class="fu">ProgressCallback</span><span class="op">(</span><span class="dt">int</span> percentage<span class="op">,</span> <span class="dt">string</span> statusMessage<span class="op">);</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Downloader</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Accept the custom delegate as a parameter</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">DownloadFile</span><span class="op">(</span><span class="dt">string</span> url<span class="op">,</span> ProgressCallback progress<span class="op">)</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">1</span><span class="op">;</span> i <span class="op">&lt;=</span> <span class="dv">100</span><span class="op">;</span> i <span class="op">+=</span> <span class="dv">50</span><span class="op">)</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>            <span class="co">// 3. Invoke the delegate</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>            progress<span class="op">?.</span><span class="fu">Invoke</span><span class="op">(</span>i<span class="op">,</span> <span class="st">&quot;Downloading...&quot;</span><span class="op">);</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        progress<span class="op">?.</span><span class="fu">Invoke</span><span class="op">(</span><span class="dv">100</span><span class="op">,</span> <span class="st">&quot;Completed&quot;</span><span class="op">);</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Usage:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> downloader <span class="op">=</span> <span class="kw">new</span> <span class="fu">Downloader</span><span class="op">();</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>downloader<span class="op">.</span><span class="fu">DownloadFile</span><span class="op">(</span><span class="st">&quot;https://example.com/file.zip&quot;</span><span class="op">,</span> <span class="op">(</span>percent<span class="op">,</span> status<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[{percent}%] {status}&quot;</span><span class="op">);</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Check for Null</strong>: Always use the null-conditional
+invocation pattern (<code>callback?.Invoke(...)</code>) to prevent
+<code>NullReferenceException</code> if the caller passes
+<code>null</code>.</li>
+<li><strong>Prefer <code>Action</code> and <code>Func</code></strong>:
+Avoid creating custom delegates unless the signature requires specific
+semantic parameter names that cannot be understood via generic
+types.</li>
+<li><strong>Async Callbacks</strong>: When passing callbacks to
+asynchronous methods, accept <code>Func&lt;Task&gt;</code> instead of
+<code>Action</code> so the receiving method can <code>await</code> the
+completion of the callback.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-pass-delegates-for-callbacks-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

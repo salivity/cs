@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# List Capacity Management and Expansion - cs</title>
+    <meta name="description" content="This article provides a comprehensive overview of how the generic List&lt;T&gt; collection manages its internal memory in C#. It explores the critical distinction between the Count and Capacity properties, breaks down the internal array reallocation process dur">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-list-capacity-management-and-expansion">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# List Capacity Management and Expansion - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-list-capacity-management-and-expansion" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comprehensive overview of how the generic List&lt;T&gt; collection manages its internal memory in C#. It explores the critical distinction between the Count and Capacity properties, breaks down the internal array reallocation process dur" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-list-capacity-management-and-expansion">C# List Capacity
+Management and Expansion</h1>
+<p>This article provides a comprehensive overview of how the generic
+<code>List&lt;T&gt;</code> collection manages its internal memory in C#.
+It explores the critical distinction between the <code>Count</code> and
+<code>Capacity</code> properties, breaks down the internal array
+reallocation process during capacity expansion, analyzes the performance
+and garbage collection impacts of dynamic resizing, and details best
+practices to optimize list operations.</p>
+<h2 id="the-underlying-structure-of-listt">The Underlying Structure of
+List&lt;T&gt;</h2>
+<p>Although <code>List&lt;T&gt;</code> behaves like an elastic data
+structure, it is internally backed by a flat, contiguous array
+(<code>T[]</code>). Because standard arrays in .NET have a fixed size
+once allocated, <code>List&lt;T&gt;</code> handles dynamic growth by
+automatically creating new arrays behind the scenes when space runs
+out.</p>
+<h2 id="count-vs-capacity">Count vs. Capacity</h2>
+<p>Understanding internal memory management requires distinguishing
+between two fundamental properties:</p>
+<ul>
+<li><strong><code>Count</code>:</strong> The actual number of elements
+currently stored in the list. This value increases by one each time an
+element is added and decreases when an element is removed.</li>
+<li><strong><code>Capacity</code>:</strong> The total number of elements
+that the internal array can hold without needing to resize. This value
+is always greater than or equal to <code>Count</code>.</li>
+</ul>
+<p>When a list is initialized using the default parameterless
+constructor (<code>new List&lt;T&gt;()</code>), its initial
+<code>Capacity</code> is <code>0</code>, and the internal array is set
+to an empty array singleton.</p>
+<h2 id="how-capacity-expansion-works">How Capacity Expansion Works</h2>
+<p>When an element is added using methods like <code>Add()</code> or
+<code>AddRange()</code>, the list checks whether <code>Count + 1</code>
+exceeds <code>Capacity</code>. If the internal array has sufficient
+room, the element is placed at index <code>Count</code>, and
+<code>Count</code> is incremented. If the array is full, an expansion
+process is triggered.</p>
+<p>The expansion follows a specific sequence:</p>
+<ol type="1">
+<li><strong>Calculate New Capacity:</strong> If the current capacity is
+<code>0</code>, the runtime sets the new capacity to a default minimum,
+which is <code>4</code>. If the capacity is already greater than
+<code>0</code>, the runtime doubles the current capacity
+(<code>Capacity * 2</code>).</li>
+<li><strong>Handle Upper Limits:</strong> If doubling the capacity
+exceeds the maximum allowed array size (<code>Array.MaxLength</code>),
+the capacity is clamped to <code>Array.MaxLength</code> or
+<code>int.MaxValue</code>.</li>
+<li><strong>Allocate New Array:</strong> A brand-new contiguous array of
+the calculated capacity is allocated on the managed heap.</li>
+<li><strong>Copy Elements:</strong> All existing elements from the old
+internal array are copied to the new array using
+<code>Array.Copy</code>.</li>
+<li><strong>Reassign Reference:</strong> The internal reference pointer
+is updated to point to the new array. The previous array is abandoned
+and becomes eligible for Garbage Collection (GC).</li>
+<li><strong>Insert Element:</strong> The new item is placed into the
+first empty slot.</li>
+</ol>
+<h2 id="performance-implications">Performance Implications</h2>
+<p>Understanding this growth cycle is critical for writing
+high-performance C# code due to two primary factors:</p>
+<h3 id="time-complexity">Time Complexity</h3>
+<ul>
+<li><strong>Amortized O(1):</strong> While inserting an element into an
+existing array slot is an <span class="math inline">\(O(1)\)</span>
+constant-time operation, resizing requires an <span
+class="math inline">\(O(N)\)</span> operation because every existing
+element must be copied to the new array. Because the capacity doubles
+each time, expansions become less frequent as the list grows,
+maintaining an amortized <span class="math inline">\(O(1)\)</span> time
+complexity for <code>Add</code>.</li>
+<li><strong>Latency Spikes:</strong> In time-critical paths, an
+unexpected resize introduces CPU pauses due to memory allocation and
+large-block copying.</li>
+</ul>
+<h3 id="garbage-collection-and-memory-overhead">Garbage Collection and
+Memory Overhead</h3>
+<p>Frequent resizes generate multiple orphaned arrays that must be
+cleaned up by the Garbage Collector. For lists containing large numbers
+of elements or large value types, the internal array can exceed 85,000
+bytes, which places it directly onto the Large Object Heap (LOH).
+Repeated expansions on the LOH can cause heap fragmentation and trigger
+costly full Gen 2 GC sweeps.</p>
+<h2 id="best-practices-for-capacity-management">Best Practices for
+Capacity Management</h2>
+<h3 id="1-pre-allocate-capacity">1. Pre-allocate Capacity</h3>
+<p>If the number of items is known or can be estimated in advance,
+define the capacity during instantiation to eliminate all reallocation
+overhead:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Allocates an internal array of size 1,000 immediately</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> numbers <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;(</span><span class="dv">1000</span><span class="op">);</span></span></code></pre></div>
+<h3 id="2-manual-capacity-adjustments">2. Manual Capacity
+Adjustments</h3>
+<p>You can manually adjust the capacity at any point during runtime
+before performing bulk operations:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> items <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;();</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>items<span class="op">.</span><span class="fu">Capacity</span> <span class="op">=</span> expectedItemCount<span class="op">;</span></span></code></pre></div>
+<h3 id="3-reclaiming-memory-with-trimexcess">3. Reclaiming Memory with
+TrimExcess</h3>
+<p>If a list grows significantly and then sheds elements without
+expecting further growth, you can release unused capacity back to the
+system:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>items<span class="op">.</span><span class="fu">TrimExcess</span><span class="op">();</span></span></code></pre></div>
+<p><code>TrimExcess()</code> checks if the list is utilizing less than
+90% of its allocated capacity. If so, it allocates a new array sized
+precisely to the current <code>Count</code>, copies the active items
+over, and frees the remaining buffer.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-list-capacity-management-and-expansion';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

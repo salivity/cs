@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimize LINQ to Avoid Multiple Database Roundtrips - cs</title>
+    <meta name="description" content="Optimizing LINQ queries in C# prevents common database performance bottlenecks such as the N+1 query problem, redundant roundtrips, and premature in-memory execution. By leveraging eager loading, specific projections, combined aggregations, deferred execu">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/optimize-linq-to-avoid-multiple-database-roundtrips">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Optimize LINQ to Avoid Multiple Database Roundtrips - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/optimize-linq-to-avoid-multiple-database-roundtrips" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Optimizing LINQ queries in C# prevents common database performance bottlenecks such as the N+1 query problem, redundant roundtrips, and premature in-memory execution. By leveraging eager loading, specific projections, combined aggregations, deferred execu" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="optimize-linq-to-avoid-multiple-database-roundtrips">Optimize
+LINQ to Avoid Multiple Database Roundtrips</h1>
+<p>Optimizing LINQ queries in C# prevents common database performance
+bottlenecks such as the N+1 query problem, redundant roundtrips, and
+premature in-memory execution. By leveraging eager loading, specific
+projections, combined aggregations, deferred execution, and bulk
+operations, developers can consolidate multiple database interactions
+into single, highly efficient SQL statements that dramatically reduce
+latency and server load.</p>
+<h2 id="1-eliminate-the-n1-query-problem-with-eager-loading">1.
+Eliminate the N+1 Query Problem with Eager Loading</h2>
+<p>The most common source of multiple database roundtrips is lazy
+loading related entities inside a loop. This results in one initial
+query for the parent records, followed by a separate query for each
+child record (N+1 queries).</p>
+<p>Use the <code>Include</code> and <code>ThenInclude</code> methods to
+instruct Entity Framework to load related data in a single SQL
+<code>JOIN</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// BAD: Generates 1 query for customers, then 1 query per customer for orders</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> customers <span class="op">=</span> context<span class="op">.</span><span class="fu">Customers</span><span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> customer <span class="kw">in</span> customers<span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> orders <span class="op">=</span> customer<span class="op">.</span><span class="fu">Orders</span><span class="op">.</span><span class="fu">ToList</span><span class="op">();</span> </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// GOOD: Generates a single SQL query with a JOIN</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> customersWithOrders <span class="op">=</span> context<span class="op">.</span><span class="fu">Customers</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Include</span><span class="op">(</span>c <span class="op">=&gt;</span> c<span class="op">.</span><span class="fu">Orders</span><span class="op">)</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span></code></pre></div>
+<h2 id="2-retrieve-only-required-data-using-projections">2. Retrieve
+Only Required Data Using Projections</h2>
+<p>Fetching full entities with <code>Include</code> can retrieve
+unnecessary columns and generate complex SQL joins. Using
+<code>Select</code> creates a tailored SQL query that fetches both
+primary and related data in a single roundtrip without tracking
+overhead.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Generates a single optimized query selecting only the specified columns</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> customerSummaries <span class="op">=</span> context<span class="op">.</span><span class="fu">Customers</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Select</span><span class="op">(</span>c <span class="op">=&gt;</span> <span class="kw">new</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        c<span class="op">.</span><span class="fu">Id</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        c<span class="op">.</span><span class="fu">Name</span><span class="op">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        OrderCount <span class="op">=</span> c<span class="op">.</span><span class="fu">Orders</span><span class="op">.</span><span class="fu">Count</span><span class="op">(),</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        RecentOrderTotal <span class="op">=</span> c<span class="op">.</span><span class="fu">Orders</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">OrderByDescending</span><span class="op">(</span>o <span class="op">=&gt;</span> o<span class="op">.</span><span class="fu">OrderDate</span><span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Select</span><span class="op">(</span>o <span class="op">=&gt;</span> o<span class="op">.</span><span class="fu">Total</span><span class="op">)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">FirstOrDefault</span><span class="op">()</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span></code></pre></div>
+<h2 id="3-combine-multiple-aggregations-into-a-single-query">3. Combine
+Multiple Aggregations into a Single Query</h2>
+<p>Executing individual LINQ aggregations like <code>.Count()</code>,
+<code>.Sum()</code>, or <code>.Average()</code> separately triggers an
+independent database roundtrip for each method call. Combine them into
+an anonymous object projection or group query so the database calculates
+them in one pass.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// BAD: Three separate database roundtrips</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> totalUsers <span class="op">=</span> context<span class="op">.</span><span class="fu">Users</span><span class="op">.</span><span class="fu">Count</span><span class="op">();</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> activeUsers <span class="op">=</span> context<span class="op">.</span><span class="fu">Users</span><span class="op">.</span><span class="fu">Count</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">IsActive</span><span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="dt">decimal</span> avgScore <span class="op">=</span> context<span class="op">.</span><span class="fu">Users</span><span class="op">.</span><span class="fu">Average</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">Score</span><span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// GOOD: Single database roundtrip</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> stats <span class="op">=</span> context<span class="op">.</span><span class="fu">Users</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">GroupBy</span><span class="op">(</span>u <span class="op">=&gt;</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Select</span><span class="op">(</span>g <span class="op">=&gt;</span> <span class="kw">new</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        TotalUsers <span class="op">=</span> g<span class="op">.</span><span class="fu">Count</span><span class="op">(),</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        ActiveUsers <span class="op">=</span> g<span class="op">.</span><span class="fu">Count</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">IsActive</span><span class="op">),</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        AverageScore <span class="op">=</span> g<span class="op">.</span><span class="fu">Average</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">Score</span><span class="op">)</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">FirstOrDefault</span><span class="op">();</span></span></code></pre></div>
+<h2 id="4-avoid-premature-query-execution">4. Avoid Premature Query
+Execution</h2>
+<p>LINQ queries use deferred execution; they do not hit the database
+until an execution operator is invoked. Calling methods like
+<code>.ToList()</code>, <code>.ToArray()</code>, <code>.First()</code>,
+or <code>foreach</code> too early terminates query building and forces
+intermediate results into application memory. Subsequent filters then
+either process data in memory inefficiently or force extra database
+queries.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// BAD: First query loads all active users; Any() executes a second query</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> users <span class="op">=</span> context<span class="op">.</span><span class="fu">Users</span><span class="op">.</span><span class="fu">Where</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">IsActive</span><span class="op">).</span><span class="fu">ToList</span><span class="op">();</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>users<span class="op">.</span><span class="fu">Any</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">Role</span> <span class="op">==</span> <span class="st">&quot;Admin&quot;</span><span class="op">))</span> </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">// GOOD: Stays as IQueryable until the final required value is requested</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> query <span class="op">=</span> context<span class="op">.</span><span class="fu">Users</span><span class="op">.</span><span class="fu">Where</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">IsActive</span><span class="op">);</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> hasAdmin <span class="op">=</span> query<span class="op">.</span><span class="fu">Any</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">Role</span> <span class="op">==</span> <span class="st">&quot;Admin&quot;</span><span class="op">);</span> <span class="co">// Exactly one query executed</span></span></code></pre></div>
+<h2 id="5-use-bulk-operations-for-updates-and-deletions">5. Use Bulk
+Operations for Updates and Deletions</h2>
+<p>Traditional Entity Framework patterns require querying entities into
+memory before updating or deleting them, causing an unnecessary read
+roundtrip before the write roundtrip. In modern EF Core (version 7.0 and
+later), use <code>ExecuteUpdate</code> and <code>ExecuteDelete</code> to
+send the command directly to the database.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// BAD: Roundtrip 1 reads entities; Roundtrip 2 saves changes</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> expiredSubscriptions <span class="op">=</span> context<span class="op">.</span><span class="fu">Subscriptions</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Where</span><span class="op">(</span>s <span class="op">=&gt;</span> s<span class="op">.</span><span class="fu">ExpiryDate</span> <span class="op">&lt;</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">)</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> sub <span class="kw">in</span> expiredSubscriptions<span class="op">)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    sub<span class="op">.</span><span class="fu">IsActive</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>context<span class="op">.</span><span class="fu">SaveChanges</span><span class="op">();</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">// GOOD: Single roundtrip directly updating rows in the database</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>context<span class="op">.</span><span class="fu">Subscriptions</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Where</span><span class="op">(</span>s <span class="op">=&gt;</span> s<span class="op">.</span><span class="fu">ExpiryDate</span> <span class="op">&lt;</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">)</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">ExecuteUpdate</span><span class="op">(</span>setters <span class="op">=&gt;</span> setters<span class="op">.</span><span class="fu">SetProperty</span><span class="op">(</span>s <span class="op">=&gt;</span> s<span class="op">.</span><span class="fu">IsActive</span><span class="op">,</span> <span class="kw">false</span><span class="op">));</span></span></code></pre></div>
+<h2 id="6-evaluate-single-vs-split-queries">6. Evaluate Single vs. Split
+Queries</h2>
+<p>When querying multiple related collections, a single query using
+multiple <code>.Include()</code> calls can lead to a "Cartesian
+explosion," generating excessive duplicated data in the result set.</p>
+<p>While EF Core allows <code>.AsSplitQuery()</code> to break this into
+multiple roundtrips, you should profile your workload. If network
+latency is the primary bottleneck, force a single roundtrip using
+<code>.AsSingleQuery()</code> or redesign the projection to pull flat,
+aggregate shapes instead of deep collection hierarchies.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> data <span class="op">=</span> context<span class="op">.</span><span class="fu">Blogs</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Include</span><span class="op">(</span>b <span class="op">=&gt;</span> b<span class="op">.</span><span class="fu">Posts</span><span class="op">)</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Include</span><span class="op">(</span>b <span class="op">=&gt;</span> b<span class="op">.</span><span class="fu">Contributors</span><span class="op">)</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AsSingleQuery</span><span class="op">()</span> <span class="co">// Forces one roundtrip via SQL JOINs</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span></code></pre></div></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/optimize-linq-to-avoid-multiple-database-roundtrips';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDD in C#: Entities, Value Objects, and Aggregates - cs</title>
+    <meta name="description" content="This article provides a practical guide to implementing the core tactical patterns of Domain-Driven Design (DDD)—Value Objects, Entities, and Aggregate Roots—using modern C#. It covers the architectural role of each concept, the design constraints require">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/ddd-in-c-entities-value-objects-and-aggregates">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="DDD in C#: Entities, Value Objects, and Aggregates - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/ddd-in-c-entities-value-objects-and-aggregates" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a practical guide to implementing the core tactical patterns of Domain-Driven Design (DDD)—Value Objects, Entities, and Aggregate Roots—using modern C#. It covers the architectural role of each concept, the design constraints require" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="ddd-in-c-entities-value-objects-and-aggregates">DDD in C#:
+Entities, Value Objects, and Aggregates</h1>
+<p>This article provides a practical guide to implementing the core
+tactical patterns of Domain-Driven Design (DDD)—Value Objects, Entities,
+and Aggregate Roots—using modern C#. It covers the architectural role of
+each concept, the design constraints required to preserve domain
+integrity, and concrete C# code examples leveraging modern language
+features like records, strongly-typed identifiers, and encapsulated
+collections.</p>
+<hr />
+<h3 id="implementing-value-objects">Implementing Value Objects</h3>
+<p>A Value Object is an immutable conceptual whole defined entirely by
+its attributes rather than a unique identifier. Two value objects with
+identical properties are considered equal.</p>
+<p>In modern C#, the simplest and most effective way to implement a
+Value Object is by using positional <code>record</code> types. Records
+automatically provide structural equality, immutability, and concise
+syntax.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record Money</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">decimal</span> Amount <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Currency <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Money</span><span class="op">(</span><span class="dt">decimal</span> amount<span class="op">,</span> <span class="dt">string</span> currency<span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>amount <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentException</span><span class="op">(</span><span class="st">&quot;Amount cannot be negative.&quot;</span><span class="op">,</span> <span class="fu">nameof</span><span class="op">(</span>amount<span class="op">));</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span><span class="dt">string</span><span class="op">.</span><span class="fu">IsNullOrWhiteSpace</span><span class="op">(</span>currency<span class="op">)</span> <span class="op">||</span> currency<span class="op">.</span><span class="fu">Length</span> <span class="op">!=</span> <span class="dv">3</span><span class="op">)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentException</span><span class="op">(</span><span class="st">&quot;Currency must be a valid 3-letter ISO code.&quot;</span><span class="op">,</span> <span class="fu">nameof</span><span class="op">(</span>currency<span class="op">));</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        Amount <span class="op">=</span> amount<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        Currency <span class="op">=</span> currency<span class="op">.</span><span class="fu">ToUpperInvariant</span><span class="op">();</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Money <span class="fu">Add</span><span class="op">(</span>Money other<span class="op">)</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>Currency <span class="op">!=</span> other<span class="op">.</span><span class="fu">Currency</span><span class="op">)</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> exciting <span class="fu">InvalidOperationException</span><span class="op">(</span><span class="st">&quot;Cannot add amounts with different currencies.&quot;</span><span class="op">);</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">new</span> <span class="fu">Money</span><span class="op">(</span>Amount <span class="op">+</span> other<span class="op">.</span><span class="fu">Amount</span><span class="op">,</span> Currency<span class="op">);</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Key rules for Value Objects:</p>
+<ul>
+<li><strong>Immutability:</strong> State cannot change after
+instantiation. Operations return a new instance instead of modifying the
+existing one.</li>
+<li><strong>Self-Validation:</strong> The constructor must enforce all
+invariant rules.</li>
+<li><strong>Value Equality:</strong> Equality is determined by comparing
+property values, not memory references.</li>
+</ul>
+<hr />
+<h3 id="implementing-entities">Implementing Entities</h3>
+<p>An Entity represents an individual domain concept defined by a
+distinct identity that persists through state changes over time. Two
+entities with identical attributes are distinct if their identifiers
+differ.</p>
+<p>To implement entities cleanly, define a generic abstract base class
+that encapsulates identifier equality logic:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">abstract</span> <span class="kw">class</span> Entity<span class="op">&lt;</span>TId<span class="op">&gt;</span> where TId <span class="op">:</span> notnull</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> TId Id <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">protected</span> init<span class="op">;</span> <span class="op">}</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="fu">Entity</span><span class="op">(</span>TId id<span class="op">)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        Id <span class="op">=</span> id<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> <span class="dt">bool</span> <span class="fu">Equals</span><span class="op">(</span><span class="dt">object</span><span class="op">?</span> obj<span class="op">)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>obj <span class="kw">is</span> not Entity<span class="op">&lt;</span>TId<span class="op">&gt;</span> other<span class="op">)</span> <span class="kw">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span><span class="fu">ReferenceEquals</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> other<span class="op">))</span> <span class="kw">return</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> EqualityComparer<span class="op">&lt;</span>TId<span class="op">&gt;.</span><span class="fu">Default</span><span class="op">.</span><span class="fu">Equals</span><span class="op">(</span>Id<span class="op">,</span> other<span class="op">.</span><span class="fu">Id</span><span class="op">);</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> <span class="dt">int</span> <span class="fu">GetHashCode</span><span class="op">()</span> <span class="op">=&gt;</span> EqualityComparer<span class="op">&lt;</span>TId<span class="op">&gt;.</span><span class="fu">Default</span><span class="op">.</span><span class="fu">GetHashCode</span><span class="op">(</span>Id<span class="op">);</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="dt">bool</span> <span class="kw">operator</span> <span class="op">==(</span>Entity<span class="op">&lt;</span>TId<span class="op">&gt;?</span> left<span class="op">,</span> Entity<span class="op">&lt;</span>TId<span class="op">&gt;?</span> right<span class="op">)</span> <span class="op">=&gt;</span> <span class="fu">Equals</span><span class="op">(</span>left<span class="op">,</span> right<span class="op">);</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="dt">bool</span> <span class="kw">operator</span> <span class="op">!=(</span>Entity<span class="op">&lt;</span>TId<span class="op">&gt;?</span> left<span class="op">,</span> Entity<span class="op">&lt;</span>TId<span class="op">&gt;?</span> right<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">!</span><span class="fu">Equals</span><span class="op">(</span>left<span class="op">,</span> right<span class="op">);</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Using strongly-typed IDs prevents primitive obsession and assignment
+bugs:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">readonly</span> record <span class="kw">struct</span> <span class="fu">OrderItemId</span><span class="op">(</span>Guid Value<span class="op">);</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OrderItem <span class="op">:</span> Entity<span class="op">&lt;</span>OrderItemId<span class="op">&gt;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> ProductName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Money UnitPrice <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Quantity <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">internal</span> <span class="fu">OrderItem</span><span class="op">(</span>OrderItemId id<span class="op">,</span> <span class="dt">string</span> productName<span class="op">,</span> Money unitPrice<span class="op">,</span> <span class="dt">int</span> quantity<span class="op">)</span> </span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">:</span> <span class="kw">base</span><span class="op">(</span>id<span class="op">)</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>quantity <span class="op">&lt;=</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentOutOfRangeException</span><span class="op">(</span><span class="fu">nameof</span><span class="op">(</span>quantity<span class="op">),</span> <span class="st">&quot;Quantity must be greater than zero.&quot;</span><span class="op">);</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        ProductName <span class="op">=</span> productName<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        UnitPrice <span class="op">=</span> unitPrice<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        Quantity <span class="op">=</span> quantity<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">internal</span> <span class="dt">void</span> <span class="fu">UpdateQuantity</span><span class="op">(</span><span class="dt">int</span> newQuantity<span class="op">)</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>newQuantity <span class="op">&lt;=</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentOutOfRangeException</span><span class="op">(</span><span class="fu">nameof</span><span class="op">(</span>newQuantity<span class="op">),</span> <span class="st">&quot;Quantity must be greater than zero.&quot;</span><span class="op">);</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        Quantity <span class="op">=</span> newQuantity<span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Key rules for Entities:</p>
+<ul>
+<li><strong>Identity-Based Equality:</strong> Comparison is based solely
+on the <code>Id</code> property.</li>
+<li><strong>Encapsulated Mutation:</strong> Properties have
+<code>private</code> or <code>protected</code> setters. Mutating state
+must occur via explicit domain methods that enforce invariants.</li>
+</ul>
+<hr />
+<h3 id="implementing-aggregates-and-aggregate-roots">Implementing
+Aggregates and Aggregate Roots</h3>
+<p>An Aggregate is a cluster of associated Entities and Value Objects
+treated as a single transactional boundary. The Aggregate Root is the
+primary Entity through which all external interactions must pass.
+External objects are prohibited from directly modifying the internal
+members of an Aggregate.</p>
+<p>An aggregate root typically emits domain events to notify other parts
+of the system when significant state changes occur.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">readonly</span> record <span class="kw">struct</span> <span class="fu">OrderId</span><span class="op">(</span>Guid Value<span class="op">);</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IAggregateRoot <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Order <span class="op">:</span> Entity<span class="op">&lt;</span>OrderId<span class="op">&gt;,</span> IAggregateRoot</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> List<span class="op">&lt;</span>OrderItem<span class="op">&gt;</span> _items <span class="op">=</span> <span class="kw">new</span><span class="op">();</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> CustomerId CustomerId <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> OrderStatus Status <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IReadOnlyCollection<span class="op">&lt;</span>OrderItem<span class="op">&gt;</span> Items <span class="op">=&gt;</span> _items<span class="op">.</span><span class="fu">AsReadOnly</span><span class="op">();</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Order</span><span class="op">(</span>OrderId id<span class="op">,</span> CustomerId customerId<span class="op">)</span> <span class="op">:</span> <span class="kw">base</span><span class="op">(</span>id<span class="op">)</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        CustomerId <span class="op">=</span> customerId<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        Status <span class="op">=</span> OrderStatus<span class="op">.</span><span class="fu">Draft</span><span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">AddItem</span><span class="op">(</span><span class="dt">string</span> productName<span class="op">,</span> Money unitPrice<span class="op">,</span> <span class="dt">int</span> quantity<span class="op">)</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>Status <span class="op">!=</span> OrderStatus<span class="op">.</span><span class="fu">Draft</span><span class="op">)</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">InvalidOperationException</span><span class="op">(</span><span class="st">&quot;Cannot add items to a finalized order.&quot;</span><span class="op">);</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> existingItem <span class="op">=</span> _items<span class="op">.</span><span class="fu">FirstOrDefault</span><span class="op">(</span>i <span class="op">=&gt;</span> i<span class="op">.</span><span class="fu">ProductName</span> <span class="op">==</span> productName<span class="op">);</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>existingItem <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>            existingItem<span class="op">.</span><span class="fu">UpdateQuantity</span><span class="op">(</span>existingItem<span class="op">.</span><span class="fu">Quantity</span> <span class="op">+</span> quantity<span class="op">);</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>        <span class="kw">else</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>            _items<span class="op">.</span><span class="fu">Add</span><span class="op">(</span><span class="kw">new</span> <span class="fu">OrderItem</span><span class="op">(</span><span class="kw">new</span> <span class="fu">OrderItemId</span><span class="op">(</span>Guid<span class="op">.</span><span class="fu">NewGuid</span><span class="op">()),</span> productName<span class="op">,</span> unitPrice<span class="op">,</span> quantity<span class="op">));</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Submit</span><span class="op">()</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(!</span>_items<span class="op">.</span><span class="fu">Any</span><span class="op">())</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">InvalidOperationException</span><span class="op">(</span><span class="st">&quot;Cannot submit an empty order.&quot;</span><span class="op">);</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>        Status <span class="op">=</span> OrderStatus<span class="op">.</span><span class="fu">Submitted</span><span class="op">;</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">enum</span> OrderStatus</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>    Draft<span class="op">,</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    Submitted<span class="op">,</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>    Cancelled</span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Key rules for Aggregates:</p>
+<ul>
+<li><strong>Single Entry Point:</strong> External consumers can only
+load, reference, and invoke methods on the Aggregate Root.</li>
+<li><strong>Encapsulated Collections:</strong> Expose internal
+collections via read-only abstractions (such as
+<code>IReadOnlyCollection&lt;T&gt;</code>) to prevent direct list
+manipulation.</li>
+<li><strong>Transactional Consistency:</strong> Any business invariant
+spanning multiple entities inside the aggregate must be satisfied within
+a single transaction managed by the root.</li>
+<li><strong>Reference by Identity:</strong> Aggregates should reference
+other Aggregates by their unique identifiers, not by direct object
+reference.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/ddd-in-c-entities-value-objects-and-aggregates';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Clone Collections in C#: Deep vs Shallow - cs</title>
+    <meta name="description" content="Cloning collections in C# involves creating a duplicate of a list, array, or dictionary, but the resulting behavior depends entirely on whether you perform a shallow copy or a deep copy. A shallow clone copies only the collection container, meaning any re">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-clone-collections-in-c-deep-vs-shallow">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Clone Collections in C#: Deep vs Shallow - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-clone-collections-in-c-deep-vs-shallow" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Cloning collections in C# involves creating a duplicate of a list, array, or dictionary, but the resulting behavior depends entirely on whether you perform a shallow copy or a deep copy. A shallow clone copies only the collection container, meaning any re" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-clone-collections-in-c-deep-vs-shallow">How to Clone
+Collections in C#: Deep vs Shallow</h1>
+<p>Cloning collections in C# involves creating a duplicate of a list,
+array, or dictionary, but the resulting behavior depends entirely on
+whether you perform a shallow copy or a deep copy. A shallow clone
+copies only the collection container, meaning any reference-type
+elements inside still point to the original objects in memory. In
+contrast, a deep clone recursively duplicates both the collection
+structure and all the distinct objects contained within it.
+Understanding how to implement each technique is essential for managing
+object state, preventing unintended side effects, and maintaining memory
+integrity across your application.</p>
+<h2 id="understanding-shallow-cloning">Understanding Shallow
+Cloning</h2>
+<p>A shallow clone creates a new collection instance, but copies only
+the references of the elements if the elements are reference types. For
+value types (like <code>int</code>, <code>double</code>,
+<code>struct</code>), shallow cloning behaves effectively like a deep
+clone because the values themselves are duplicated.</p>
+<p>If you modify the cloned collection by adding or removing items, the
+original collection remains unaffected. However, if you modify the
+internal properties of a reference-type item inside the cloned
+collection, that change reflects in the original collection because both
+collections point to the same memory addresses.</p>
+<h3 id="methods-for-shallow-cloning">Methods for Shallow Cloning</h3>
+<p>C# provides several built-in, highly optimized ways to create shallow
+copies:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> original <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span>Person<span class="op">&gt;</span> </span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span> </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> Person <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Alice&quot;</span> <span class="op">},</span> </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> Person <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Bob&quot;</span> <span class="op">}</span> </span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Using the copy constructor</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> shallow1 <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span>Person<span class="op">&gt;(</span>original<span class="op">);</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Using LINQ&#39;s ToList()</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> shallow2 <span class="op">=</span> original<span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Using the collection expression (C# 12+)</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span>Person<span class="op">&gt;</span> shallow3 <span class="op">=</span> <span class="op">[..</span> original<span class="op">];</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Using Array.Copy (for arrays)</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>Person<span class="op">[]</span> originalArray <span class="op">=</span> original<span class="op">.</span><span class="fu">ToArray</span><span class="op">();</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>Person<span class="op">[]</span> shallowArray <span class="op">=</span> <span class="kw">new</span> Person<span class="op">[</span>originalArray<span class="op">.</span><span class="fu">Length</span><span class="op">];</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>Array<span class="op">.</span><span class="fu">Copy</span><span class="op">(</span>originalArray<span class="op">,</span> shallowArray<span class="op">,</span> originalArray<span class="op">.</span><span class="fu">Length</span><span class="op">);</span></span></code></pre></div>
+<h3 id="the-reference-side-effect">The Reference Side Effect</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Modifying a property inside a shallow clone:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>shallow1<span class="op">[</span><span class="dv">0</span><span class="op">].</span><span class="fu">Name</span> <span class="op">=</span> <span class="st">&quot;Charlie&quot;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Result:</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// original[0].Name is now also &quot;Charlie&quot;</span></span></code></pre></div>
+<h2 id="understanding-deep-cloning">Understanding Deep Cloning</h2>
+<p>A deep clone creates a new collection instance and recursively
+instantiates brand-new copies of every element within it. Modifying an
+object inside a deep-cloned collection has zero impact on the
+corresponding object in the original collection.</p>
+<p>Because .NET does not provide a universal, built-in deep copy
+mechanism for collections, developers typically rely on one of two
+approaches: manual cloning or serialization.</p>
+<h3 id="method-1-manual-copying-best-performance">Method 1: Manual
+Copying (Best Performance)</h3>
+<p>The most performant and type-safe approach is manually copying
+elements, either via a copy constructor, a factory method, or a
+dedicated clone method.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Person</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Copy constructor</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Person</span><span class="op">(</span>Person other<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        Name <span class="op">=</span> other<span class="op">.</span><span class="fu">Name</span><span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Person</span><span class="op">()</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Deep clone using LINQ and the copy constructor</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> deepClone <span class="op">=</span> original<span class="op">.</span><span class="fu">Select</span><span class="op">(</span>p <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">Person</span><span class="op">(</span>p<span class="op">)).</span><span class="fu">ToList</span><span class="op">();</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Modifying the cloned object does not affect the original:</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>deepClone<span class="op">[</span><span class="dv">0</span><span class="op">].</span><span class="fu">Name</span> <span class="op">=</span> <span class="st">&quot;Charlie&quot;</span><span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co">// original[0].Name remains &quot;Alice&quot;</span></span></code></pre></div>
+<p>If your objects contain nested reference types, the copy constructor
+must also instantiate new copies of those child objects.</p>
+<h3 id="method-2-json-serialization-best-convenience">Method 2: JSON
+Serialization (Best Convenience)</h3>
+<p>For complex object graphs with multiple levels of nested references,
+manual copying can become tedious and error-prone. Serializing the
+collection to JSON and deserializing it back into a new collection
+creates a completely independent copy.</p>
+<p>Using <code>System.Text.Json</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Text</span><span class="op">.</span><span class="fu">Json</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> CollectionExtensions</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> List<span class="op">&lt;</span>T<span class="op">&gt;</span> DeepClone<span class="op">&lt;</span>T<span class="op">&gt;(</span><span class="kw">this</span> List<span class="op">&lt;</span>T<span class="op">&gt;</span> source<span class="op">)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>source <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="kw">return</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> json <span class="op">=</span> JsonSerializer<span class="op">.</span><span class="fu">Serialize</span><span class="op">(</span>source<span class="op">);</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> JsonSerializer<span class="op">.</span><span class="fu">Deserialize</span><span class="op">&lt;</span>List<span class="op">&lt;</span>T<span class="op">&gt;&gt;(</span>json<span class="op">);</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> deepClone <span class="op">=</span> original<span class="op">.</span><span class="fu">DeepClone</span><span class="op">();</span></span></code></pre></div>
+<p><strong>Considerations when using serialization:</strong></p>
+<ul>
+<li>Elements must have parameterless constructors or supported
+deserialization constructors.</li>
+<li>Private fields and properties without getters/setters may not be
+copied by default.</li>
+<li>It is significantly slower than manual cloning and consumes more
+memory, making it less suitable for high-frequency or
+performance-critical loops.</li>
+</ul>
+<h2 id="summary-of-differences">Summary of Differences</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Shallow Clone</th>
+<th style="text-align: left;">Deep Clone</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>New Collection
+Instance</strong></td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>New Element
+Instances</strong></td>
+<td style="text-align: left;">No (References shared)</td>
+<td style="text-align: left;">Yes (Independent copies)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance</strong></td>
+<td style="text-align: left;">Extremely fast</td>
+<td style="text-align: left;">Slower (requires object allocations)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Memory Footprint</strong></td>
+<td style="text-align: left;">Minimal</td>
+<td style="text-align: left;">Proportional to the size of all
+elements</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Best Used For</strong></td>
+<td style="text-align: left;">Value types, immutable objects
+(<code>string</code>, <code>record</code>), or read-only
+collections</td>
+<td style="text-align: left;">Mutable complex objects that will be
+altered independently</td>
+</tr>
+</tbody>
+</table></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-clone-collections-in-c-deep-vs-shallow';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

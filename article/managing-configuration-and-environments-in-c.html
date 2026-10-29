@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Managing Configuration and Environments in C# - cs</title>
+    <meta name="description" content="Effective configuration management in C# separates application code from deployment-specific values, allowing seamless transitions across development, staging, and production environments. Modern .NET applications achieve this using a layered configuratio">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/managing-configuration-and-environments-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Managing Configuration and Environments in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/managing-configuration-and-environments-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Effective configuration management in C# separates application code from deployment-specific values, allowing seamless transitions across development, staging, and production environments. Modern .NET applications achieve this using a layered configuratio" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="managing-configuration-and-environments-in-c">Managing
+Configuration and Environments in C</h1>
+<p>Effective configuration management in C# separates application code
+from deployment-specific values, allowing seamless transitions across
+development, staging, and production environments. Modern .NET
+applications achieve this using a layered configuration system,
+hierarchical JSON files, environment variables, secure secret managers,
+and strongly typed settings via the Options pattern. This guide details
+how to implement robust, scalable, and secure environment-specific
+settings in C#.</p>
+<h2 id="the-layered-configuration-model">The Layered Configuration
+Model</h2>
+<p>.NET uses an extensible, order-dependent configuration pipeline
+represented by the <code>IConfiguration</code> interface. When you
+configure the application host (typically in <code>Program.cs</code>),
+settings are merged sequentially from multiple providers. If keys
+conflict, the last loaded provider overwrites previous values.</p>
+<p>A standard configuration pipeline prioritizes settings in the
+following order:</p>
+<ol type="1">
+<li><code>appsettings.json</code> (Base configuration)</li>
+<li><code>appsettings.{Environment}.json</code> (Environment
+overrides)</li>
+<li>User Secrets (Local development only)</li>
+<li>Environment variables</li>
+<li>Command-line arguments</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// The default Host automatically loads the providers in the order above.</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> configuration <span class="op">=</span> builder<span class="op">.</span><span class="fu">Configuration</span><span class="op">;</span></span></code></pre></div>
+<h2 id="determining-the-current-environment">Determining the Current
+Environment</h2>
+<p>The application runtime determines its context using the
+<code>ASPNETCORE_ENVIRONMENT</code> or <code>DOTNET_ENVIRONMENT</code>
+environment variable. Standard values include <code>Development</code>,
+<code>Staging</code>, and <code>Production</code>.</p>
+<p>You can query the environment using
+<code>IHostEnvironment</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>builder<span class="op">.</span><span class="fu">Environment</span><span class="op">.</span><span class="fu">IsDevelopment</span><span class="op">())</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Enable local debugging tools or mock services</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>When the runtime detects <code>Development</code>, it automatically
+attempts to load <code>appsettings.Development.json</code> after
+<code>appsettings.json</code>, overriding any matching keys defined in
+the base file.</p>
+<h2 id="structured-configuration-with-json">Structured Configuration
+with JSON</h2>
+<p>Use <code>appsettings.json</code> for non-sensitive, shared defaults
+across all environments:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;Logging&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;LogLevel&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;Default&quot;</span><span class="fu">:</span> <span class="st">&quot;Information&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;Features&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;EnableExport&quot;</span><span class="fu">:</span> <span class="kw">true</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Override specific values for production in
+<code>appsettings.Production.json</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;Logging&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;LogLevel&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;Default&quot;</span><span class="fu">:</span> <span class="st">&quot;Warning&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Only keys specified in the environment-specific file are replaced;
+omitted keys retain values defined in <code>appsettings.json</code>.</p>
+<h2 id="overriding-via-environment-variables">Overriding via Environment
+Variables</h2>
+<p>Production deployments, container platforms (like Docker and
+Kubernetes), and CI/CD pipelines commonly rely on environment
+variables.</p>
+<p>To override nested JSON settings using environment variables, use a
+double underscore (<code>__</code>) as a delimiter to represent
+hierarchy:</p>
+<ul>
+<li>JSON key:
+<code>"DatabaseSettings": { "ConnectionString": "..." }</code></li>
+<li>Environment variable:
+<code>DatabaseSettings__ConnectionString</code></li>
+</ul>
+<p>This mechanism keeps sensitive values out of source control and
+enables dynamic injection at runtime.</p>
+<h2 id="the-options-pattern">The Options Pattern</h2>
+<p>Avoid accessing <code>IConfiguration</code> directly throughout your
+business logic. Instead, bind configuration sections to strongly typed
+classes using the Options pattern.</p>
+<p>Define the settings model:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DatabaseOptions</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">const</span> <span class="dt">string</span> SectionName <span class="op">=</span> <span class="st">&quot;Database&quot;</span><span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> ConnectionString <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> <span class="dt">string</span><span class="op">.</span><span class="fu">Empty</span><span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> TimeoutSeconds <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> <span class="dv">30</span><span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Register the options in <code>Program.cs</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">Configure</span><span class="op">&lt;</span>DatabaseOptions<span class="op">&gt;(</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    builder<span class="op">.</span><span class="fu">Configuration</span><span class="op">.</span><span class="fu">GetSection</span><span class="op">(</span>DatabaseOptions<span class="op">.</span><span class="fu">SectionName</span><span class="op">));</span></span></code></pre></div>
+<p>Inject the settings into your services:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OrderService</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> DatabaseOptions _options<span class="op">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">OrderService</span><span class="op">(</span>IOptions<span class="op">&lt;</span>DatabaseOptions<span class="op">&gt;</span> options<span class="op">)</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        _options <span class="op">=</span> options<span class="op">.</span><span class="fu">Value</span><span class="op">;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>For applications requiring real-time configuration updates without
+restarting, use <code>IOptionsSnapshot&lt;T&gt;</code> (scoped lifetime)
+or <code>IOptionsMonitor&lt;T&gt;</code> (singleton lifetime) instead of
+<code>IOptions&lt;T&gt;</code>.</p>
+<h2 id="handling-sensitive-data">Handling Sensitive Data</h2>
+<p>Never store credentials, API keys, or connection strings in committed
+JSON files.</p>
+<h3 id="local-development-secret-manager">Local Development: Secret
+Manager</h3>
+<p>Use the .NET Secret Manager (User Secrets) during local development
+to store sensitive data outside the project directory.</p>
+<p>Run these CLI commands in your project folder:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> user-secrets init</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> user-secrets set <span class="st">&quot;Database:ConnectionString&quot;</span> <span class="st">&quot;Server=localhost;...&quot;</span></span></code></pre></div>
+<p>These values are loaded automatically when
+<code>builder.Environment.IsDevelopment()</code> is true.</p>
+<h3 id="production-external-key-vaults">Production: External Key
+Vaults</h3>
+<p>In production environments, integrate dedicated secret managers such
+as Azure Key Vault, AWS Secrets Manager, or HashiCorp Vault into the
+<code>ConfigurationBuilder</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>builder<span class="op">.</span><span class="fu">Environment</span><span class="op">.</span><span class="fu">IsProduction</span><span class="op">())</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    builder<span class="op">.</span><span class="fu">Configuration</span><span class="op">.</span><span class="fu">AddAzureKeyVault</span><span class="op">(</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">new</span> <span class="fu">Uri</span><span class="op">(</span><span class="st">&quot;https://your-vault.vault.azure.net/&quot;</span><span class="op">),</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">new</span> <span class="fu">DefaultAzureCredential</span><span class="op">());</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Validate at Startup:</strong> Use
+<code>AddOptions&lt;TOptions&gt;().ValidateDataAnnotations().ValidateOnStart()</code>
+to fail fast if required settings are missing or invalid.</li>
+<li><strong>Keep Base Files Safe:</strong> Ensure
+<code>appsettings.json</code> contains no production secrets or
+sensitive API keys.</li>
+<li><strong>Rely on Strongly Typed Classes:</strong> Do not inject
+<code>IConfiguration</code> directly into consumers; maintain
+encapsulation using <code>IOptions&lt;T&gt;</code>.</li>
+<li><strong>Use Delimiters Correctly:</strong> Ensure orchestration
+scripts convert nested configurations to the double-underscore syntax
+(<code>Section__SubSection__Key</code>).</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/managing-configuration-and-environments-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

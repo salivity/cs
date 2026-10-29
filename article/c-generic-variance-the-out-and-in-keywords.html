@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Generic Variance: The Out and In Keywords - cs</title>
+    <meta name="description" content="Generic variance in C# controls how type compatibility works between generic types that share an inheritance relationship. By using the out and in keywords on generic type parameters in interfaces and delegates, C# enables covariance and contravariance. T">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-generic-variance-the-out-and-in-keywords">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Generic Variance: The Out and In Keywords - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-generic-variance-the-out-and-in-keywords" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Generic variance in C# controls how type compatibility works between generic types that share an inheritance relationship. By using the out and in keywords on generic type parameters in interfaces and delegates, C# enables covariance and contravariance. T" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-generic-variance-the-out-and-in-keywords">C# Generic Variance:
+The Out and In Keywords</h1>
+<p>Generic variance in C# controls how type compatibility works between
+generic types that share an inheritance relationship. By using the
+<code>out</code> and <code>in</code> keywords on generic type parameters
+in interfaces and delegates, C# enables covariance and contravariance.
+This overview explains how these keywords change type assignment rules,
+allowing developers to write more reusable, flexible, and type-safe code
+when dealing with polymorphic collections and delegates.</p>
+<h2 id="understanding-invariance">Understanding Invariance</h2>
+<p>By default, generic type parameters in C# are invariant. Invariance
+means that a generic type <code>Gen&lt;Base&gt;</code> and
+<code>Gen&lt;Derived&gt;</code> are treated as completely unrelated,
+regardless of the relationship between <code>Base</code> and
+<code>Derived</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> strings <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;();</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">// This causes a compile-time error:</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// List&lt;object&gt; objects = strings; </span></span></code></pre></div>
+<p>Even though <code>string</code> inherits from <code>object</code>,
+<code>List&lt;string&gt;</code> cannot be assigned to
+<code>List&lt;object&gt;</code>. Invariance prevents unsafe operations,
+such as adding an <code>int</code> to a list that was originally
+instantiated as a list of strings.</p>
+<hr />
+<h2 id="covariance-with-the-out-keyword">Covariance with the
+<code>out</code> Keyword</h2>
+<p>The <code>out</code> keyword enables <strong>covariance</strong>.
+Covariance allows you to use a more derived (more specific) type than
+the one originally specified.</p>
+<p>When a type parameter is marked with <code>out</code>, it signifies
+that the type parameter is used only in <strong>output</strong>
+positions—such as method return types or read-only properties. Because
+data only comes out of the object, it is impossible to introduce
+incompatible types into the instance.</p>
+<h3 id="example-ienumerableout-t">Example:
+<code>IEnumerable&lt;out T&gt;</code></h3>
+<p>A classic example in the .NET runtime is
+<code>IEnumerable&lt;out T&gt;</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IEnumerable<span class="op">&lt;</span><span class="kw">out</span> T<span class="op">&gt;</span> <span class="op">:</span> IEnumerable</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    IEnumerator<span class="op">&lt;</span>T<span class="op">&gt;</span> <span class="fu">GetEnumerator</span><span class="op">();</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Because <code>T</code> is marked with <code>out</code>, the following
+assignment is valid:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>IEnumerable<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> strings <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> <span class="op">{</span> <span class="st">&quot;apple&quot;</span><span class="op">,</span> <span class="st">&quot;banana&quot;</span> <span class="op">};</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>IEnumerable<span class="op">&lt;</span><span class="dt">object</span><span class="op">&gt;</span> objects <span class="op">=</span> strings<span class="op">;</span> <span class="co">// Allowed because of covariance</span></span></code></pre></div>
+<p>A consumer of <code>IEnumerable&lt;object&gt;</code> only reads
+<code>object</code> instances out of the sequence. Since every
+<code>string</code> is an <code>object</code>, this operation is
+completely type-safe.</p>
+<hr />
+<h2 id="contravariance-with-the-in-keyword">Contravariance with the
+<code>in</code> Keyword</h2>
+<p>The <code>in</code> keyword enables <strong>contravariance</strong>.
+Contravariance allows you to use a less derived (more general/broader)
+type than the one originally specified.</p>
+<p>When a type parameter is marked with <code>in</code>, it signifies
+that the type parameter is used only in <strong>input</strong>
+positions—such as method arguments. Because data is only passed into the
+object, the implementation can safely accept any base type that
+satisfies the method's parameter requirements.</p>
+<h3 id="example-actionin-t-and-icomparerin-t">Example:
+<code>Action&lt;in T&gt;</code> and
+<code>IComparer&lt;in T&gt;</code></h3>
+<p>A built-in example is the <code>Action&lt;in T&gt;</code>
+delegate:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">delegate</span> <span class="dt">void</span> Action<span class="op">&lt;</span><span class="kw">in</span> T<span class="op">&gt;(</span>T obj<span class="op">);</span></span></code></pre></div>
+<p>Consider the following assignment:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Action<span class="op">&lt;</span><span class="dt">object</span><span class="op">&gt;</span> printObject <span class="op">=</span> obj <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>obj<span class="op">.</span><span class="fu">ToString</span><span class="op">());</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Allowed because of contravariance:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>Action<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> printString <span class="op">=</span> printObject<span class="op">;</span> </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">printString</span><span class="op">(</span><span class="st">&quot;Hello World&quot;</span><span class="op">);</span></span></code></pre></div>
+<p><code>printObject</code> can handle any <code>object</code>.
+Therefore, passing it a <code>string</code> (which is an
+<code>object</code>) is safe. Contravariance allows a broader consumer
+(<code>Action&lt;object&gt;</code>) to satisfy a more specialized
+contract (<code>Action&lt;string&gt;</code>).</p>
+<hr />
+<h2 id="key-rules-and-limitations">Key Rules and Limitations</h2>
+<ol type="1">
+<li><strong>Only Interfaces and Delegates:</strong> Variance can only be
+applied to generic interfaces and delegates. Generic classes, structs,
+and methods do not support the <code>in</code> and <code>out</code>
+keywords on their type parameters.</li>
+<li><strong>Reference Types Only:</strong> Generic variance only works
+with reference types. It does not apply to value types. For example,
+<code>IEnumerable&lt;int&gt;</code> cannot be assigned to
+<code>IEnumerable&lt;object&gt;</code> due to the memory layout and
+boxing overhead associated with value types.</li>
+<li><strong>Position Enforcement:</strong> The C# compiler strictly
+enforces position rules. You cannot return a type marked with
+<code>in</code> from a method, nor can you accept a type marked with
+<code>out</code> as an input parameter.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-generic-variance-the-out-and-in-keywords';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

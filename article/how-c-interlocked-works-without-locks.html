@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How C# Interlocked Works Without Locks - cs</title>
+    <meta name="description" content="The Interlocked class in C# provides thread-safe, atomic operations on shared variables without relying on traditional software locks or monitors. Instead of forcing threads to block and enter expensive kernel transitions, Interlocked maps directly to har">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-c-interlocked-works-without-locks">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How C# Interlocked Works Without Locks - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-c-interlocked-works-without-locks" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Interlocked class in C# provides thread-safe, atomic operations on shared variables without relying on traditional software locks or monitors. Instead of forcing threads to block and enter expensive kernel transitions, Interlocked maps directly to har" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-c-interlocked-works-without-locks">How C# Interlocked Works
+Without Locks</h1>
+<p>The <code>Interlocked</code> class in C# provides thread-safe, atomic
+operations on shared variables without relying on traditional software
+locks or monitors. Instead of forcing threads to block and enter
+expensive kernel transitions, <code>Interlocked</code> maps directly to
+hardware-level CPU instructions that guarantee operations like
+increments, decrements, and swaps are completed in a single,
+uninterrupted step. This article explains how <code>Interlocked</code>
+achieves lock-free synchronization, the role of processor-level
+instructions like Compare-And-Swap (CAS), and how memory barriers ensure
+visibility across CPU cores.</p>
+<h3 id="the-problem-with-traditional-locks">The Problem with Traditional
+Locks</h3>
+<p>Traditional synchronization mechanisms, such as the <code>lock</code>
+statement (which uses <code>Monitor</code>) or primitive synchronization
+objects like <code>Mutex</code> and <code>Semaphore</code>, involve
+operating system intervention. When a thread encounters an acquired
+lock, it may be placed in a wait state, triggering a context switch.
+Context switches require the OS to save thread state, switch registers,
+and reschedule execution, consuming thousands of CPU cycles.</p>
+<p>For simple tasks like incrementing a counter or updating a reference,
+this overhead severely limits throughput and scalability in
+high-concurrency environments.</p>
+<h3 id="hardware-level-atomic-instructions">Hardware-Level Atomic
+Instructions</h3>
+<p>The <code>Interlocked</code> class avoids software-based locking
+entirely by pushing synchronization directly to the CPU. Modern
+processors (such as x86, x64, and ARM) include specialized hardware
+instructions designed for atomic state modification:</p>
+<ul>
+<li><strong>x86/x64 Architectures:</strong> The CPU uses the
+<code>LOCK</code> prefix before specific assembly instructions (such as
+<code>LOCK XADD</code> for atomic addition or <code>LOCK CMPXCHG</code>
+for compare-and-swap). The <code>LOCK</code> prefix asserts a signal on
+the system bus or, more commonly in modern multi-core chips, uses cache
+coherency protocols (like MESI) to lock down the specific cache line
+containing the target variable. This prevents other processor cores from
+reading or writing that memory location until the instruction
+finishes.</li>
+<li><strong>ARM Architectures:</strong> ARM chips typically achieve
+atomicity via Load-Linked/Store-Conditional (LL/SC) instruction pairs
+(<code>LDREX</code> and <code>STREX</code>), ensuring that a store
+succeeds only if no other processor has updated the memory location
+since the load.</li>
+</ul>
+<p>Because the synchronization happens in hardware at the silicon level,
+execution takes only a few CPU cycles without pausing threads or
+engaging the OS kernel.</p>
+<h3 id="the-foundation-compare-and-swap-cas">The Foundation:
+Compare-and-Swap (CAS)</h3>
+<p>The cornerstone of lock-free programming in the
+<code>Interlocked</code> class is
+<code>Interlocked.CompareExchange</code>. This method implements the
+atomic Compare-and-Swap (CAS) primitive.</p>
+<p><code>CompareExchange</code> performs three actions atomically:</p>
+<ol type="1">
+<li>Compares a target memory location with an expected value.</li>
+<li>If the values are identical, overwrites the target with a new
+value.</li>
+<li>Returns the original value stored in the target memory
+location.</li>
+</ol>
+<p>If another thread modifies the variable during this window, the
+comparison fails, alerting the caller that the operation was not
+applied. Developers use this in a lock-free retry loop (optimistic
+concurrency):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> initialValue<span class="op">,</span> computedValue<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">do</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    initialValue <span class="op">=</span> sharedVariable<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    computedValue <span class="op">=</span> initialValue <span class="op">*</span> <span class="dv">2</span><span class="op">;</span> <span class="co">// Arbitrary complex calculation</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">while</span> <span class="op">(</span>Interlocked<span class="op">.</span><span class="fu">CompareExchange</span><span class="op">(</span><span class="kw">ref</span> sharedVariable<span class="op">,</span> computedValue<span class="op">,</span> initialValue<span class="op">)</span> <span class="op">!=</span> initialValue<span class="op">);</span></span></code></pre></div>
+<p>This pattern guarantees that the state is only updated if it remained
+unchanged throughout the calculation, eliminating race conditions
+without blocking.</p>
+<h3 id="common-interlocked-operations">Common Interlocked
+Operations</h3>
+<p>The <code>Interlocked</code> class exposes several heavily optimized
+methods for common operations:</p>
+<ul>
+<li><strong><code>Increment</code> / <code>Decrement</code>:</strong>
+Adds or subtracts 1 from a variable atomically using instructions like
+<code>LOCK XADD</code>.</li>
+<li><strong><code>Add</code>:</strong> Atomically adds a specific
+integer to a variable and returns the new value.</li>
+<li><strong><code>Exchange</code>:</strong> Replaces the value of a
+variable with a new value atomically and returns the original
+value.</li>
+<li><strong><code>Read</code>:</strong> Atomically reads a 64-bit value
+on 32-bit systems, where 64-bit operations are normally non-atomic and
+susceptible to "torn reads."</li>
+</ul>
+<h3 id="memory-barriers-and-cache-coherence">Memory Barriers and Cache
+Coherence</h3>
+<p>Multi-core processors and optimizing compilers frequently reorder
+instructions and store values in core-local registers or CPU caches to
+maximize performance. Without coordination, an update made by Core A
+might not immediately be visible to Core B.</p>
+<p>Methods in the <code>Interlocked</code> class generate a full memory
+barrier (or memory fence). A memory barrier enforces two critical
+rules:</p>
+<ol type="1">
+<li><strong>Instruction Ordering:</strong> It prevents the compiler and
+CPU from reordering memory reads and writes across the barrier
+boundary.</li>
+<li><strong>Cache Coherency:</strong> It forces local CPU cache writes
+to flush out and invalidates stale cache entries on other cores,
+guaranteeing immediate read-write visibility across all threads.</li>
+</ol>
+<h3 id="summary">Summary</h3>
+<p>The <code>Interlocked</code> class achieves high-performance thread
+safety by discarding software-managed waiting queues in favor of
+processor-level atomic instructions. By locking cache lines rather than
+execution threads, it eliminates context-switch overhead, minimizes
+contention, and guarantees memory consistency across modern multi-core
+architectures.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-c-interlocked-works-without-locks';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

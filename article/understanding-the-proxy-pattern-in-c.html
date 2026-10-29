@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding the Proxy Pattern in C# - cs</title>
+    <meta name="description" content="The Proxy pattern is a structural design pattern that provides a surrogate or placeholder object to control access to another target object. This article breaks down the Proxy pattern, explains the mechanisms it uses to manage and restrict access to real">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/understanding-the-proxy-pattern-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding the Proxy Pattern in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/understanding-the-proxy-pattern-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Proxy pattern is a structural design pattern that provides a surrogate or placeholder object to control access to another target object. This article breaks down the Proxy pattern, explains the mechanisms it uses to manage and restrict access to real" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-the-proxy-pattern-in-c">Understanding the Proxy
+Pattern in C</h1>
+<p>The Proxy pattern is a structural design pattern that provides a
+surrogate or placeholder object to control access to another target
+object. This article breaks down the Proxy pattern, explains the
+mechanisms it uses to manage and restrict access to real objects, and
+provides a clear, practical implementation in C#.</p>
+<h2 id="what-is-the-proxy-pattern">What is the Proxy Pattern?</h2>
+<p>The Proxy pattern creates an intermediary object that mirrors the
+interface of a target object, known as the Real Subject. By intercepting
+calls made by the client before they reach the Real Subject, the proxy
+can perform actions such as access validation, lazy initialization,
+caching, logging, or remote communication without modifying the
+underlying object's code.</p>
+<p>The pattern consists of three primary components:</p>
+<ul>
+<li><strong>Subject Interface:</strong> Defines the common contract
+shared by both the Real Subject and the Proxy.</li>
+<li><strong>Real Subject:</strong> The concrete class that contains the
+core business logic and performs the actual work.</li>
+<li><strong>Proxy:</strong> The wrapper class implementing the same
+interface, holding a reference to the Real Subject to delegate requests
+while enforcing access rules.</li>
+</ul>
+<h2 id="how-the-proxy-pattern-controls-access">How the Proxy Pattern
+Controls Access</h2>
+<p>A proxy controls access to the Real Subject primarily through three
+mechanisms:</p>
+<ol type="1">
+<li><strong>Protection (Access Control):</strong> Checks permissions or
+authentication criteria before allowing the client to execute methods on
+the Real Subject.</li>
+<li><strong>Lazy Loading (Virtual Proxy):</strong> Delays the creation
+and resource-heavy initialization of the Real Subject until it is
+strictly needed by a client call.</li>
+<li><strong>Caching and Throttling:</strong> Intercepts repeated
+requests to serve cached results or limits execution frequency,
+preventing unnecessary load on the Real Subject.</li>
+</ol>
+<h2 id="implementing-the-proxy-pattern-in-c">Implementing the Proxy
+Pattern in C</h2>
+<p>The following example demonstrates a <strong>Protection
+Proxy</strong> that controls access to a shared corporate database based
+on user roles.</p>
+<h3 id="1-the-subject-interface">1. The Subject Interface</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IDatabaseService</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">ExecuteQuery</span><span class="op">(</span><span class="dt">string</span> query<span class="op">);</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-the-real-subject">2. The Real Subject</h3>
+<p>The <code>RealDatabaseService</code> performs the actual expensive
+operations and executes database queries.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> RealDatabaseService <span class="op">:</span> IDatabaseService</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">RealDatabaseService</span><span class="op">()</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Simulating heavy initialization, such as opening connections</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Connecting to the database server...&quot;</span><span class="op">);</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ExecuteQuery</span><span class="op">(</span><span class="dt">string</span> query<span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Executing query: {query}&quot;</span><span class="op">);</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-the-proxy">3. The Proxy</h3>
+<p>The <code>DatabaseProxy</code> enforces access restrictions. It
+ensures that only users with the <code>Admin</code> role can execute
+write or drop queries, while simultaneously applying lazy loading to the
+<code>RealDatabaseService</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DatabaseProxy <span class="op">:</span> IDatabaseService</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> RealDatabaseService<span class="op">?</span> _realService<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> <span class="dt">string</span> _userRole<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">DatabaseProxy</span><span class="op">(</span><span class="dt">string</span> userRole<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        _userRole <span class="op">=</span> userRole<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ExecuteQuery</span><span class="op">(</span><span class="dt">string</span> query<span class="op">)</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>query<span class="op">.</span><span class="fu">StartsWith</span><span class="op">(</span><span class="st">&quot;DROP&quot;</span><span class="op">,</span> StringComparison<span class="op">.</span><span class="fu">OrdinalIgnoreCase</span><span class="op">)</span> <span class="op">&amp;&amp;</span> _userRole <span class="op">!=</span> <span class="st">&quot;Admin&quot;</span><span class="op">)</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Access Denied: Role &#39;{_userRole}&#39; is not allowed to drop tables.&quot;</span><span class="op">);</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span><span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Lazy initialization: Instantiate only when authorized and needed</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        _realService <span class="op">??=</span> <span class="kw">new</span> <span class="fu">RealDatabaseService</span><span class="op">();</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        _realService<span class="op">.</span><span class="fu">ExecuteQuery</span><span class="op">(</span>query<span class="op">);</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="4-client-usage">4. Client Usage</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// A standard user attempting a destructive query</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        IDatabaseService userProxy <span class="op">=</span> <span class="kw">new</span> <span class="fu">DatabaseProxy</span><span class="op">(</span><span class="st">&quot;User&quot;</span><span class="op">);</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        userProxy<span class="op">.</span><span class="fu">ExecuteQuery</span><span class="op">(</span><span class="st">&quot;DROP TABLE Users;&quot;</span><span class="op">);</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">();</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// An administrator executing the same query</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        IDatabaseService adminProxy <span class="op">=</span> <span class="kw">new</span> <span class="fu">DatabaseProxy</span><span class="op">(</span><span class="st">&quot;Admin&quot;</span><span class="op">);</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        adminProxy<span class="op">.</span><span class="fu">ExecuteQuery</span><span class="op">(</span><span class="st">&quot;DROP TABLE Users;&quot;</span><span class="op">);</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="output">Output:</h3>
+<pre class="text"><code>Access Denied: Role &#39;User&#39; is not allowed to drop tables.
+
+Connecting to the database server...
+Executing query: DROP TABLE Users;</code></pre>
+<h2 id="when-to-use-the-proxy-pattern">When to Use the Proxy
+Pattern</h2>
+<p>The Proxy pattern is most effective when:</p>
+<ul>
+<li><strong>Direct access is unsafe or inefficient:</strong> You need to
+protect sensitive operations behind permission checks.</li>
+<li><strong>Resource allocation must be optimized:</strong> An object
+consumes significant memory or network bandwidth, making on-demand
+instantiation (lazy loading) essential.</li>
+<li><strong>Cross-cutting concerns must be decoupled:</strong> You want
+to add auditing, logging, or caching without altering the core business
+logic of the service.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/understanding-the-proxy-pattern-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abstract Factory Pattern in C#: A Practical Guide - cs</title>
+    <meta name="description" content="The Abstract Factory pattern is a creational design pattern that allows you to produce families of related or dependent objects without specifying their concrete classes. This article explores the core definition of the pattern, breaks down its structural">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/abstract-factory-pattern-in-c-a-practical-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Abstract Factory Pattern in C#: A Practical Guide - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/abstract-factory-pattern-in-c-a-practical-guide" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Abstract Factory pattern is a creational design pattern that allows you to produce families of related or dependent objects without specifying their concrete classes. This article explores the core definition of the pattern, breaks down its structural" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="abstract-factory-pattern-in-c-a-practical-guide">Abstract
+Factory Pattern in C#: A Practical Guide</h1>
+<p>The Abstract Factory pattern is a creational design pattern that
+allows you to produce families of related or dependent objects without
+specifying their concrete classes. This article explores the core
+definition of the pattern, breaks down its structural components, and
+demonstrates how to implement it cleanly in C# through a cross-platform
+user interface example.</p>
+<h3 id="what-is-the-abstract-factory-pattern">What is the Abstract
+Factory Pattern?</h3>
+<p>In software engineering, systems often need to create groups of
+related objects that must work seamlessly together. The Abstract Factory
+pattern addresses this by declaring an interface for creating each
+distinct product in a product family. Concrete classes then implement
+these creation methods to return specific product variants.</p>
+<p>By isolating the client code from concrete implementations, the
+pattern enforces consistency among products, adheres to the Single
+Responsibility Principle, and satisfies the Open/Closed Principle by
+allowing new product variants without breaking existing code.</p>
+<h3 id="core-structure-of-the-pattern">Core Structure of the
+Pattern</h3>
+<p>The pattern consists of five primary components:</p>
+<ol type="1">
+<li><strong>Abstract Factory:</strong> Declares an interface containing
+methods for creating each abstract product.</li>
+<li><strong>Concrete Factories:</strong> Implements the creation
+operations to produce specific instances of concrete products.</li>
+<li><strong>Abstract Products:</strong> Declares interfaces for a set of
+distinct but related products that make up a product family.</li>
+<li><strong>Concrete Products:</strong> Provide the implementations for
+abstract product interfaces, grouped by variant.</li>
+<li><strong>Client:</strong> Interacts only with objects declared by the
+Abstract Factory and Abstract Product interfaces.</li>
+</ol>
+<h3 id="implementing-abstract-factory-in-c">Implementing Abstract
+Factory in C</h3>
+<p>The following example models a cross-platform UI toolkit that creates
+buttons and checkboxes for two platforms: Windows and macOS.</p>
+<h4 id="1-abstract-products">1. Abstract Products</h4>
+<p>First, define the interfaces for the individual components that
+belong to the family.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IButton</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">Render</span><span class="op">();</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> ICheckbox</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">Toggle</span><span class="op">();</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="2-concrete-products">2. Concrete Products</h4>
+<p>Implement these interfaces for each specific platform variant.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Windows variants</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> WinButton <span class="op">:</span> IButton</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Render</span><span class="op">()</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Rendering Windows-style Button.&quot;</span><span class="op">);</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> WinCheckbox <span class="op">:</span> ICheckbox</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Toggle</span><span class="op">()</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Toggling Windows-style Checkbox.&quot;</span><span class="op">);</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Mac variants</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MacButton <span class="op">:</span> IButton</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Render</span><span class="op">()</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Rendering macOS-style Button.&quot;</span><span class="op">);</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MacCheckbox <span class="op">:</span> ICheckbox</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Toggle</span><span class="op">()</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Toggling macOS-style Checkbox.&quot;</span><span class="op">);</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="3-abstract-factory">3. Abstract Factory</h4>
+<p>Define the factory interface containing creation methods for all
+abstract products in the family.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IUIFactory</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    IButton <span class="fu">CreateButton</span><span class="op">();</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    ICheckbox <span class="fu">CreateCheckbox</span><span class="op">();</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="4-concrete-factories">4. Concrete Factories</h4>
+<p>Implement the factory interface to return specific product variants
+that correspond to a single platform.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> WinUIFactory <span class="op">:</span> IUIFactory</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IButton <span class="fu">CreateButton</span><span class="op">()</span> <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">WinButton</span><span class="op">();</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> ICheckbox <span class="fu">CreateCheckbox</span><span class="op">()</span> <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">WinCheckbox</span><span class="op">();</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MacUIFactory <span class="op">:</span> IUIFactory</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IButton <span class="fu">CreateButton</span><span class="op">()</span> <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">MacButton</span><span class="op">();</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> ICheckbox <span class="fu">CreateCheckbox</span><span class="op">()</span> <span class="op">=&gt;</span> <span class="kw">new</span> <span class="fu">MacCheckbox</span><span class="op">();</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="5-client-code">5. Client Code</h4>
+<p>The client interacts solely with the abstract interfaces, remaining
+decoupled from the underlying operating system details.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Application</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IButton _button<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> ICheckbox _checkbox<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Application</span><span class="op">(</span>IUIFactory factory<span class="op">)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        _button <span class="op">=</span> factory<span class="op">.</span><span class="fu">CreateButton</span><span class="op">();</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        _checkbox <span class="op">=</span> factory<span class="op">.</span><span class="fu">CreateCheckbox</span><span class="op">();</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">RenderUI</span><span class="op">()</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        _button<span class="op">.</span><span class="fu">Render</span><span class="op">();</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        _checkbox<span class="op">.</span><span class="fu">Toggle</span><span class="op">();</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="6-execution">6. Execution</h4>
+<p>The application is configured with a specific factory at runtime.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// The factory can be chosen based on environment or configuration</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        IUIFactory factory <span class="op">=</span> OperatingSystem<span class="op">.</span><span class="fu">IsWindows</span><span class="op">()</span> </span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>            <span class="op">?</span> <span class="kw">new</span> <span class="fu">WinUIFactory</span><span class="op">()</span> </span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>            <span class="op">:</span> <span class="kw">new</span> <span class="fu">MacUIFactory</span><span class="op">();</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        Application app <span class="op">=</span> <span class="kw">new</span> <span class="fu">Application</span><span class="op">(</span>factory<span class="op">);</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        app<span class="op">.</span><span class="fu">RenderUI</span><span class="op">();</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="when-to-use">When to Use</h3>
+<p>Use the Abstract Factory pattern when your code needs to work with
+various families of related products, but you want to prevent tight
+coupling to concrete product classes. It is particularly effective when
+you must ensure that products from one family are never mixed with
+products from another.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/abstract-factory-pattern-in-c-a-practical-guide';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

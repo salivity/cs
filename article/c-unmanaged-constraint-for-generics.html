@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Unmanaged Constraint for Generics - cs</title>
+    <meta name="description" content="The unmanaged constraint in C# restricts a generic type parameter to types that are not managed by the garbage collector. Introduced in C# 7.3, it ensures that a type is a non-nullable value type containing no reference type fields at any level of nesting">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-unmanaged-constraint-for-generics">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Unmanaged Constraint for Generics - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-unmanaged-constraint-for-generics" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The unmanaged constraint in C# restricts a generic type parameter to types that are not managed by the garbage collector. Introduced in C# 7.3, it ensures that a type is a non-nullable value type containing no reference type fields at any level of nesting" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-unmanaged-constraint-for-generics">C# Unmanaged Constraint for
+Generics</h1>
+<p>The <code>unmanaged</code> constraint in C# restricts a generic type
+parameter to types that are not managed by the garbage collector.
+Introduced in C# 7.3, it ensures that a type is a non-nullable value
+type containing no reference type fields at any level of nesting. This
+article explains the technical definition of an unmanaged type,
+demonstrates how to use the constraint in generic code, outlines the key
+differences between <code>struct</code> and <code>unmanaged</code>, and
+highlights common use cases involving low-level memory and native
+interop.</p>
+<h2 id="what-is-an-unmanaged-type">What Is an Unmanaged Type?</h2>
+<p>In C#, a type is considered unmanaged if it satisfies all of the
+following conditions:</p>
+<ul>
+<li>It is a built-in primitive type: <code>sbyte</code>,
+<code>byte</code>, <code>short</code>, <code>ushort</code>,
+<code>int</code>, <code>uint</code>, <code>long</code>,
+<code>ulong</code>, <code>nint</code>, <code>nuint</code>,
+<code>char</code>, <code>float</code>, <code>double</code>,
+<code>decimal</code>, or <code>bool</code>.</li>
+<li>It is an <code>enum</code> type.</li>
+<li>It is a pointer type.</li>
+<li>It is a user-defined <code>struct</code> that contains only fields
+of unmanaged types.</li>
+</ul>
+<p>If a <code>struct</code> contains any reference types—such as a
+<code>string</code>, an array, or an <code>object</code>—it is not
+unmanaged.</p>
+<h2 id="syntax-and-implementation">Syntax and Implementation</h2>
+<p>You declare the constraint by adding <code>where T : unmanaged</code>
+to a generic class, interface, method, or delegate:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">unsafe</span> <span class="kw">class</span> NativeBuffer<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> unmanaged</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> T<span class="op">*</span> _pointer<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">int</span> _length<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">NativeBuffer</span><span class="op">(</span><span class="dt">int</span> length<span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        _length <span class="op">=</span> length<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        _pointer <span class="op">=</span> <span class="op">(</span>T<span class="op">*)</span>System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">InteropServices</span><span class="op">.</span><span class="fu">NativeMemory</span><span class="op">.</span><span class="fu">Alloc</span><span class="op">((</span>nuint<span class="op">)(</span>length <span class="op">*</span> <span class="kw">sizeof</span><span class="op">(</span>T<span class="op">)));</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Free</span><span class="op">()</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>_pointer <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>            System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">InteropServices</span><span class="op">.</span><span class="fu">NativeMemory</span><span class="op">.</span><span class="fu">Free</span><span class="op">(</span>_pointer<span class="op">);</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>            _pointer <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="why-use-the-unmanaged-constraint">Why Use the Unmanaged
+Constraint?</h2>
+<p>Before the <code>unmanaged</code> constraint, generic code could not
+directly interact with pointers or native memory safely because the C#
+compiler could not verify whether a generic type parameter contained
+garbage-collected references.</p>
+<p>Applying <code>where T : unmanaged</code> provides several specific
+capabilities:</p>
+<ol type="1">
+<li><strong>Pointer Operations on Generic Types:</strong> You can
+declare pointers to generic types (e.g., <code>T*</code>), perform
+pointer arithmetic, and use the address-of operator
+(<code>&amp;</code>).</li>
+<li><strong>The <code>sizeof</code> Operator:</strong> You can use
+<code>sizeof(T)</code> directly on the generic parameter without
+throwing a compile-time error.</li>
+<li><strong>Memory Allocation:</strong> It enables safe integration with
+<code>stackalloc</code>, <code>Span&lt;T&gt;</code>,
+<code>Memory&lt;T&gt;</code>, and direct native heap allocations via
+<code>NativeMemory</code> or <code>Marshal</code>.</li>
+</ol>
+<h2 id="unmanaged-vs-struct"><code>unmanaged</code> vs.
+<code>struct</code></h2>
+<p>While the <code>struct</code> constraint requires a type to be a
+value type, it does not guarantee that the type is free of managed
+references:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Valid: &#39;struct&#39; allows reference types inside</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> ManagedStruct</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name<span class="op">;</span> <span class="co">// Reference type</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Allowed:</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> ProcessStruct<span class="op">&lt;</span>T<span class="op">&gt;()</span> where T <span class="op">:</span> <span class="kw">struct</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>ProcessStruct<span class="op">&lt;</span>ManagedStruct<span class="op">&gt;();</span> </span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Compilation Error: ManagedStruct is not unmanaged</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> ProcessUnmanaged<span class="op">&lt;</span>T<span class="op">&gt;()</span> where T <span class="op">:</span> unmanaged <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">// ProcessUnmanaged&lt;ManagedStruct&gt;(); </span></span></code></pre></div>
+<p>The <code>unmanaged</code> constraint implicitly satisfies the
+<code>struct</code> constraint, meaning that anything that satisfies
+<code>unmanaged</code> also satisfies <code>struct</code>, but the
+inverse is not true.</p>
+<h2 id="practical-use-cases">Practical Use Cases</h2>
+<ul>
+<li><strong>Native Interoperability (P/Invoke):</strong> Marshaling data
+between managed C# code and unmanaged C/C++ libraries.</li>
+<li><strong>Game Development and Graphics:</strong> Constructing
+high-frequency data structures, such as vertex buffers or direct
+hardware buffers.</li>
+<li><strong>Serialization and Network Protocols:</strong> Writing binary
+serializers that read and write directly to byte streams via pointer
+casting without heap allocations.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-unmanaged-constraint-for-generics';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

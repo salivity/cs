@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How ConfigureAwait(false) Prevents Deadlocks in C# - cs</title>
+    <meta name="description" content="In C#, blocking on asynchronous code using methods like .Result or .Wait() often leads to deadlocks in environments governed by a SynchronizationContext, such as Windows Forms, WPF, and legacy ASP.NET. This article explains how the interaction between syn">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-configure-await-false-prevents-deadlocks-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How ConfigureAwait(false) Prevents Deadlocks in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-configure-await-false-prevents-deadlocks-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, blocking on asynchronous code using methods like .Result or .Wait() often leads to deadlocks in environments governed by a SynchronizationContext, such as Windows Forms, WPF, and legacy ASP.NET. This article explains how the interaction between syn" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-configureawaitfalse-prevents-deadlocks-in-c">How
+ConfigureAwait(false) Prevents Deadlocks in C</h1>
+<p>In C#, blocking on asynchronous code using methods like
+<code>.Result</code> or <code>.Wait()</code> often leads to deadlocks in
+environments governed by a <code>SynchronizationContext</code>, such as
+Windows Forms, WPF, and legacy ASP.NET. This article explains how the
+interaction between synchronous blocking and context-capturing tasks
+causes these deadlocks, and how appending
+<code>ConfigureAwait(false)</code> resolves the issue by allowing
+continuations to execute on a thread pool thread rather than waiting for
+the original, occupied context.</p>
+<h3 id="the-mechanism-of-synchronization-contexts">The Mechanism of
+Synchronization Contexts</h3>
+<p>A <code>SynchronizationContext</code> manages how units of work are
+dispatched to specific threads. In UI frameworks like WPF and WinForms,
+the synchronization context ensures that work is executed on the single,
+dedicated UI thread to prevent cross-thread operation exceptions.
+Similarly, ASP.NET (prior to ASP.NET Core) used an exclusive
+synchronization context to preserve request state and
+<code>HttpContext</code> thread-affinity.</p>
+<p>By default, when an <code>await</code> expression is encountered in
+C#, the runtime captures the current <code>SynchronizationContext</code>
+(or <code>TaskScheduler</code> if no context exists). Once the awaited
+asynchronous operation finishes, the remainder of the method—known as
+the continuation—is posted back to that captured context to resume
+execution.</p>
+<h3 id="how-mixing-sync-and-async-causes-a-deadlock">How Mixing Sync and
+Async Causes a Deadlock</h3>
+<p>A deadlock occurs when code synchronously blocks on an uncompleted
+asynchronous task while executing on a thread managed by a
+single-threaded <code>SynchronizationContext</code>. The sequence
+unfolds as follows:</p>
+<ol type="1">
+<li><strong>Invocation and Blocking:</strong> A method running on the UI
+thread calls an asynchronous method and blocks synchronously using
+<code>.Wait()</code> or <code>.Result</code>. This holds the UI thread
+hostage until the task completes.</li>
+<li><strong>Asynchronous Operation:</strong> Inside the async method, an
+internal operation (such as an HTTP call or file read) is awaited. At
+the <code>await</code> boundary, the method yields control and captures
+the calling thread's <code>SynchronizationContext</code>.</li>
+<li><strong>Completion:</strong> The background operation completes. The
+async method prepares to execute its remaining continuation code.</li>
+<li><strong>The Blocked Continuation:</strong> Because the context was
+captured, the continuation is queued to the UI thread via the
+<code>SynchronizationContext</code>.</li>
+<li><strong>The Deadlock:</strong> The continuation cannot execute
+because the UI thread is busy blocking on <code>.Wait()</code> or
+<code>.Result</code>. Simultaneously, the blocking call cannot return
+because the task cannot complete until its continuation runs. Neither
+side yields, resulting in a permanent freeze.</li>
+</ol>
+<h3 id="how-configureawaitfalse-prevents-the-deadlock">How
+<code>ConfigureAwait(false)</code> Prevents the Deadlock</h3>
+<p>The <code>ConfigureAwait</code> method accepts a boolean parameter
+named <code>continueOnCapturedContext</code>. Passing <code>false</code>
+explicitly instructs the runtime to ignore the current
+<code>SynchronizationContext</code> or <code>TaskScheduler</code> when
+scheduling the continuation.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> async Task<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> <span class="fu">DownloadDataAsync</span><span class="op">()</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> <span class="op">(</span><span class="dt">var</span> client <span class="op">=</span> <span class="kw">new</span> <span class="fu">HttpClient</span><span class="op">())</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ConfigureAwait(false) prevents capturing the SynchronizationContext</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> response <span class="op">=</span> await client<span class="op">.</span><span class="fu">GetStringAsync</span><span class="op">(</span><span class="st">&quot;https://api.example.com/data&quot;</span><span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>                                   <span class="op">.</span><span class="fu">ConfigureAwait</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// This continuation runs on an arbitrary ThreadPool thread</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="fu">ProcessData</span><span class="op">(</span>response<span class="op">);</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>When <code>ConfigureAwait(false)</code> is applied:</p>
+<ul>
+<li>The runtime does not attempt to marshal execution back to the
+original context upon completing the asynchronous operation.</li>
+<li>The continuation executes on an available worker thread from the
+<code>ThreadPool</code>.</li>
+<li>Because the continuation does not request the original thread, it is
+not obstructed by synchronous calls like <code>.Wait()</code> or
+<code>.Result</code> occupying that thread.</li>
+<li>The method finishes, the underlying <code>Task</code> transitions to
+the completed state, and the blocked calling thread is released.</li>
+</ul>
+<h3 id="practical-guidelines">Practical Guidelines</h3>
+<ul>
+<li><strong>General-Purpose Libraries:</strong> Library code should
+generally apply <code>.ConfigureAwait(false)</code> to every
+<code>await</code>. Libraries typically do not need access to UI
+elements or context-specific data, making context-capturing unnecessary
+and exposing consumers to deadlock risks.</li>
+<li><strong>UI-Bound Code:</strong> Do not use
+<code>ConfigureAwait(false)</code> if the code immediately following the
+<code>await</code> needs to manipulate UI controls, as doing so will
+throw a cross-thread exception. In UI layers, the preferred solution is
+to make the entire call stack asynchronous using <code>async</code> and
+<code>await</code> all the way through, avoiding blocking calls
+entirely.</li>
+<li><strong>ASP.NET Core:</strong> ASP.NET Core does not have a
+<code>SynchronizationContext</code>. While
+<code>ConfigureAwait(false)</code> will not hurt performance in ASP.NET
+Core, it is not strictly required to avoid deadlocks in that specific
+framework.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-configure-await-false-prevents-deadlocks-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

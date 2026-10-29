@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type Forwarding Across Assemblies in .NET C# - cs</title>
+    <meta name="description" content="Type forwarding is a .NET runtime mechanism that allows you to move a type from one assembly to another without breaking existing client applications compiled against the original assembly. By utilizing the [TypeForwardedTo] attribute, developers can refa">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/type-forwarding-across-assemblies-in-net-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Type Forwarding Across Assemblies in .NET C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/type-forwarding-across-assemblies-in-net-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Type forwarding is a .NET runtime mechanism that allows you to move a type from one assembly to another without breaking existing client applications compiled against the original assembly. By utilizing the [TypeForwardedTo] attribute, developers can refa" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="type-forwarding-across-assemblies-in-net-c">Type Forwarding
+Across Assemblies in .NET C</h1>
+<p>Type forwarding is a .NET runtime mechanism that allows you to move a
+type from one assembly to another without breaking existing client
+applications compiled against the original assembly. By utilizing the
+<code>[TypeForwardedTo]</code> attribute, developers can refactor class
+libraries, split monolithic assemblies into modular packages, and
+maintain binary backward compatibility without requiring downstream
+consumers to recompile their code.</p>
+<h2 id="the-problem-breaking-changes-in-assembly-refactoring">The
+Problem: Breaking Changes in Assembly Refactoring</h2>
+<p>In .NET, the identity of a type is strictly tied to its
+assembly-qualified name, which includes the type's full name, the
+assembly name, version, culture, and public key token.</p>
+<p>If you have a class <code>OrderService</code> in
+<code>LegacyApp.Core.dll</code> and move its code to a new assembly
+called <code>LegacyApp.Orders.dll</code>, any existing application
+compiled against <code>LegacyApp.Core.dll</code> will fail at runtime
+with a <code>TypeLoadException</code>. Even though the namespace and
+type name remain identical, the runtime looks for the type strictly
+inside the assembly referenced at compile time.</p>
+<h2 id="how-type-forwarding-works">How Type Forwarding Works</h2>
+<p>Type forwarding addresses this issue at the Common Language Runtime
+(CLR) metadata level:</p>
+<ol type="1">
+<li><strong>Physical Relocation:</strong> You move the actual source
+code of the type to the destination assembly.</li>
+<li><strong>Metadata Forwarding:</strong> In the source (original)
+assembly, you declare a type forwarder using the
+<code>TypeForwardedToAttribute</code>.</li>
+<li><strong>Metadata Table Entry:</strong> When compiling the source
+assembly, the C# compiler adds an entry to the <code>ExportedType</code>
+metadata table indicating that the type now resides in the target
+assembly.</li>
+<li><strong>Runtime Resolution:</strong> When an un-recompiled client
+requests the type from the old assembly, the CLR checks the metadata,
+discovers the forwarder, loads the target assembly, and resolves the
+type transparently.</li>
+</ol>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="step-1-move-the-type-to-the-new-assembly">Step 1: Move the Type
+to the New Assembly</h3>
+<p>Move the class definition into the new project (e.g.,
+<code>NewAssembly</code>). Ensure the namespace and class signature
+remain unchanged.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Inside NewAssembly.dll</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Company<span class="op">.</span><span class="fu">Services</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">class</span> OrderProcessor</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Process</span><span class="op">(</span><span class="dt">int</span> orderId<span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Business logic</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="step-2-add-a-reference-to-the-new-assembly">Step 2: Add a
+Reference to the New Assembly</h3>
+<p>The original assembly (<code>OldAssembly</code>) must reference the
+new assembly (<code>NewAssembly</code>) so it can access the relocated
+type for forwarding.</p>
+<h3 id="step-3-declare-the-typeforwardedto-attribute">Step 3: Declare
+the TypeForwardedTo Attribute</h3>
+<p>In the original assembly, remove the original class file entirely.
+Then, apply the <code>TypeForwardedTo</code> attribute at the assembly
+level, typically in an <code>AssemblyInfo.cs</code> file or any other
+top-level C# file.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Inside OldAssembly.dll</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">CompilerServices</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Company<span class="op">.</span><span class="fu">Services</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>assembly<span class="op">:</span> <span class="fu">TypeForwardedTo</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span>OrderProcessor<span class="op">))]</span></span></code></pre></div>
+<h2 id="important-considerations">Important Considerations</h2>
+<ul>
+<li><strong>Public Types Only:</strong> Type forwarding only applies to
+<code>public</code> types. Internal or private types cannot be forwarded
+because they are not part of the public assembly contract.</li>
+<li><strong>No Circular References:</strong> The original assembly must
+reference the new assembly to declare the attribute. The new assembly
+must not reference the original assembly, as circular dependencies
+between projects are prohibited.</li>
+<li><strong>Runtime Version:</strong> Type forwarding is supported
+natively across .NET Framework, .NET Core, and modern .NET (.NET 5+). It
+is the primary mechanism Microsoft uses to unify runtime libraries (such
+as moving types from <code>mscorlib</code> to
+<code>System.Runtime</code>).</li>
+<li><strong>Source vs. Binary Compatibility:</strong> While type
+forwarding guarantees binary backward compatibility, recompiling the
+client project will directly bind it to the new assembly, bypassing the
+forwarder entirely.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/type-forwarding-across-assemblies-in-net-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

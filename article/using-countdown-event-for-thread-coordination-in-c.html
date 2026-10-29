@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using CountdownEvent for Thread Coordination in C# - cs</title>
+    <meta name="description" content="The CountdownEvent class in C# is a synchronization primitive designed to block a thread until a predetermined number of signals are received from concurrent operations. This article covers the fundamental mechanics of CountdownEvent, explores its primary">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/using-countdown-event-for-thread-coordination-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using CountdownEvent for Thread Coordination in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/using-countdown-event-for-thread-coordination-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The CountdownEvent class in C# is a synchronization primitive designed to block a thread until a predetermined number of signals are received from concurrent operations. This article covers the fundamental mechanics of CountdownEvent, explores its primary" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-countdownevent-for-thread-coordination-in-c">Using
+CountdownEvent for Thread Coordination in C</h1>
+<p>The <code>CountdownEvent</code> class in C# is a synchronization
+primitive designed to block a thread until a predetermined number of
+signals are received from concurrent operations. This article covers the
+fundamental mechanics of <code>CountdownEvent</code>, explores its
+primary methods and properties, provides a practical code example
+demonstrating multi-threaded coordination, and highlights key
+considerations for choosing between <code>CountdownEvent</code> and
+modern asynchronous alternatives like <code>Task.WhenAll</code>.</p>
+<h2 id="what-is-countdownevent">What Is CountdownEvent?</h2>
+<p>Located in the <code>System.Threading</code> namespace,
+<code>CountdownEvent</code> maintains an internal counter that is
+initialized to a specific value. Worker threads perform tasks
+concurrently and decrement this counter by signaling the event upon
+completion. Concurrently, one or more coordinating threads call a wait
+method that blocks execution until the counter reaches zero. Once the
+counter hits zero, the event enters a signaled state, unblocking the
+waiting threads so they can proceed.</p>
+<h2 id="key-methods-and-properties">Key Methods and Properties</h2>
+<p>To effectively coordinate threads, <code>CountdownEvent</code>
+exposes several essential members:</p>
+<ul>
+<li><strong><code>InitialCount</code></strong>: Gets the initial number
+of signals required to set the event.</li>
+<li><strong><code>CurrentCount</code></strong>: Returns the remaining
+number of signals needed before the event is set.</li>
+<li><strong><code>IsSet</code></strong>: A boolean property indicating
+whether the counter has reached zero.</li>
+<li><strong><code>Signal()</code></strong>: Decrements the counter by
+one. An overload allows decrementing by a specified integer value.</li>
+<li><strong><code>Wait()</code></strong>: Blocks the calling thread
+until the counter reaches zero. Overloads accept timeouts and
+<code>CancellationToken</code> instances.</li>
+<li><strong><code>AddCount()</code></strong>: Increments the internal
+counter, allowing dynamic tracking of additional work items. This can
+only be called while the count is greater than zero.</li>
+<li><strong><code>Reset()</code></strong>: Resets the counter back to
+its <code>InitialCount</code> or to a newly specified value.</li>
+<li><strong><code>Dispose()</code></strong>: Releases the unmanaged
+resources used by the synchronization primitive.</li>
+</ul>
+<h2 id="coordinating-work-practical-example">Coordinating Work:
+Practical Example</h2>
+<p>The following example demonstrates coordinating multiple worker tasks
+using <code>CountdownEvent</code>. A main thread initializes the event
+to track three operations, dispatches work to the thread pool, and waits
+until all workers report completion.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">.</span><span class="fu">Tasks</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">const</span> <span class="dt">int</span> taskCount <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Initialize CountdownEvent with the number of expected signals</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>CountdownEvent countdown <span class="op">=</span> <span class="kw">new</span> <span class="fu">CountdownEvent</span><span class="op">(</span>taskCount<span class="op">))</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>            <span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">1</span><span class="op">;</span> i <span class="op">&lt;=</span> taskCount<span class="op">;</span> i<span class="op">++)</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>                <span class="dt">int</span> workerId <span class="op">=</span> i<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>                ThreadPool<span class="op">.</span><span class="fu">QueueUserWorkItem</span><span class="op">(</span>_ <span class="op">=&gt;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>                    <span class="kw">try</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>                    <span class="op">{</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>                        <span class="fu">PerformWork</span><span class="op">(</span>workerId<span class="op">);</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>                    <span class="kw">finally</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>                    <span class="op">{</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>                        <span class="co">// Decrement the counter even if an exception occurs</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>                        countdown<span class="op">.</span><span class="fu">Signal</span><span class="op">();</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>                <span class="op">});</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Main thread waiting for workers to complete...&quot;</span><span class="op">);</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Block until CurrentCount reaches 0</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>            countdown<span class="op">.</span><span class="fu">Wait</span><span class="op">();</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;All workers completed. Resuming main thread execution.&quot;</span><span class="op">);</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">PerformWork</span><span class="op">(</span><span class="dt">int</span> id<span class="op">)</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Worker {id} started.&quot;</span><span class="op">);</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>        Thread<span class="op">.</span><span class="fu">Sleep</span><span class="op">(</span>id <span class="op">*</span> <span class="dv">500</span><span class="op">);</span> <span class="co">// Simulate processing time</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Worker {id} finished.&quot;</span><span class="op">);</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="best-practices-and-considerations">Best Practices and
+Considerations</h2>
+<ul>
+<li><strong>Always use try/finally blocks:</strong> Ensure
+<code>Signal()</code> is called within a <code>finally</code> block. If
+an unhandled exception prevents <code>Signal()</code> from being
+executed, the waiting thread may block indefinitely unless a timeout was
+specified.</li>
+<li><strong>Resource management:</strong> Because
+<code>CountdownEvent</code> relies on native synchronization handles via
+an internal <code>ManualResetEventSlim</code>, it implements
+<code>IDisposable</code>. Always wrap it in a <code>using</code>
+statement or explicitly call <code>Dispose()</code>.</li>
+<li><strong>Dynamic work queues:</strong> If the total workload is
+unknown upfront, <code>AddCount()</code> allows you to increase the
+required signals as new jobs are discovered. However, calling
+<code>AddCount()</code> after the counter has reached zero throws an
+<code>InvalidOperationException</code>. Use <code>TryAddCount()</code>
+if there is a race condition where the event might already be
+signaled.</li>
+<li><strong>CountdownEvent vs. Task.WhenAll:</strong> For modern
+asynchronous programming using <code>async</code>/<code>await</code>,
+<code>Task.WhenAll</code> is generally preferred because it avoids
+blocking threads synchronously. <code>CountdownEvent</code> is best
+suited for scenarios involving dedicated background threads, legacy
+codebases, custom thread-pool scheduling, or where non-allocating,
+low-level synchronous synchronization is explicitly required.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/using-countdown-event-for-thread-coordination-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

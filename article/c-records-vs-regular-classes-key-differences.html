@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Records vs Regular Classes: Key Differences - cs</title>
+    <meta name="description" content="This article explores C# record classes and how they fundamentally differ from traditional classes. Introduced in C# 9, records provide a concise, data-centric alternative to standard object-oriented classes. You will learn about the core mechanics of rec">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-records-vs-regular-classes-key-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Records vs Regular Classes: Key Differences - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-records-vs-regular-classes-key-differences" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores C# record classes and how they fundamentally differ from traditional classes. Introduced in C# 9, records provide a concise, data-centric alternative to standard object-oriented classes. You will learn about the core mechanics of rec" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-records-vs-regular-classes-key-differences">C# Records vs
+Regular Classes: Key Differences</h1>
+<p>This article explores C# record classes and how they fundamentally
+differ from traditional classes. Introduced in C# 9, records provide a
+concise, data-centric alternative to standard object-oriented classes.
+You will learn about the core mechanics of records—including value-based
+equality, non-destructive mutation, and built-in formatting—along with
+clear guidelines on when to choose a record over a standard class in
+your applications.</p>
+<hr />
+<h3 id="what-is-a-record-class">What Is a Record Class?</h3>
+<p>A record class (defined using the <code>record</code> or
+<code>record class</code> keyword) is a reference type designed
+specifically for encapsulating data rather than mutable behavior. While
+regular classes focus on object identity and state changes, records
+prioritize immutability and data consistency, significantly cutting down
+boilerplate code for common data structures.</p>
+<h3 id="key-differences-between-records-and-classes">Key Differences
+Between Records and Classes</h3>
+<h4 id="1-equality-semantics-value-equality-vs-reference-equality">1.
+Equality Semantics: Value Equality vs. Reference Equality</h4>
+<p>The most significant distinction between records and regular classes
+is how equality is evaluated:</p>
+<ul>
+<li><strong>Regular Classes:</strong> Use <strong>reference
+equality</strong> by default. Two distinct instances of a class are
+considered equal only if they point to the exact same memory address,
+regardless of whether their property values are identical.</li>
+<li><strong>Records:</strong> Use <strong>value equality</strong> by
+default. The compiler synthesizes an <code>Equals</code> method and
+overrides the <code>==</code> and <code>!=</code> operators so that two
+separate record instances are considered equal if they are of the same
+type and hold identical values for all properties.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Regular Class</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ClassPerson</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> c1 <span class="op">=</span> <span class="kw">new</span> ClassPerson <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Alice&quot;</span> <span class="op">};</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> c2 <span class="op">=</span> <span class="kw">new</span> ClassPerson <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Alice&quot;</span> <span class="op">};</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>c1 <span class="op">==</span> c2<span class="op">);</span> <span class="co">// False (different references)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Record Class</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">RecordPerson</span><span class="op">(</span><span class="dt">string</span> Name<span class="op">);</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> r1 <span class="op">=</span> <span class="kw">new</span> <span class="fu">RecordPerson</span><span class="op">(</span><span class="st">&quot;Alice&quot;</span><span class="op">);</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> r2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">RecordPerson</span><span class="op">(</span><span class="st">&quot;Alice&quot;</span><span class="op">);</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>r1 <span class="op">==</span> r2<span class="op">);</span> <span class="co">// True (same values)</span></span></code></pre></div>
+<h4 id="2-concise-syntax-and-immutability">2. Concise Syntax and
+Immutability</h4>
+<p>Records support <strong>positional syntax</strong>, allowing you to
+declare properties, a primary constructor, and deconstruction logic in a
+single line.</p>
+<ul>
+<li><strong>Regular Classes:</strong> Require explicit constructors,
+backing fields, and property declarations.</li>
+<li><strong>Records:</strong> Properties declared in a positional record
+are immutable by default with <code>init</code>-only accessors.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Record defined in one line</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">Book</span><span class="op">(</span><span class="dt">string</span> Title<span class="op">,</span> <span class="dt">string</span> Author<span class="op">,</span> <span class="dt">decimal</span> Price<span class="op">);</span></span></code></pre></div>
+<p>This single line automatically generates:</p>
+<ul>
+<li>Public <code>init</code>-only properties for <code>Title</code>,
+<code>Author</code>, and <code>Price</code>.</li>
+<li>A primary constructor to populate them.</li>
+<li>Built-in deconstructors for tuple-like extraction.</li>
+</ul>
+<h4 id="3-non-destructive-mutation-with-expression">3. Non-Destructive
+Mutation (<code>with</code> Expression)</h4>
+<p>Because records are commonly immutable, modifying an object usually
+requires creating a new copy with updated values. Records natively
+support non-destructive mutation via the <code>with</code>
+expression:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> original <span class="op">=</span> <span class="kw">new</span> <span class="fu">Book</span><span class="op">(</span><span class="st">&quot;C# in Depth&quot;</span><span class="op">,</span> <span class="st">&quot;Jon Skeet&quot;</span><span class="op">,</span> <span class="fl">39.99m</span><span class="op">);</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> discounted <span class="op">=</span> original with <span class="op">{</span> Price <span class="op">=</span> <span class="fl">29.99m</span> <span class="op">};</span></span></code></pre></div>
+<p>In a standard class, achieving this requires implementing a custom
+copy constructor or a cloning method.</p>
+<h4 id="4-built-in-tostring-formatting">4. Built-in
+<code>ToString()</code> Formatting</h4>
+<ul>
+<li><strong>Regular Classes:</strong> By default, calling
+<code>ToString()</code> prints the fully qualified type name (e.g.,
+<code>MyApp.Models.ClassPerson</code>).</li>
+<li><strong>Records:</strong> The compiler automatically overrides
+<code>ToString()</code> to display the record's type name and a
+formatted list of all its property names and values:</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>original<span class="op">);</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: Book { Title = C# in Depth, Author = Jon Skeet, Price = 39.99 }</span></span></code></pre></div>
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Regular Class</th>
+<th style="text-align: left;">Record Class</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Default Equality</strong></td>
+<td style="text-align: left;">Reference (memory address)</td>
+<td style="text-align: left;">Value (property contents)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Focus</strong></td>
+<td style="text-align: left;">Encapsulated state and behavior</td>
+<td style="text-align: left;">Immutable data structures</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Default Mutability</strong></td>
+<td style="text-align: left;">Mutable (<code>get; set;</code>)</td>
+<td style="text-align: left;">Immutable (<code>get; init;</code>) with
+positional syntax</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>with</code>
+Expression</strong></td>
+<td style="text-align: left;">Not supported</td>
+<td style="text-align: left;">Supported natively</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Generated
+<code>ToString()</code></strong></td>
+<td style="text-align: left;">Displays class namespace/name</td>
+<td style="text-align: left;">Displays properties and values</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Deconstruction</strong></td>
+<td style="text-align: left;">Requires manual <code>Deconstruct</code>
+method</td>
+<td style="text-align: left;">Built-in for positional records</td>
+</tr>
+</tbody>
+</table>
+<h3 id="when-to-use-which">When to Use Which</h3>
+<ul>
+<li><strong>Choose Records</strong> for data transfer objects (DTOs),
+API request and response payloads, event messages, domain values, or any
+scenario where the identity of the object depends purely on the data it
+carries.</li>
+<li><strong>Choose Regular Classes</strong> for rich domain models with
+complex internal state, operations that require mutable behavior, or
+entities where object identity is distinct from object state (such as
+entities tracked by an ORM like Entity Framework).</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-records-vs-regular-classes-key-differences';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

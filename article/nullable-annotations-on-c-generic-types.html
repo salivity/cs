@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nullable Annotations on C# Generic Types - cs</title>
+    <meta name="description" content="Handling nullable annotations on generic type parameters in C# requires balancing the differences between nullable value types and nullable reference types. Because an unconstrained generic parameter T can represent either a reference type or a value type">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/nullable-annotations-on-c-generic-types">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Nullable Annotations on C# Generic Types - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/nullable-annotations-on-c-generic-types" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Handling nullable annotations on generic type parameters in C# requires balancing the differences between nullable value types and nullable reference types. Because an unconstrained generic parameter T can represent either a reference type or a value type" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="nullable-annotations-on-c-generic-types">Nullable Annotations on
+C# Generic Types</h1>
+<p>Handling nullable annotations on generic type parameters in C#
+requires balancing the differences between nullable value types and
+nullable reference types. Because an unconstrained generic parameter
+<code>T</code> can represent either a reference type or a value type,
+the compiler requires specific constraints or nullability attributes to
+correctly determine how <code>T?</code> behaves. This guide explains how
+to properly annotate and constrain generic type parameters using modern
+C# features.</p>
+<h3 id="unconstrained-generic-type-parameters-t">Unconstrained Generic
+Type Parameters (<code>T?</code>)</h3>
+<p>Starting in C# 9.0, you can annotate an unconstrained generic type
+parameter as <code>T?</code>. When <code>T</code> is unconstrained,
+<code>T?</code> represents an unknown type that can be null:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Container<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> T<span class="op">?</span> Value <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Container</span><span class="op">(</span>T<span class="op">?</span> value<span class="op">)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        Value <span class="op">=</span> value<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If <code>T</code> is a reference type (like <code>string</code>),
+<code>T?</code> is treated as a nullable reference type
+(<code>string?</code>). If <code>T</code> is a non-nullable value type
+(like <code>int</code>), <code>T?</code> is treated as
+<code>Nullable&lt;int&gt;</code> (<code>int?</code>). If <code>T</code>
+is instantiated as an already-nullable value type (like
+<code>int?</code>), <code>T?</code> remains <code>int?</code>.</p>
+<h3 id="the-notnull-constraint">The <code>notnull</code> Constraint</h3>
+<p>To prevent callers from supplying a nullable reference type or a
+nullable value type, apply the <code>notnull</code> constraint:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Dictionary<span class="op">&lt;</span>TKey<span class="op">,</span> TValue<span class="op">&gt;</span> where TKey <span class="op">:</span> notnull</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Add</span><span class="op">(</span>TKey key<span class="op">,</span> TValue value<span class="op">)</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This prevents usages like <code>Dictionary&lt;string?, int&gt;</code>
+or <code>Dictionary&lt;int?, int&gt;</code>, ensuring <code>TKey</code>
+is guaranteed to be non-null at compile time.</p>
+<h3 id="reference-type-constraints-class-vs-class">Reference Type
+Constraints: <code>class</code> vs. <code>class?</code></h3>
+<p>When a generic parameter must be a reference type, you have two
+primary options:</p>
+<ul>
+<li><strong><code>where T : class</code></strong>: Enforces that the
+type argument must be a non-nullable reference type. Inside the generic
+class or method, <code>T</code> is non-nullable, and <code>T?</code>
+represents a nullable reference type.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> ProcessReference<span class="op">&lt;</span>T<span class="op">&gt;(</span>T item<span class="op">,</span> T<span class="op">?</span> fallback<span class="op">)</span> where T <span class="op">:</span> <span class="kw">class</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// item cannot be null; fallback can be null</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<ul>
+<li><strong><code>where T : class?</code></strong>: Allows the type
+argument to be either a nullable or non-nullable reference type. This is
+useful when you want to enforce reference types while giving the caller
+flexibility.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ReferenceContainer<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> <span class="kw">class</span><span class="op">?</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> T _item<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">ReferenceContainer</span><span class="op">(</span>T item<span class="op">)</span> <span class="op">=&gt;</span> _item <span class="op">=</span> item<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="value-type-constraints-struct">Value Type Constraints:
+<code>struct</code></h3>
+<p>To ensure a type parameter is strictly a value type, use
+<code>where T : struct</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> ProcessValue<span class="op">&lt;</span>T<span class="op">&gt;(</span>T item<span class="op">,</span> T<span class="op">?</span> optionalItem<span class="op">)</span> where T <span class="op">:</span> <span class="kw">struct</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// item is T</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// optionalItem is System.Nullable&lt;T&gt;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This enforces that <code>T</code> cannot be a reference type, and
+<code>T?</code> explicitly creates a <code>Nullable&lt;T&gt;</code>.</p>
+<h3 id="code-analysis-attributes-for-generic-methods">Code Analysis
+Attributes for Generic Methods</h3>
+<p>Sometimes type constraints are too restrictive, especially when
+returning <code>default(T)</code> from methods that accept an
+unconstrained generic <code>T</code>. In these cases, use attributes
+from the <code>System.Diagnostics.CodeAnalysis</code> namespace:</p>
+<ul>
+<li><strong><code>[return: MaybeNull]</code></strong>: Indicates that
+the return value may be <code>null</code>, even if <code>T</code> is
+technically non-nullable:</li>
+</ul>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Diagnostics</span><span class="op">.</span><span class="fu">CodeAnalysis</span><span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> T<span class="op">?</span> Find<span class="op">&lt;</span>T<span class="op">&gt;(</span>IEnumerable<span class="op">&lt;</span>T<span class="op">&gt;</span> source<span class="op">,</span> Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> predicate<span class="op">)</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> item <span class="kw">in</span> source<span class="op">)</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span><span class="fu">predicate</span><span class="op">(</span>item<span class="op">))</span> <span class="kw">return</span> item<span class="op">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="kw">default</span><span class="op">;</span> <span class="co">// Compiler allows this even if T is a non-nullable type</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<ul>
+<li><strong><code>[NotNullWhen]</code></strong>: Informs the compiler
+that an <code>out</code> parameter is not null if the method returns
+<code>true</code>:</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">bool</span> TryGetValue<span class="op">&lt;</span>T<span class="op">&gt;(</span><span class="dt">string</span> key<span class="op">,</span> <span class="op">[</span><span class="fu">NotNullWhen</span><span class="op">(</span><span class="kw">true</span><span class="op">)]</span> <span class="kw">out</span> T<span class="op">?</span> value<span class="op">)</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// If this returns true, callers can safely use &#39;value&#39; without null checks.</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    value <span class="op">=</span> <span class="kw">default</span><span class="op">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Applying the correct constraints (<code>class</code>,
+<code>class?</code>, <code>struct</code>, or <code>notnull</code>)
+alongside conditional nullability attributes provides the compiler with
+the necessary context to enforce null safety across generic APIs.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/nullable-annotations-on-c-generic-types';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitwise Operations with Flags Enums in C# - cs</title>
+    <meta name="description" content="In C#, a flags enum is an enumeration type treated as a bit field, allowing a single variable to store multiple distinct states or options simultaneously. This article explains how to define a flags enum using the [Flags] attribute and values mapped to po">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/bitwise-operations-with-flags-enums-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Bitwise Operations with Flags Enums in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/bitwise-operations-with-flags-enums-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, a flags enum is an enumeration type treated as a bit field, allowing a single variable to store multiple distinct states or options simultaneously. This article explains how to define a flags enum using the [Flags] attribute and values mapped to po" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="bitwise-operations-with-flags-enums-in-c">Bitwise Operations
+with Flags Enums in C</h1>
+<p>In C#, a flags enum is an enumeration type treated as a bit field,
+allowing a single variable to store multiple distinct states or options
+simultaneously. This article explains how to define a flags enum using
+the <code>[Flags]</code> attribute and values mapped to powers of two.
+It also demonstrates how to manipulate these values efficiently using
+bitwise operators—specifically the OR (<code>|</code>), AND
+(<code>&amp;</code>), NOT (<code>~</code>), and XOR (<code>^</code>)
+operators, as well as the built-in <code>HasFlag</code> method.</p>
+<h2 id="defining-a-flags-enum">Defining a Flags Enum</h2>
+<p>By default, an enum in C# represents a single distinct value. Adding
+the <code>[Flags]</code> attribute signals that the enum can be treated
+as a collection of bits. To ensure individual values do not overlap in
+binary representation, each member must be assigned a unique power of
+two (1, 2, 4, 8, 16, etc.) or defined using the binary literal or
+bit-shift syntax.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Flags<span class="op">]</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">enum</span> FileAccessPermissions</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    None    <span class="op">=</span> <span class="dv">0</span><span class="op">,</span>      <span class="co">// 0000</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    Read    <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">0</span><span class="op">,</span> <span class="co">// 0001 (1)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    Write   <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">1</span><span class="op">,</span> <span class="co">// 0010 (2)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    Execute <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">2</span><span class="op">,</span> <span class="co">// 0100 (4)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    Delete  <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">3</span>  <span class="co">// 1000 (8)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The <code>[Flags]</code> attribute does not alter the underlying data
+or enforce assignment rules; its primary runtime effect is altering the
+behavior of the <code>.ToString()</code> method to display
+comma-separated flag names instead of a raw integer.</p>
+<h2 id="combining-flags-bitwise-or">Combining Flags (Bitwise OR)</h2>
+<p>To assign multiple values to a single variable, use the bitwise OR
+(<code>|</code>) operator. The OR operator combines the bits of each
+operand, setting a bit to <code>1</code> if it is present in either
+value.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>FileAccessPermissions userPermissions <span class="op">=</span> FileAccessPermissions<span class="op">.</span><span class="fu">Read</span> <span class="op">|</span> FileAccessPermissions<span class="op">.</span><span class="fu">Write</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">// Binary: 0001 | 0010 = 0011 (Value: 3)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// userPermissions.ToString() outputs: &quot;Read, Write&quot;</span></span></code></pre></div>
+<h2 id="checking-for-a-flag-bitwise-and">Checking for a Flag (Bitwise
+AND)</h2>
+<p>To test whether a specific flag is set, you can use the bitwise AND
+(<code>&amp;</code>) operator or the <code>Enum.HasFlag</code>
+method.</p>
+<p>The bitwise AND operator masks the bits, returning a non-zero value
+if the specific flag exists:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> canRead <span class="op">=</span> <span class="op">(</span>userPermissions <span class="op">&amp;</span> FileAccessPermissions<span class="op">.</span><span class="fu">Read</span><span class="op">)</span> <span class="op">==</span> FileAccessPermissions<span class="op">.</span><span class="fu">Read</span><span class="op">;</span></span></code></pre></div>
+<p>Alternatively, use <code>HasFlag</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> canWrite <span class="op">=</span> userPermissions<span class="op">.</span><span class="fu">HasFlag</span><span class="op">(</span>FileAccessPermissions<span class="op">.</span><span class="fu">Write</span><span class="op">);</span></span></code></pre></div>
+<p>While <code>HasFlag</code> is more readable, direct bitwise AND
+operations are faster and preferred in performance-critical code
+paths.</p>
+<h2 id="removing-a-flag-bitwise-and-with-not">Removing a Flag (Bitwise
+AND with NOT)</h2>
+<p>To remove a flag from an existing combination, combine the bitwise
+NOT (<code>~</code>) and bitwise AND (<code>&amp;</code>) operators. The
+bitwise NOT operator inverts the target bits, and the AND operator
+unsets the target bit while preserving all others.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Remove Write permission</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>userPermissions <span class="op">&amp;=</span> <span class="op">~</span>FileAccessPermissions<span class="op">.</span><span class="fu">Write</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Binary: 0011 &amp; ~0010 =&gt; 0011 &amp; 1101 = 0001 (Read)</span></span></code></pre></div>
+<h2 id="toggling-a-flag-bitwise-xor">Toggling a Flag (Bitwise XOR)</h2>
+<p>To invert the state of a flag (turning it off if it is on, or on if
+it is off), use the bitwise XOR (<code>^</code>) operator.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Toggle Execute permission on</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>userPermissions <span class="op">^=</span> FileAccessPermissions<span class="op">.</span><span class="fu">Execute</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Toggle Execute permission off</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>userPermissions <span class="op">^=</span> FileAccessPermissions<span class="op">.</span><span class="fu">Execute</span><span class="op">;</span></span></code></pre></div>
+<h2 id="summary-of-operators">Summary of Operators</h2>
+<ul>
+<li><strong>Bitwise OR (<code>|</code>)</strong>: Combines multiple
+flags together.</li>
+<li><strong>Bitwise AND (<code>&amp;</code>)</strong>: Checks if one or
+more flags are present.</li>
+<li><strong>Bitwise NOT (<code>~</code>)</strong>: Inverts all bits,
+primarily used with AND to strip a flag.</li>
+<li><strong>Bitwise XOR (<code>^</code>)</strong>: Toggles a flag
+between active and inactive.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/bitwise-operations-with-flags-enums-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

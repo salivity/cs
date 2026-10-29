@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top-Level Statements in C# 9 Console Apps - cs</title>
+    <meta name="description" content="C# 9 introduced top-level statements to reduce boilerplate code and streamline the entry point of console applications. This article explores how this feature eliminates traditional scaffolding—such as explicit namespaces, classes, and Main methods—while">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/top-level-statements-in-c-9-console-apps">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Top-Level Statements in C# 9 Console Apps - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/top-level-statements-in-c-9-console-apps" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="C# 9 introduced top-level statements to reduce boilerplate code and streamline the entry point of console applications. This article explores how this feature eliminates traditional scaffolding—such as explicit namespaces, classes, and Main methods—while" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="top-level-statements-in-c-9-console-apps">Top-Level Statements
+in C# 9 Console Apps</h1>
+<p>C# 9 introduced top-level statements to reduce boilerplate code and
+streamline the entry point of console applications. This article
+explores how this feature eliminates traditional scaffolding—such as
+explicit namespaces, classes, and <code>Main</code> methods—while
+generating the same underlying application architecture. You will learn
+the mechanics behind top-level statements, their handling of
+asynchronous code and command-line arguments, and the practical benefits
+they bring to both novice and experienced developers.</p>
+<h3 id="the-problem-with-traditional-entry-points">The Problem with
+Traditional Entry Points</h3>
+<p>Prior to C# 9, even the most basic console application required a
+significant amount of ceremonial code. A simple program that printed
+text to the console typically looked like this:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> HelloWorldApp</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">class</span> Program</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">(</span><span class="dt">string</span><span class="op">[]</span> args<span class="op">)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Hello, World!&quot;</span><span class="op">);</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>For beginners, this structure introduced advanced
+concepts—namespaces, classes, static members, and parameter
+arrays—before they could even learn basic control flow. For experienced
+developers, it added unnecessary visual clutter to small utility tools,
+scripts, and Azure Functions.</p>
+<h3 id="how-top-level-statements-work">How Top-Level Statements
+Work</h3>
+<p>Top-level statements remove the need to explicitly declare a
+<code>namespace</code>, <code>class Program</code>, and
+<code>static void Main</code>. Instead, code executes sequentially from
+the top of the file:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Hello, World!&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>Behind the scenes, the C# compiler automatically wraps these
+statements inside a generated class and an entry-point method at compile
+time. The compiled Intermediate Language (IL) is virtually identical to
+the traditional approach, ensuring that runtime performance and
+application behavior remain unchanged.</p>
+<h3 id="built-in-capabilities">Built-in Capabilities</h3>
+<p>Despite their minimal syntax, top-level statements preserve full
+access to standard entry-point functionality:</p>
+<ul>
+<li><strong>Command-Line Arguments:</strong> The compiler automatically
+exposes an implicit <code>args</code> variable, allowing you to read
+command-line inputs without explicitly declaring
+<code>string[] args</code>.</li>
+<li><strong>Asynchronous Support:</strong> You can use the
+<code>await</code> keyword directly at the top level. The compiler
+automatically detects this and generates an asynchronous entry point
+(such as <code>Task&lt;int&gt;</code> or <code>Task</code>).</li>
+<li><strong>Exit Codes:</strong> You can return an integer status code
+directly using <code>return 0;</code> or another integer value,
+signaling success or failure to the host environment.</li>
+<li><strong>Local Functions and Types:</strong> You can define local
+functions directly within the top-level code. Any custom classes,
+records, or structs must be placed at the bottom of the file, after all
+executable statements.</li>
+</ul>
+<h3 id="rules-and-limitations">Rules and Limitations</h3>
+<p>To maintain code clarity and prevent entry-point conflicts, C#
+enforces specific rules:</p>
+<ol type="1">
+<li><strong>Single Entry Point:</strong> Only one file in an entire
+project can use top-level statements. Including them in multiple files
+results in a compilation error.</li>
+<li><strong>Order of Elements:</strong> <code>using</code> directives
+must come first, followed by top-level executable statements, followed
+by any type or namespace declarations.</li>
+<li><strong>No Direct Method Wrapper:</strong> Because the code is
+executed inside a compiler-generated method, you cannot declare members
+with access modifiers (such as <code>public</code> or
+<code>private</code>) directly at the top level without placing them
+inside a type.</li>
+</ol>
+<h3 id="conclusion">Conclusion</h3>
+<p>Top-level statements simplify C# console application entry points by
+eliminating boilerplate while maintaining the full power of the
+language. By shifting the responsibility of defining the application
+wrapper to the compiler, C# 9 makes codebases cleaner, eases the
+learning curve for newcomers, and makes C# an ideal choice for
+microservices, prototypes, and lightweight console utilities.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/top-level-statements-in-c-9-console-apps';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

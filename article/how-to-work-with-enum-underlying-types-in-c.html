@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Work with Enum Underlying Types in C# - cs</title>
+    <meta name="description" content="By default, every enumeration in C# uses the 32-bit signed integer (int) as its underlying storage mechanism. However, C# allows developers to override this default and choose from a specific set of integral types—such as byte, short, or long—to optimize">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-work-with-enum-underlying-types-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Work with Enum Underlying Types in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-work-with-enum-underlying-types-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="By default, every enumeration in C# uses the 32-bit signed integer (int) as its underlying storage mechanism. However, C# allows developers to override this default and choose from a specific set of integral types—such as byte, short, or long—to optimize" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-work-with-enum-underlying-types-in-c">How to Work with
+Enum Underlying Types in C</h1>
+<p>By default, every enumeration in C# uses the 32-bit signed integer
+(<code>int</code>) as its underlying storage mechanism. However, C#
+allows developers to override this default and choose from a specific
+set of integral types—such as <code>byte</code>, <code>short</code>, or
+<code>long</code>—to optimize memory allocation, maintain strict API
+contracts, or integrate cleanly with databases and network protocols.
+This guide covers how to declare an enum with a custom underlying type,
+safely cast between the enum and its primitive value, and retrieve
+underlying type information at runtime.</p>
+<h3 id="supported-underlying-types">Supported Underlying Types</h3>
+<p>An enum in C# can inherit from any integral type except
+<code>char</code>. The allowed types are:</p>
+<ul>
+<li><code>byte</code> and <code>sbyte</code> (8-bit)</li>
+<li><code>short</code> and <code>ushort</code> (16-bit)</li>
+<li><code>int</code> and <code>uint</code> (32-bit)</li>
+<li><code>long</code> and <code>ulong</code> (64-bit)</li>
+</ul>
+<h3 id="declaring-an-enum-with-a-specific-underlying-type">Declaring an
+Enum with a Specific Underlying Type</h3>
+<p>To specify an underlying type, place a colon (<code>:</code>)
+followed by the chosen type name after the enum identifier:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">enum</span> NetworkState <span class="op">:</span> <span class="dt">byte</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    Disconnected <span class="op">=</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    Connecting <span class="op">=</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    Connected <span class="op">=</span> <span class="dv">2</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    Error <span class="op">=</span> <span class="dv">255</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>In this example, each member of <code>NetworkState</code> requires
+only 1 byte of memory instead of the default 4 bytes. If an assigned
+value exceeds the range of the underlying type, the C# compiler produces
+a compile-time error.</p>
+<h3 id="casting-between-enums-and-underlying-types">Casting Between
+Enums and Underlying Types</h3>
+<p>C# requires explicit casting to convert an enum instance to or from
+its underlying type:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Enum to underlying type</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>NetworkState state <span class="op">=</span> NetworkState<span class="op">.</span><span class="fu">Connected</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">byte</span> rawValue <span class="op">=</span> <span class="op">(</span><span class="dt">byte</span><span class="op">)</span>state<span class="op">;</span> <span class="co">// rawValue is 2</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Underlying type to enum</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="dt">byte</span> input <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>NetworkState restoredState <span class="op">=</span> <span class="op">(</span>NetworkState<span class="op">)</span>input<span class="op">;</span> <span class="co">// restoredState is NetworkState.Connecting</span></span></code></pre></div>
+<p>While casting to an integral type of the same size or larger is safe,
+casting directly to an incompatible integral type can cause truncation
+or runtime errors if done improperly. Always match the explicit cast to
+the defined underlying type or a larger type.</p>
+<h3 id="inspecting-underlying-types-at-runtime">Inspecting Underlying
+Types at Runtime</h3>
+<p>To determine the underlying storage type dynamically, use the
+<code>Enum.GetUnderlyingType</code> method:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Type underlyingType <span class="op">=</span> Enum<span class="op">.</span><span class="fu">GetUnderlyingType</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span>NetworkState<span class="op">));</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>underlyingType<span class="op">);</span> <span class="co">// Outputs: System.Byte</span></span></code></pre></div>
+<p>This is particularly useful when writing generic serialization logic,
+database mapping layers, or reflection-based validators where the enum
+structure must be inspected programmatically.</p>
+<h3 id="using-underlying-types-with-the-flags-attribute">Using
+Underlying Types with the <code>[Flags]</code> Attribute</h3>
+<p>When using the <code>[Flags]</code> attribute for bitwise operations,
+choosing a larger underlying type like <code>long</code> expands the
+maximum number of distinct bit flags from 32 to 64:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Flags<span class="op">]</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">enum</span> UserPermissions <span class="op">:</span> <span class="dt">ulong</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    None <span class="op">=</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    Read <span class="op">=</span> <span class="dv">1UL</span> <span class="op">&lt;&lt;</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    Write <span class="op">=</span> <span class="dv">1UL</span> <span class="op">&lt;&lt;</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    Execute <span class="op">=</span> <span class="dv">1UL</span> <span class="op">&lt;&lt;</span> <span class="dv">2</span><span class="op">,</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Can safely scale up to 1UL &lt;&lt; 63</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Choosing the correct underlying type ensures efficient memory usage
+in high-throughput applications, prevents overflow errors in bitmask
+scenarios, and enforces correct data representations across system
+boundaries.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-work-with-enum-underlying-types-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

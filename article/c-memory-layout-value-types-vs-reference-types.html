@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Memory Layout: Value Types vs Reference Types - cs</title>
+    <meta name="description" content="In C#, understanding how value types and reference types utilize memory is essential for writing high-performance, efficient code. The core distinction lies in how and where data is physically stored in memory: value types hold their data directly inline">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-memory-layout-value-types-vs-reference-types">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Memory Layout: Value Types vs Reference Types - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-memory-layout-value-types-vs-reference-types" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, understanding how value types and reference types utilize memory is essential for writing high-performance, efficient code. The core distinction lies in how and where data is physically stored in memory: value types hold their data directly inline" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-memory-layout-value-types-vs-reference-types">C# Memory
+Layout: Value Types vs Reference Types</h1>
+<p>In C#, understanding how value types and reference types utilize
+memory is essential for writing high-performance, efficient code. The
+core distinction lies in how and where data is physically stored in
+memory: value types hold their data directly inline wherever they are
+declared, while reference types store their actual data on the managed
+heap, accessed via an address pointer. This architectural difference
+fundamentally shapes memory consumption, object overhead, cache
+locality, and the operational workload placed on the .NET Garbage
+Collector (GC).</p>
+<h3 id="value-types-inline-data-storage">Value Types: Inline Data
+Storage</h3>
+<p>Value types—which include primitives like <code>int</code>,
+<code>float</code>, and <code>bool</code>, as well as custom
+<code>struct</code> types and <code>enum</code> types—store their values
+directly within the memory allocated for the variable.</p>
+<ul>
+<li><strong>Allocation Location:</strong> Value types do not
+automatically live on the stack. Instead, their allocation is
+contextual. If declared as a local variable within a method, the data
+resides directly on the execution stack. If declared as a field inside a
+class, the value type's data is embedded directly inline within that
+class instance on the heap.</li>
+<li><strong>Lack of Metadata Overhead:</strong> Value types carry zero
+inherent memory overhead. A 32-bit integer (<code>int</code>) consumes
+exactly 4 bytes of memory, and a custom struct containing two
+<code>int</code> fields consumes 8 bytes (subject to byte alignment and
+padding). They do not contain any object headers or type pointers.</li>
+<li><strong>Copy Semantics:</strong> When a value type is assigned to
+another variable or passed by value to a method, a bitwise copy of the
+actual data is created in a new memory location. Modifying the copy does
+not alter the original value.</li>
+</ul>
+<h3 id="reference-types-pointers-and-the-managed-heap">Reference Types:
+Pointers and the Managed Heap</h3>
+<p>Reference types—including classes, interfaces, delegates,
+<code>string</code>, and <code>record class</code> types—are always
+stored on the managed heap, while the variable itself holds only a
+memory address (a reference) pointing to that heap location.</p>
+<ul>
+<li><strong>Split Layout:</strong> A reference type involves two
+distinct memory locations:
+<ol type="1">
+<li><strong>The Reference (Pointer):</strong> Located on the stack (if
+local) or inside another object. It consumes 4 bytes on a 32-bit
+architecture or 8 bytes on a 64-bit architecture.</li>
+<li><strong>The Object Instance:</strong> Allocated on the managed heap,
+containing the actual object data.</li>
+</ol></li>
+<li><strong>Object Header Overhead:</strong> Every reference type
+instance on the managed heap includes hidden overhead that precedes its
+actual data fields:
+<ul>
+<li><strong>SyncBlock Index:</strong> Used for thread synchronization
+(locking), hash codes, and garbage collection flags (4 bytes on 32-bit,
+8 bytes on 64-bit).</li>
+<li><strong>MethodTable Pointer (Type Handle):</strong> Points to the
+type's runtime metadata and virtual method table (4 bytes on 32-bit, 8
+bytes on 64-bit).</li>
+</ul>
+Because of this, an empty class instance on a 64-bit runtime immediately
+consumes at least 24 bytes (16 bytes of header overhead plus the minimum
+object size alignment), even before any field data is added.</li>
+<li><strong>Copy Semantics:</strong> When assigning a reference type to
+a new variable, only the memory address (the pointer) is copied. Both
+variables then point to the exact same memory block on the heap, meaning
+changes made through one variable affect the other.</li>
+</ul>
+<h3 id="memory-overhead-and-cache-locality">Memory Overhead and Cache
+Locality</h3>
+<p>The difference in physical layout significantly impacts hardware
+performance and cache efficiency:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Characteristic</th>
+<th style="text-align: left;">Value Type</th>
+<th style="text-align: left;">Reference Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Variable Contents</strong></td>
+<td style="text-align: left;">The actual data value</td>
+<td style="text-align: left;">A memory address pointing to the heap</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Object Overhead</strong></td>
+<td style="text-align: left;">0 bytes</td>
+<td style="text-align: left;">8–16 bytes (SyncBlock + Type Handle)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Default Pointer Size</strong></td>
+<td style="text-align: left;">None (unless boxed or passed with
+<code>ref</code>)</td>
+<td style="text-align: left;">4 bytes (32-bit) / 8 bytes (64-bit)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GC Pressure</strong></td>
+<td style="text-align: left;">Minimal to none (unless boxed)</td>
+<td style="text-align: left;">High (requires GC tracking and
+compaction)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Memory Access</strong></td>
+<td style="text-align: left;">Direct access</td>
+<td style="text-align: left;">Indirect access (pointer
+dereferencing)</td>
+</tr>
+</tbody>
+</table>
+<p>Because arrays of value types store their elements contiguously in a
+single contiguous block of memory, the CPU can read them sequentially
+into the L1/L2 hardware caches with minimal cache misses. In contrast,
+an array of reference types stores an array of pointers; accessing the
+actual elements requires dereferencing each pointer to scattered
+locations on the heap, which increases cache misses and latency.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-memory-layout-value-types-vs-reference-types';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

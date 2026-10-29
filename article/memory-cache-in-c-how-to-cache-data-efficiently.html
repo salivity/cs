@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemoryCache in C#: How to Cache Data Efficiently - cs</title>
+    <meta name="description" content="This article provides an overview of .NET&#39;s MemoryCache, detailing how it operates within application memory and outlining the most efficient ways to store, retrieve, and evict cached data in C#. By understanding expiration strategies, size restrictions,">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/memory-cache-in-c-how-to-cache-data-efficiently">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MemoryCache in C#: How to Cache Data Efficiently - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/memory-cache-in-c-how-to-cache-data-efficiently" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of .NET&#39;s MemoryCache, detailing how it operates within application memory and outlining the most efficient ways to store, retrieve, and evict cached data in C#. By understanding expiration strategies, size restrictions," />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="memorycache-in-c-how-to-cache-data-efficiently">MemoryCache in
+C#: How to Cache Data Efficiently</h1>
+<p>This article provides an overview of .NET's <code>MemoryCache</code>,
+detailing how it operates within application memory and outlining the
+most efficient ways to store, retrieve, and evict cached data in C#. By
+understanding expiration strategies, size restrictions, and thread-safe
+retrieval patterns, developers can optimize application performance
+while avoiding excessive memory consumption.</p>
+<h2 id="what-is-memorycache">What is MemoryCache?</h2>
+<p><code>MemoryCache</code> is an in-memory key-value store provided by
+.NET under the <code>Microsoft.Extensions.Caching.Memory</code>
+namespace. It runs inside the hosting process, making data retrieval
+extremely fast since it does not incur network serialization or
+round-trip overhead like distributed caches (e.g., Redis). However,
+because it shares memory with the application, unmanaged growth can lead
+to <code>OutOfMemoryException</code> errors, making efficient cache
+management essential.</p>
+<h2 id="registering-and-injecting-memorycache">Registering and Injecting
+MemoryCache</h2>
+<p>To use <code>MemoryCache</code> in modern .NET applications, register
+it in the dependency injection container:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddMemoryCache</span><span class="op">();</span></span></code></pre></div>
+<p>Inject the <code>IMemoryCache</code> interface into your service or
+controller:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ProductService</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IMemoryCache _cache<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">ProductService</span><span class="op">(</span>IMemoryCache cache<span class="op">)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        _cache <span class="op">=</span> cache<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="efficient-data-retrieval-with-getorcreateasync">Efficient Data
+Retrieval with GetOrCreateAsync</h2>
+<p>The most efficient and safe pattern for accessing cached data is
+<code>GetOrCreateAsync</code>. This pattern handles checking for the
+key, computing the value if missing, and storing the result in a single,
+clean operation:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> async Task<span class="op">&lt;</span>Product<span class="op">&gt;</span> <span class="fu">GetProductAsync</span><span class="op">(</span><span class="dt">int</span> id<span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">string</span> cacheKey <span class="op">=</span> $<span class="st">&quot;product:{id}&quot;</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> await _cache<span class="op">.</span><span class="fu">GetOrCreateAsync</span><span class="op">(</span>cacheKey<span class="op">,</span> async entry <span class="op">=&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        entry<span class="op">.</span><span class="fu">AbsoluteExpirationRelativeToNow</span> <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">FromMinutes</span><span class="op">(</span><span class="dv">10</span><span class="op">);</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        entry<span class="op">.</span><span class="fu">SlidingExpiration</span> <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">FromMinutes</span><span class="op">(</span><span class="dv">2</span><span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        entry<span class="op">.</span><span class="fu">Size</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> await <span class="fu">FetchProductFromDatabaseAsync</span><span class="op">(</span>id<span class="op">);</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">});</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="strategies-for-efficient-cache-storage">Strategies for Efficient
+Cache Storage</h2>
+<h3 id="1-combine-absolute-and-sliding-expiration">1. Combine Absolute
+and Sliding Expiration</h3>
+<p>A common pitfall is relying solely on <code>SlidingExpiration</code>,
+which resets the expiration clock every time an item is read. If an item
+is read continuously, it will never expire, leading to stale data.</p>
+<p>Combine <code>SlidingExpiration</code> with
+<code>AbsoluteExpirationRelativeToNow</code> to ensure frequently
+accessed data stays in the cache while forcing a refresh
+periodically:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> cacheOptions <span class="op">=</span> <span class="kw">new</span> <span class="fu">MemoryCacheEntryOptions</span><span class="op">()</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">SetSlidingExpiration</span><span class="op">(</span>TimeSpan<span class="op">.</span><span class="fu">FromMinutes</span><span class="op">(</span><span class="dv">5</span><span class="op">))</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">SetAbsoluteExpiration</span><span class="op">(</span>TimeSpan<span class="op">.</span><span class="fu">FromHours</span><span class="op">(</span><span class="dv">1</span><span class="op">));</span></span></code></pre></div>
+<h3 id="2-enforce-size-limits-to-prevent-memory-leaks">2. Enforce Size
+Limits to Prevent Memory Leaks</h3>
+<p>By default, <code>MemoryCache</code> has no size limit. To prevent
+uncontrolled memory growth, configure a global <code>SizeLimit</code>
+when registering the service:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddMemoryCache</span><span class="op">(</span>options <span class="op">=&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    options<span class="op">.</span><span class="fu">SizeLimit</span> <span class="op">=</span> <span class="dv">1024</span><span class="op">;</span> <span class="co">// Represents logical units (e.g., number of entries or estimated megabytes)</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<p>When a <code>SizeLimit</code> is set, every entry added to the cache
+must explicitly declare its size using <code>.SetSize()</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> entryOptions <span class="op">=</span> <span class="kw">new</span> <span class="fu">MemoryCacheEntryOptions</span><span class="op">()</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">SetSize</span><span class="op">(</span><span class="dv">1</span><span class="op">)</span> <span class="co">// Uses 1 unit of the 1024 limit</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">SetAbsoluteExpiration</span><span class="op">(</span>TimeSpan<span class="op">.</span><span class="fu">FromMinutes</span><span class="op">(</span><span class="dv">30</span><span class="op">));</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>_cache<span class="op">.</span><span class="fu">Set</span><span class="op">(</span>cacheKey<span class="op">,</span> product<span class="op">,</span> entryOptions<span class="op">);</span></span></code></pre></div>
+<h3 id="3-set-cache-item-priority">3. Set Cache Item Priority</h3>
+<p>When the cache reaches its size limit, it evicts items based on
+priority. Use <code>CacheItemPriority</code> to guide eviction
+decisions:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> entryOptions <span class="op">=</span> <span class="kw">new</span> <span class="fu">MemoryCacheEntryOptions</span><span class="op">()</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">SetPriority</span><span class="op">(</span>CacheItemPriority<span class="op">.</span><span class="fu">High</span><span class="op">)</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">SetSize</span><span class="op">(</span><span class="dv">1</span><span class="op">);</span></span></code></pre></div>
+<p>Use <code>CacheItemPriority.NeverRemove</code> sparingly, as it
+bypasses eviction during memory pressure.</p>
+<h3 id="4-cache-keys-and-value-types">4. Cache Keys and Value Types</h3>
+<p>Keep cache keys short, structured, and consistent (e.g.,
+<code>entity:id</code>). Avoid caching large object graphs that
+duplicate common data across entries. When possible, cache serialized
+byte arrays or lightweight Data Transfer Objects (DTOs) rather than live
+database entities with active change trackers.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/memory-cache-in-c-how-to-cache-data-efficiently';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue and Stack in C# Algorithms - cs</title>
+    <meta name="description" content="In C# software development, Queue&lt;T&gt; and Stack&lt;T&gt; are foundational collection classes designed to handle sequential data with strict access rules. While both store elements sequentially, they operate on opposing access patterns: First-In, First-Out (FIFO)">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/queue-and-stack-in-c-algorithms">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Queue and Stack in C# Algorithms - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/queue-and-stack-in-c-algorithms" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C# software development, Queue&lt;T&gt; and Stack&lt;T&gt; are foundational collection classes designed to handle sequential data with strict access rules. While both store elements sequentially, they operate on opposing access patterns: First-In, First-Out (FIFO)" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="queue-and-stack-in-c-algorithms">Queue and Stack in C#
+Algorithms</h1>
+<p>In C# software development, <code>Queue&lt;T&gt;</code> and
+<code>Stack&lt;T&gt;</code> are foundational collection classes designed
+to handle sequential data with strict access rules. While both store
+elements sequentially, they operate on opposing access patterns:
+First-In, First-Out (FIFO) for queues and Last-In, First-Out (LIFO) for
+stacks. Understanding their algorithmic applications is critical for
+solving complex problems such as graph traversals, syntax validation,
+state tracking, and workload buffering with optimal time complexity.</p>
+<h2 id="the-core-mechanisms">The Core Mechanisms</h2>
+<p>Before implementing them in algorithms, it is essential to understand
+their structural behavior in the <code>.NET</code> runtime:</p>
+<ul>
+<li><strong><code>Queue&lt;T&gt;</code> (FIFO):</strong> Elements are
+inserted at the back via <code>Enqueue()</code> and removed from the
+front via <code>Dequeue()</code>. The element that has been in the
+collection the longest is processed first.</li>
+<li><strong><code>Stack&lt;T&gt;</code> (LIFO):</strong> Elements are
+pushed onto the top via <code>Push()</code> and removed from the top via
+<code>Pop()</code>. The most recently added element is processed
+first.</li>
+</ul>
+<p>Both structures provide <span class="math inline">\(O(1)\)</span>
+amortized time complexity for insertion, removal, and lookup of the next
+element using <code>Peek()</code>.</p>
+<h2 id="algorithmic-uses-for-queuet">Algorithmic Uses for
+<code>Queue&lt;T&gt;</code></h2>
+<p>Queues are standard when elements must be processed in the exact
+order they arrive or when exploring possibilities symmetrically.</p>
+<h3 id="1-breadth-first-search-bfs">1. Breadth-First Search (BFS)</h3>
+<p>The primary algorithmic use of a <code>Queue&lt;T&gt;</code> is in
+graph and tree traversals via BFS. Unlike depth-oriented approaches, BFS
+visits nodes layer by layer. A queue stores neighbor nodes awaiting
+exploration, ensuring that all nodes at depth <span
+class="math inline">\(k\)</span> are evaluated before moving to depth
+<span class="math inline">\(k + 1\)</span>. This pattern is vital for
+finding the shortest path in unweighted graphs.</p>
+<h3 id="2-rate-limiting-and-sliding-windows">2. Rate Limiting and
+Sliding Windows</h3>
+<p>Queues efficiently track events within a moving time window. For
+instance, in a rate-limiting algorithm, incoming request timestamps can
+be enqueued. When a new request arrives, older timestamps outside the
+valid window are dequeued, leaving only active counts to determine
+eligibility.</p>
+<h3 id="3-buffering-and-asynchronous-pipelines">3. Buffering and
+Asynchronous Pipelines</h3>
+<p>Queues manage tasks between decoupled systems with unequal production
+and consumption rates. In algorithmic implementations of the
+Producer-Consumer pattern, queues buffer instructions, ensuring
+sequential and thread-safe execution (often utilizing
+<code>ConcurrentQueue&lt;T&gt;</code>).</p>
+<h2 id="algorithmic-uses-for-stackt">Algorithmic Uses for
+<code>Stack&lt;T&gt;</code></h2>
+<p>Stacks are utilized when an algorithm requires revisiting previous
+states, reversing order, or matching nested pairs.</p>
+<h3 id="1-depth-first-search-dfs">1. Depth-First Search (DFS)</h3>
+<p>While DFS is often implemented recursively via the system call stack,
+recursion carries the risk of a <code>StackOverflowException</code> for
+deep structures. An explicit <code>Stack&lt;T&gt;</code> enables an
+iterative DFS, giving developers manual control over heap memory while
+preserving traversal order.</p>
+<h3 id="2-expression-parsing-and-syntax-validation">2. Expression
+Parsing and Syntax Validation</h3>
+<p>Stacks are fundamental in compilers and mathematical parsers:</p>
+<ul>
+<li><strong>Balanced Parentheses:</strong> Checking whether strings
+contain valid nested braces (<code>()</code>, <code>{}</code>,
+<code>[]</code>) is solved by pushing opening brackets and popping them
+when a matching closing bracket is encountered.</li>
+<li><strong>Postfix/Prefix Conversion:</strong> Evaluating reverse
+Polish notation (RPN) or transforming infix expressions via the
+Shunting-Yard algorithm relies on stacks to maintain operators until
+precedence rules dictate their execution.</li>
+</ul>
+<h3 id="3-backtracking-and-state-history">3. Backtracking and State
+History</h3>
+<p>Any algorithm that involves trial and error—such as maze solving,
+N-Queens, or implementing an undo/redo system—relies on stacks. When a
+path reaches a dead end, popping elements allows the algorithm to
+backtrack to the preceding branch and explore alternative solutions.</p>
+<h3 id="4-monotonic-stack-algorithms">4. Monotonic Stack Algorithms</h3>
+<p>A monotonic stack maintains elements in strictly increasing or
+decreasing order. This specialized technique solves range-query problems
+in <span class="math inline">\(O(n)\)</span> time, such as finding the
+"Next Greater Element," calculating the largest rectangle in a
+histogram, or determining daily temperatures.</p>
+<h2 id="choosing-between-queue-and-stack">Choosing Between Queue and
+Stack</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Algorithm Type</th>
+<th style="text-align: left;">Preferred Structure</th>
+<th style="text-align: left;">Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Shortest path (unweighted)</td>
+<td style="text-align: left;"><code>Queue&lt;T&gt;</code></td>
+<td style="text-align: left;">Level-by-level exploration (BFS)</td>
+</tr>
+<tr>
+<td style="text-align: left;">Nested syntax checking</td>
+<td style="text-align: left;"><code>Stack&lt;T&gt;</code></td>
+<td style="text-align: left;">Matches inner-most elements first</td>
+</tr>
+<tr>
+<td style="text-align: left;">Reversing sequences</td>
+<td style="text-align: left;"><code>Stack&lt;T&gt;</code></td>
+<td style="text-align: left;">Natural inversion via LIFO</td>
+</tr>
+<tr>
+<td style="text-align: left;">Task scheduling</td>
+<td style="text-align: left;"><code>Queue&lt;T&gt;</code></td>
+<td style="text-align: left;">Preserves chronological arrival</td>
+</tr>
+<tr>
+<td style="text-align: left;">Backtracking / Path undo</td>
+<td style="text-align: left;"><code>Stack&lt;T&gt;</code></td>
+<td style="text-align: left;">Restores the most recent valid state</td>
+</tr>
+</tbody>
+</table></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/queue-and-stack-in-c-algorithms';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

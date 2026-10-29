@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Interceptors: Modifying Method Calls at Build Time - cs</title>
+    <meta name="description" content="Interceptors are an experimental compiler feature introduced in C# 12 and .NET 8 that allow source generators to reroute specific method calls to alternative code at compile time. This article explains what interceptors are, how they manipulate the Abstra">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-interceptors-modifying-method-calls-at-build-time">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Interceptors: Modifying Method Calls at Build Time - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-interceptors-modifying-method-calls-at-build-time" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Interceptors are an experimental compiler feature introduced in C# 12 and .NET 8 that allow source generators to reroute specific method calls to alternative code at compile time. This article explains what interceptors are, how they manipulate the Abstra" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-interceptors-modifying-method-calls-at-build-time">C#
+Interceptors: Modifying Method Calls at Build Time</h1>
+<p>Interceptors are an experimental compiler feature introduced in C# 12
+and .NET 8 that allow source generators to reroute specific method calls
+to alternative code at compile time. This article explains what
+interceptors are, how they manipulate the Abstract Syntax Tree (AST)
+during compilation to replace call sites, how they differ from runtime
+patching, and why they are essential for optimizing Native Ahead-of-Time
+(AOT) compilation and runtime performance.</p>
+<h2 id="what-are-c-interceptors">What Are C# Interceptors?</h2>
+<p>An interceptor is a method that can declaratively substitute a call
+to another method at a specific source code location during compilation.
+Unlike traditional interception techniques—such as runtime reflection,
+dynamic proxies (e.g., Castle DynamicProxy), or Intermediate Language
+(IL) weaving (e.g., Fody)—C# interceptors execute entirely within the
+Roslyn compiler pipeline.</p>
+<p>When you compile an application using interceptors, the compiler
+rewires the call site directly in the emitted IL code. The original
+method remains untouched, but the specific call location is permanently
+bound to the interceptor method instead. Because this occurs at build
+time, there is zero runtime overhead, no dynamic dispatch penalty, and
+complete compatibility with Native AOT environments where dynamic code
+generation is prohibited.</p>
+<h2 id="how-interceptors-modify-method-calls-at-build-time">How
+Interceptors Modify Method Calls at Build Time</h2>
+<p>The build-time modification process relies on collaboration between
+the Roslyn compiler and source generators. The workflow operates as
+follows:</p>
+<ol type="1">
+<li><strong>Source Parsing and Call Site Identification</strong>: The
+Roslyn compiler parses the source code into a syntax tree. A Roslyn
+incremental generator scans the syntax tree to identify specific method
+invocations that qualify for interception (for example, methods
+utilizing reflection or complex generic dispatch).</li>
+<li><strong>Location Mapping</strong>: The generator records the exact
+physical location of the call site, including the relative file path,
+line number, and character offset within the source file.</li>
+<li><strong>Code Generation</strong>: The generator creates a new C#
+source file containing the interceptor method. This method is decorated
+with the <code>InterceptsLocationAttribute</code>, passing the exact
+file path, line, and character coordinates of the target call site.</li>
+<li><strong>AST Rewrite and IL Emission</strong>: During the compilation
+phase, when the compiler encounters an invocation at the coordinates
+specified by the <code>InterceptsLocationAttribute</code>, it
+substitutes the invocation target. Instead of emitting an IL
+<code>call</code> or <code>callvirt</code> instruction to the original
+method, it emits the instruction pointing directly to the generated
+interceptor method.</li>
+</ol>
+<h2 id="mechanics-and-syntax">Mechanics and Syntax</h2>
+<p>To use interceptors, the feature must be enabled in the project file,
+and the compiler must be instructed which namespaces are permitted to
+contain interceptors:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">PropertyGroup</span>&gt;</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">Features</span>&gt;InterceptorsPreview&lt;/<span class="kw">Features</span>&gt;</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">InterceptorsPreviewNamespaces</span>&gt;$(InterceptorsPreviewNamespaces);MySourceGeneratorNamespace&lt;/<span class="kw">InterceptorsPreviewNamespaces</span>&gt;</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">PropertyGroup</span>&gt;</span></code></pre></div>
+<p>The compiler requires the declaration of the
+<code>InterceptsLocationAttribute</code> within the
+<code>System.Runtime.CompilerServices</code> namespace:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">CompilerServices</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">AttributeUsage</span><span class="op">(</span>AttributeTargets<span class="op">.</span><span class="fu">Method</span><span class="op">,</span> AllowMultiple <span class="op">=</span> <span class="kw">true</span><span class="op">)]</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    file <span class="kw">sealed</span> <span class="kw">class</span> InterceptsLocationAttribute <span class="op">:</span> Attribute</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="fu">InterceptsLocationAttribute</span><span class="op">(</span><span class="dt">string</span> filePath<span class="op">,</span> <span class="dt">int</span> line<span class="op">,</span> <span class="dt">int</span> character<span class="op">)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>An interceptor method must match the signature, return type, and
+generic constraints of the target method. If intercepting an instance
+method, the interceptor must be defined as an extension method or static
+method where the first parameter represents <code>this</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> MySourceGeneratorNamespace</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> GeneratedInterceptors</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Intercepts a call at Program.cs, line 10, character 5</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">[</span>System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">CompilerServices</span><span class="op">.</span><span class="fu">InterceptsLocation</span><span class="op">(</span><span class="st">&quot;Program.cs&quot;</span><span class="op">,</span> line<span class="op">:</span> <span class="dv">10</span><span class="op">,</span> character<span class="op">:</span> <span class="dv">5</span><span class="op">)]</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">InterceptedLog</span><span class="op">(</span><span class="dt">string</span> message<span class="op">)</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Specialized, high-performance logic replaces the original call</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[Optimized]: {message}&quot;</span><span class="op">);</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="primary-use-cases">Primary Use Cases</h2>
+<ul>
+<li><strong>Ahead-of-Time (AOT) Compilation</strong>: Frameworks like
+ASP.NET Core often rely on reflection to analyze route handlers and bind
+parameters. Interceptors allow source generators to inspect minimal API
+routes at build time and replace dynamic mapping calls with hardcoded,
+strongly-typed serializers and binders.</li>
+<li><strong>Performance Optimization</strong>: General-purpose library
+methods can be replaced with specialized versions tailored to the exact
+compile-time constants passed at a specific call site.</li>
+<li><strong>Logging and Diagnostics</strong>: Diagnostic tools can
+inject tracing or telemetry hooks into specific calls without modifying
+source code directly or using IL post-processors.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-interceptors-modifying-method-calls-at-build-time';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

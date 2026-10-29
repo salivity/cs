@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use Nested Types in C# - cs</title>
+    <meta name="description" content="Nested types in C# are types (classes, structs, interfaces, enums, or delegates) declared directly within the scope of an enclosing class or struct. This guide provides a straightforward explanation of how to define, configure, and use nested types in C#,">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-use-nested-types-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use Nested Types in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-use-nested-types-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Nested types in C# are types (classes, structs, interfaces, enums, or delegates) declared directly within the scope of an enclosing class or struct. This guide provides a straightforward explanation of how to define, configure, and use nested types in C#," />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-nested-types-in-c">How to Use Nested Types in C</h1>
+<p>Nested types in C# are types (classes, structs, interfaces, enums, or
+delegates) declared directly within the scope of an enclosing class or
+struct. This guide provides a straightforward explanation of how to
+define, configure, and use nested types in C#, focusing on access
+modifiers, cross-scope member accessibility, instantiation patterns, and
+typical use cases.</p>
+<h3 id="declaring-a-nested-type">Declaring a Nested Type</h3>
+<p>To create a nested type, place its declaration inside the body of the
+containing class.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Container</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Nested class declaration</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">class</span> Nested</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">DisplayMessage</span><span class="op">()</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Inside the nested class.&quot;</span><span class="op">);</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="access-modifiers-and-defaults">Access Modifiers and
+Defaults</h3>
+<p>Unlike top-level types, which can only be declared as
+<code>public</code> or <code>internal</code>, nested types support the
+full range of C# access modifiers:</p>
+<ul>
+<li><code>private</code>: Accessible only within the containing type
+(this is the default if no modifier is specified).</li>
+<li><code>public</code>: Accessible to any code that has access to the
+containing type.</li>
+<li><code>protected</code>: Accessible within the containing type and
+types derived from the containing type.</li>
+<li><code>internal</code>: Accessible within the same assembly.</li>
+<li><code>protected internal</code>: Accessible within the same assembly
+or derived classes.</li>
+<li><code>private protected</code>: Accessible within the containing
+class or derived types in the same assembly.</li>
+</ul>
+<h3 id="accessing-members-between-outer-and-inner-classes">Accessing
+Members Between Outer and Inner Classes</h3>
+<p>The relationship between the outer and nested classes has specific
+accessibility rules:</p>
+<ol type="1">
+<li><strong>Nested Class Accessing Enclosing Class Members:</strong> A
+nested type can access all members—including <code>private</code>
+members—of its enclosing type. However, to access instance members of
+the outer class, the nested class must have an explicit reference to an
+instance of that outer class.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Car</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">string</span> _engineSecret <span class="op">=</span> <span class="st">&quot;Turbocharged V8&quot;</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">class</span> Engine</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">PrintEngineType</span><span class="op">(</span>Car carInstance<span class="op">)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Accessing private instance member of the outer class via reference</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>carInstance<span class="op">.</span><span class="fu">_engineSecret</span><span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<ol start="2" type="1">
+<li><strong>Enclosing Class Accessing Nested Class Members:</strong> The
+enclosing class does not automatically inherit access to the private
+members of its nested class. It can instantiate the nested class and use
+any members that the nested class exposes through its own accessibility
+levels.</li>
+</ol>
+<h3 id="instantiating-a-nested-type">Instantiating a Nested Type</h3>
+<p>How a nested type is instantiated depends on where the code is
+executing and the nested type's access modifier.</p>
+<ul>
+<li><p><strong>From within the containing class:</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Container</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">CreateNested</span><span class="op">()</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        Nested item <span class="op">=</span> <span class="kw">new</span> <span class="fu">Nested</span><span class="op">();</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        item<span class="op">.</span><span class="fu">DisplayMessage</span><span class="op">();</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">class</span> Nested</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">DisplayMessage</span><span class="op">()</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Hello&quot;</span><span class="op">);</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+<li><p><strong>From outside the containing class:</strong> If the nested
+type is marked <code>public</code>, it is qualified using the outer
+type's name:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Container<span class="op">.</span><span class="fu">Nested</span> nestedInstance <span class="op">=</span> <span class="kw">new</span> Container<span class="op">.</span><span class="fu">Nested</span><span class="op">();</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>nestedInstance<span class="op">.</span><span class="fu">DisplayMessage</span><span class="op">();</span></span></code></pre></div></li>
+</ul>
+<h3 id="when-to-use-nested-types">When to Use Nested Types</h3>
+<ul>
+<li><strong>Internal Helpers:</strong> Encapsulate helper classes that
+only exist to serve the containing class (e.g., custom enumerators or
+state trackers) by declaring them <code>private</code>.</li>
+<li><strong>Logical Coupling:</strong> Group small, strongly bound types
+where the nested type has no independent conceptual meaning outside the
+context of the outer class.</li>
+<li><strong>Hidden Implementations:</strong> Implement interfaces
+explicitly or create private subclasses of abstract classes within a
+factory class to prevent consumers from directly creating concrete
+instances.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-use-nested-types-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

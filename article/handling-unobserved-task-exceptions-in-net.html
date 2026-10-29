@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handling Unobserved Task Exceptions in .NET - cs</title>
+    <meta name="description" content="Unobserved task exceptions occur when a faulted Task in .NET is finalized by the Garbage Collector without its exception ever being inspected by the application. This guide explains what triggers these exceptions, how modern .NET runtimes behave when they">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/handling-unobserved-task-exceptions-in-net">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Handling Unobserved Task Exceptions in .NET - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/handling-unobserved-task-exceptions-in-net" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Unobserved task exceptions occur when a faulted Task in .NET is finalized by the Garbage Collector without its exception ever being inspected by the application. This guide explains what triggers these exceptions, how modern .NET runtimes behave when they" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="handling-unobserved-task-exceptions-in-net">Handling Unobserved
+Task Exceptions in .NET</h1>
+<p>Unobserved task exceptions occur when a faulted <code>Task</code> in
+.NET is finalized by the Garbage Collector without its exception ever
+being inspected by the application. This guide explains what triggers
+these exceptions, how modern .NET runtimes behave when they occur, and
+the proper C# strategies—both reactive and proactive—for capturing,
+logging, and preventing them.</p>
+<h3 id="what-causes-unobserved-task-exceptions">What Causes Unobserved
+Task Exceptions?</h3>
+<p>When an asynchronous operation throws an exception, the returned
+<code>Task</code> enters a <code>Faulted</code> state, capturing the
+exception within its <code>Exception</code> property. If your code never
+inspects this exception—such as by using <code>await</code>, calling
+<code>.Wait()</code>, accessing <code>.Result</code>, or reading
+<code>.Exception</code>—the exception remains unobserved.</p>
+<p>When the Garbage Collector eventually finalizes the abandoned
+<code>Task</code> instance, it detects that the exception was never
+handled and raises the issue to the runtime.</p>
+<h3 id="default-runtime-behavior">Default Runtime Behavior</h3>
+<p>In modern .NET (.NET Core, .NET 5+ through .NET 8+), unobserved task
+exceptions do not terminate the process by default. Instead, the runtime
+suppresses the crash to maintain application stability, though the
+exception is still flagged internally. While this prevents unexpected
+termination, silent failures can hide severe bugs, corrupted states, or
+memory leaks.</p>
+<h3 id="subscribing-to-taskschedulerunobservedtaskexception">Subscribing
+to <code>TaskScheduler.UnobservedTaskException</code></h3>
+<p>The primary mechanism for globally intercepting unobserved task
+exceptions is the static event
+<code>TaskScheduler.UnobservedTaskException</code>. You can attach an
+event handler early in your application lifecycle (such as in
+<code>Program.cs</code>) to log the error and mark it as observed.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">.</span><span class="fu">Tasks</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">(</span><span class="dt">string</span><span class="op">[]</span> args<span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        TaskScheduler<span class="op">.</span><span class="fu">UnobservedTaskException</span> <span class="op">+=</span> <span class="op">(</span>sender<span class="op">,</span> eventArgs<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Log the exception details</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Unobserved exception: {eventArgs.Exception.Message}&quot;</span><span class="op">);</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Mark the exception as observed to prevent further escalation</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>            eventArgs<span class="op">.</span><span class="fu">SetObserved</span><span class="op">();</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Create an unobserved faulted task</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="fu">CreateFaultedTask</span><span class="op">();</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Force GC and finalization to demonstrate the event (testing only)</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        GC<span class="op">.</span><span class="fu">Collect</span><span class="op">();</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        GC<span class="op">.</span><span class="fu">WaitForPendingFinalizers</span><span class="op">();</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        GC<span class="op">.</span><span class="fu">Collect</span><span class="op">();</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">CreateFaultedTask</span><span class="op">()</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        Task<span class="op">.</span><span class="fu">Run</span><span class="op">(()</span> <span class="op">=&gt;</span> <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">InvalidOperationException</span><span class="op">(</span><span class="st">&quot;Task failed silently.&quot;</span><span class="op">));</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Calling <code>eventArgs.SetObserved()</code> informs the runtime that
+the failure has been acknowledged, preventing any secondary escalation
+or strict runtime failure policies from acting on it.</p>
+<h3 id="best-practices-for-preventing-unobserved-tasks">Best Practices
+for Preventing Unobserved Tasks</h3>
+<p>While global logging is a useful safety net, modern C# applications
+should proactively prevent tasks from going unobserved.</p>
+<h4 id="1-always-await-asynchronous-calls">1. Always Await Asynchronous
+Calls</h4>
+<p>The cleanest way to observe a task's state is by awaiting it within a
+<code>try/catch</code> block. Avoid calling async methods without
+<code>await</code> inside async contexts.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> async Task <span class="fu">ProcessDataAsync</span><span class="op">()</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">try</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        await <span class="fu">PerformOperationAsync</span><span class="op">();</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">catch</span> <span class="op">(</span>Exception ex<span class="op">)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Exception is properly observed and handled</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        Logger<span class="op">.</span><span class="fu">LogError</span><span class="op">(</span>ex<span class="op">,</span> <span class="st">&quot;Operation failed.&quot;</span><span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="2-implement-safe-fire-and-forget-wrappers">2. Implement Safe
+Fire-and-Forget Wrappers</h4>
+<p>If an operation must run in the background without blocking the
+caller, do not use raw <code>_ = Task.Run(...)</code> without error
+handling. Use an extension method that attaches a continuation or
+handles errors explicitly:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> TaskExtensions</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">SafeFireAndForget</span><span class="op">(</span><span class="kw">this</span> Task task<span class="op">,</span> Action<span class="op">&lt;</span>Exception<span class="op">&gt;?</span> onError <span class="op">=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        task<span class="op">.</span><span class="fu">ContinueWith</span><span class="op">(</span>t <span class="op">=&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(</span>t<span class="op">.</span><span class="fu">IsFaulted</span> <span class="op">&amp;&amp;</span> t<span class="op">.</span><span class="fu">Exception</span> <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                <span class="dt">var</span> ex <span class="op">=</span> t<span class="op">.</span><span class="fu">Exception</span><span class="op">.</span><span class="fu">Flatten</span><span class="op">();</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                onError<span class="op">?.</span><span class="fu">Invoke</span><span class="op">(</span>ex<span class="op">);</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">},</span> TaskContinuationOptions<span class="op">.</span><span class="fu">OnlyOnFaulted</span><span class="op">);</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Usage:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Task<span class="op">.</span><span class="fu">Run</span><span class="op">(()</span> <span class="op">=&gt;</span> <span class="fu">DoBackgroundWork</span><span class="op">()).</span><span class="fu">SafeFireAndForget</span><span class="op">(</span>ex <span class="op">=&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    Logger<span class="op">.</span><span class="fu">LogError</span><span class="op">(</span>ex<span class="op">,</span> <span class="st">&quot;Background task encountered an error.&quot;</span><span class="op">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<h4 id="3-avoid-async-void">3. Avoid <code>async void</code></h4>
+<p>Except for UI event handlers, avoid using <code>async void</code>. An
+unhandled exception in an <code>async void</code> method bypasses the
+<code>Task</code> pipeline entirely and immediately crashes the
+application process via the <code>AppDomain.UnhandledException</code>
+handler, making it impossible to catch via
+<code>TaskScheduler.UnobservedTaskException</code>. Always return
+<code>Task</code> or <code>Task&lt;T&gt;</code>.</p>
+<h3
+id="enforcing-strict-behavior-crashing-on-unobserved-exceptions">Enforcing
+Strict Behavior (Crashing on Unobserved Exceptions)</h3>
+<p>If you prefer your application to fail fast during development or
+testing when an unobserved task exception occurs, you can re-enable the
+legacy crash behavior in your <code>runtimeconfig.json</code> file:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;runtimeOptions&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;configProperties&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;System.Threading.Tasks.TaskScheduler.ThrowUnobservedTaskExceptions&quot;</span><span class="fu">:</span> <span class="kw">true</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>When this flag is active, any unobserved task exception not marked as
+observed via <code>eventArgs.SetObserved()</code> will crash the
+process, making hidden failures immediately visible.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/handling-unobserved-task-exceptions-in-net';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

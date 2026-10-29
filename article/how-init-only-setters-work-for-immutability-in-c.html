@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Init-Only Setters Work for Immutability in C# - cs</title>
+    <meta name="description" content="Init-only setters, introduced in C# 9.0, provide a mechanism to make individual object properties immutable while still allowing them to be configured using object initializers. By replacing the traditional set accessor with the init accessor, developers">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-init-only-setters-work-for-immutability-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Init-Only Setters Work for Immutability in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-init-only-setters-work-for-immutability-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Init-only setters, introduced in C# 9.0, provide a mechanism to make individual object properties immutable while still allowing them to be configured using object initializers. By replacing the traditional set accessor with the init accessor, developers" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-init-only-setters-work-for-immutability-in-c">How Init-Only
+Setters Work for Immutability in C</h1>
+<p>Init-only setters, introduced in C# 9.0, provide a mechanism to make
+individual object properties immutable while still allowing them to be
+configured using object initializers. By replacing the traditional
+<code>set</code> accessor with the <code>init</code> accessor,
+developers can create flexible, clean models that forbid any state
+modification once construction has completed, solving the long-standing
+tension between constructor boilerplate and data mutability.</p>
+<h2 id="the-problem-init-only-setters-solve">The Problem Init-Only
+Setters Solve</h2>
+<p>Prior to C# 9, achieving immutability in C# typically required one of
+two approaches:</p>
+<ol type="1">
+<li><strong>Read-only properties with parameterized
+constructors:</strong> Properties only define a <code>get</code>
+accessor and are backed by <code>readonly</code> fields. While this
+guarantees immutability, it forces developers to write boilerplate
+constructors, especially as the number of properties grows.</li>
+<li><strong>Private setters:</strong> Properties use
+<code>private set;</code>, which allows methods within the class to
+alter state, compromising strict immutability. Additionally, this
+approach prevents the use of object initializer syntax from external
+callers.</li>
+</ol>
+<p>Init-only setters resolve this by allowing properties to be assigned
+during object construction—including via object initializers—while
+strictly preventing reassignment afterward.</p>
+<h2 id="syntax-and-basic-usage">Syntax and Basic Usage</h2>
+<p>An init-only property uses the <code>init</code> keyword in place of
+<code>set</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> User</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Id <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> init<span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> init<span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Once declared, you can assign values to these properties during
+instantiation using standard object initialization syntax:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> user <span class="op">=</span> <span class="kw">new</span> User</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    Id <span class="op">=</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    Name <span class="op">=</span> <span class="st">&quot;Alice&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<p>Any attempt to modify the property after the initialization phase
+will trigger a compile-time error:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Compile-time error: CS8852: Init-only property or indexer &#39;User.Name&#39; </span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">// can only be assigned in an object initializer, or on &#39;this&#39; or &#39;base&#39; in an instance constructor.</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>user<span class="op">.</span><span class="fu">Name</span> <span class="op">=</span> <span class="st">&quot;Bob&quot;</span><span class="op">;</span> </span></code></pre></div>
+<h2 id="where-can-init-properties-be-mutated">Where Can
+<code>init</code> Properties Be Mutated?</h2>
+<p>The compiler restricts assignments to <code>init</code> properties to
+specific execution contexts:</p>
+<ul>
+<li><strong>Object initializers:</strong> Property values assigned
+within <code>{ ... }</code> at creation.</li>
+<li><strong>Instance constructors:</strong> Assigned via
+<code>this.PropertyName</code> inside the declaring type.</li>
+<li><strong>Derived class constructors:</strong> Assigned via
+<code>base.PropertyName</code> or <code>this.PropertyName</code> in
+child classes.</li>
+<li><strong><code>with</code> expressions:</strong> When used with
+<code>record</code> types or structs, non-destructive mutation creates a
+new instance and leverages <code>init</code> accessors during that new
+instance's creation.</li>
+</ul>
+<h2 id="how-the-runtime-enforces-init-only-properties">How the Runtime
+Enforces Init-Only Properties</h2>
+<p>Under the hood, C# enforces init-only setters using Intermediate
+Language (IL) metadata called required modifiers
+(<code>modreq</code>).</p>
+<p>When the C# compiler compiles a property with an <code>init</code>
+accessor, it emits a standard setter method for that property, but marks
+the return type with
+<code>System.Runtime.CompilerServices.IsExternalInit</code>.</p>
+<p>Compilers that understand this modifier (such as Roslyn) recognize
+that this setter may only be called during initialization. If a consumer
+attempts to call the setter outside of an initialization scope,
+compilation fails. If an older compiler that does not understand the
+<code>modreq</code> tries to interact with the member, it refuses to
+compile the call, thereby protecting the property's immutability across
+different consumers.</p>
+<h2 id="shallow-vs-deep-immutability">Shallow vs. Deep Immutability</h2>
+<p>It is important to note that init-only setters enforce
+<strong>shallow immutability</strong>.</p>
+<p>If an <code>init</code> property holds a reference to a mutable
+object, the reference itself cannot be swapped, but the internal state
+of that referenced object can still be modified:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Team</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> Members <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> init<span class="op">;</span> <span class="op">}</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> team <span class="op">=</span> <span class="kw">new</span> Team</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    Members <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> <span class="op">{</span> <span class="st">&quot;Alice&quot;</span><span class="op">,</span> <span class="st">&quot;Bob&quot;</span> <span class="op">}</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Allowed: The collection reference remains the same, but its state changes</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>team<span class="op">.</span><span class="fu">Members</span><span class="op">.</span><span class="fu">Add</span><span class="op">(</span><span class="st">&quot;Charlie&quot;</span><span class="op">);</span> </span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Compiler error: Cannot reassign the reference</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>team<span class="op">.</span><span class="fu">Members</span> <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;();</span> </span></code></pre></div>
+<p>To ensure true deep immutability, pair <code>init</code> setters with
+immutable collection types (such as <code>ImmutableList&lt;T&gt;</code>)
+or read-only interfaces.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-init-only-setters-work-for-immutability-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

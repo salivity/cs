@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Sourcing in C#: Storing State as Event Streams - cs</title>
+    <meta name="description" content="Event sourcing is an architectural pattern where changes to application state are stored as an immutable sequence of events rather than updating records directly in a database. This article explores the core concepts of event sourcing, examines how it dif">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/event-sourcing-in-c-storing-state-as-event-streams">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Event Sourcing in C#: Storing State as Event Streams - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/event-sourcing-in-c-storing-state-as-event-streams" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Event sourcing is an architectural pattern where changes to application state are stored as an immutable sequence of events rather than updating records directly in a database. This article explores the core concepts of event sourcing, examines how it dif" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="event-sourcing-in-c-storing-state-as-event-streams">Event
+Sourcing in C#: Storing State as Event Streams</h1>
+<p>Event sourcing is an architectural pattern where changes to
+application state are stored as an immutable sequence of events rather
+than updating records directly in a database. This article explores the
+core concepts of event sourcing, examines how it differs from
+traditional CRUD persistence, and demonstrates how to implement an
+aggregate root, capture state changes, and reconstruct state from event
+streams using modern C#.</p>
+<h3 id="understanding-event-sourcing">Understanding Event Sourcing</h3>
+<p>In a traditional relational model (CRUD), if a user changes their
+address, the application executes an <code>UPDATE</code> statement that
+overwrites the existing row. The previous state is lost unless explicit
+audit logging is implemented.</p>
+<p>Event sourcing approaches persistence differently. Instead of storing
+the current state, the application persists the full history of domain
+events that led to that state. Each event represents a business fact
+that occurred in the past (e.g., <code>UserRegistered</code>,
+<code>AddressChanged</code>, <code>OrderPlaced</code>). Because events
+represent history, they are append-only and immutable; once written, an
+event is never updated or deleted.</p>
+<p>The current state of any entity is derived by replaying its
+historical stream of events in chronological order from the
+beginning.</p>
+<h3 id="key-concepts">Key Concepts</h3>
+<ul>
+<li><strong>Domain Event:</strong> An immutable object representing
+something that happened in the domain.</li>
+<li><strong>Event Stream:</strong> The ordered sequence of events
+associated with a specific entity instance (aggregate).</li>
+<li><strong>Aggregate Root:</strong> The domain object responsible for
+validating commands, producing new events, and applying those events to
+update its internal state.</li>
+<li><strong>Rehydration:</strong> The process of instantiating an
+aggregate and replaying its event stream to rebuild its current
+state.</li>
+</ul>
+<h3 id="implementing-event-sourcing-in-c">Implementing Event Sourcing in
+C</h3>
+<p>Modern C# features, such as <code>record</code> types, make defining
+and handling events concise and robust.</p>
+<h4 id="1-define-domain-events">1. Define Domain Events</h4>
+<p>Events should be lightweight, immutable data structures representing
+business facts:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IEvent</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    Guid AggregateId <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    DateTime OccurredOn <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">BankAccountCreated</span><span class="op">(</span>Guid AccountId<span class="op">,</span> <span class="dt">string</span> Owner<span class="op">,</span> <span class="dt">decimal</span> InitialDeposit<span class="op">,</span> DateTime OccurredOn<span class="op">)</span> <span class="op">:</span> IEvent</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Guid AggregateId <span class="op">=&gt;</span> AccountId<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">MoneyDeposited</span><span class="op">(</span>Guid AccountId<span class="op">,</span> <span class="dt">decimal</span> Amount<span class="op">,</span> DateTime OccurredOn<span class="op">)</span> <span class="op">:</span> IEvent</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Guid AggregateId <span class="op">=&gt;</span> AccountId<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">MoneyWithdrawn</span><span class="op">(</span>Guid AccountId<span class="op">,</span> <span class="dt">decimal</span> Amount<span class="op">,</span> DateTime OccurredOn<span class="op">)</span> <span class="op">:</span> IEvent</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Guid AggregateId <span class="op">=&gt;</span> AccountId<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="2-create-the-aggregate-root">2. Create the Aggregate Root</h4>
+<p>The aggregate enforces business invariants, stages uncommitted
+events, and updates its internal state via event handlers:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> BankAccount</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> List<span class="op">&lt;</span>IEvent<span class="op">&gt;</span> _uncommittedEvents <span class="op">=</span> <span class="kw">new</span><span class="op">();</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Guid Id <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Owner <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> <span class="dt">string</span><span class="op">.</span><span class="fu">Empty</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">decimal</span> Balance <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Version <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IReadOnlyCollection<span class="op">&lt;</span>IEvent<span class="op">&gt;</span> UncommittedEvents <span class="op">=&gt;</span> _uncommittedEvents<span class="op">.</span><span class="fu">AsReadOnly</span><span class="op">();</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">BankAccount</span><span class="op">()</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Command: Open Account</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> BankAccount <span class="fu">Open</span><span class="op">(</span>Guid id<span class="op">,</span> <span class="dt">string</span> owner<span class="op">,</span> <span class="dt">decimal</span> initialDeposit<span class="op">)</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>initialDeposit <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentException</span><span class="op">(</span><span class="st">&quot;Initial deposit cannot be negative.&quot;</span><span class="op">);</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> account <span class="op">=</span> <span class="kw">new</span> <span class="fu">BankAccount</span><span class="op">();</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>        account<span class="op">.</span><span class="fu">RaiseEvent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">BankAccountCreated</span><span class="op">(</span>id<span class="op">,</span> owner<span class="op">,</span> initialDeposit<span class="op">,</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">));</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> account<span class="op">;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Command: Deposit</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Deposit</span><span class="op">(</span><span class="dt">decimal</span> amount<span class="op">)</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>amount <span class="op">&lt;=</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentException</span><span class="op">(</span><span class="st">&quot;Deposit amount must be positive.&quot;</span><span class="op">);</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>        <span class="fu">RaiseEvent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">MoneyDeposited</span><span class="op">(</span>Id<span class="op">,</span> amount<span class="op">,</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">));</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Command: Withdraw</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Withdraw</span><span class="op">(</span><span class="dt">decimal</span> amount<span class="op">)</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>amount <span class="op">&lt;=</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentException</span><span class="op">(</span><span class="st">&quot;Withdrawal amount must be positive.&quot;</span><span class="op">);</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>Balance <span class="op">&lt;</span> amount<span class="op">)</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">InvalidOperationException</span><span class="op">(</span><span class="st">&quot;Insufficient funds.&quot;</span><span class="op">);</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>        <span class="fu">RaiseEvent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">MoneyWithdrawn</span><span class="op">(</span>Id<span class="op">,</span> amount<span class="op">,</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">));</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Record and apply event</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">RaiseEvent</span><span class="op">(</span>IEvent @event<span class="op">)</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Apply</span><span class="op">(</span>@event<span class="op">);</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>        _uncommittedEvents<span class="op">.</span><span class="fu">Add</span><span class="op">(</span>@event<span class="op">);</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Mutate internal state</span></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">Apply</span><span class="op">(</span>IEvent @event<span class="op">)</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>        <span class="kw">switch</span> <span class="op">(</span>@event<span class="op">)</span></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>            <span class="kw">case</span> BankAccountCreated e<span class="op">:</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>                Id <span class="op">=</span> e<span class="op">.</span><span class="fu">AccountId</span><span class="op">;</span></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>                Owner <span class="op">=</span> e<span class="op">.</span><span class="fu">Owner</span><span class="op">;</span></span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>                Balance <span class="op">=</span> e<span class="op">.</span><span class="fu">InitialDeposit</span><span class="op">;</span></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>                <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>            <span class="kw">case</span> MoneyDeposited e<span class="op">:</span></span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>                Balance <span class="op">+=</span> e<span class="op">.</span><span class="fu">Amount</span><span class="op">;</span></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>                <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>            <span class="kw">case</span> MoneyWithdrawn e<span class="op">:</span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>                Balance <span class="op">-=</span> e<span class="op">.</span><span class="fu">Amount</span><span class="op">;</span></span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>                <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>        Version<span class="op">++;</span></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Replay historical events</span></span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">LoadFromHistory</span><span class="op">(</span>IEnumerable<span class="op">&lt;</span>IEvent<span class="op">&gt;</span> history<span class="op">)</span></span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>        <span class="kw">foreach</span> <span class="op">(</span>var @event <span class="kw">in</span> history<span class="op">)</span></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>            <span class="fu">Apply</span><span class="op">(</span>@event<span class="op">);</span></span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ClearUncommittedEvents</span><span class="op">()</span> <span class="op">=&gt;</span> _uncommittedEvents<span class="op">.</span><span class="fu">Clear</span><span class="op">();</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="3-storing-and-appending-to-the-stream">3. Storing and Appending
+to the Stream</h4>
+<p>An event store writes new events to an append-only store and fetches
+existing streams by aggregate identifier:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IEventStore</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    Task <span class="fu">AppendEventsAsync</span><span class="op">(</span>Guid aggregateId<span class="op">,</span> IEnumerable<span class="op">&lt;</span>IEvent<span class="op">&gt;</span> events<span class="op">,</span> <span class="dt">int</span> expectedVersion<span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    Task<span class="op">&lt;</span>IReadOnlyList<span class="op">&lt;</span>IEvent<span class="op">&gt;&gt;</span> <span class="fu">GetStreamAsync</span><span class="op">(</span>Guid aggregateId<span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> InMemoryEventStore <span class="op">:</span> IEventStore</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> Dictionary<span class="op">&lt;</span>Guid<span class="op">,</span> List<span class="op">&lt;</span>IEvent<span class="op">&gt;&gt;</span> _streams <span class="op">=</span> <span class="kw">new</span><span class="op">();</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Task <span class="fu">AppendEventsAsync</span><span class="op">(</span>Guid aggregateId<span class="op">,</span> IEnumerable<span class="op">&lt;</span>IEvent<span class="op">&gt;</span> events<span class="op">,</span> <span class="dt">int</span> expectedVersion<span class="op">)</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(!</span>_streams<span class="op">.</span><span class="fu">TryGetValue</span><span class="op">(</span>aggregateId<span class="op">,</span> <span class="kw">out</span> <span class="dt">var</span> stream<span class="op">))</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            stream <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span>IEvent<span class="op">&gt;();</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>            _streams<span class="op">[</span>aggregateId<span class="op">]</span> <span class="op">=</span> stream<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>stream<span class="op">.</span><span class="fu">Count</span> <span class="op">!=</span> expectedVersion<span class="op">)</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">InvalidOperationException</span><span class="op">(</span><span class="st">&quot;Concurrency conflict detected.&quot;</span><span class="op">);</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        stream<span class="op">.</span><span class="fu">AddRange</span><span class="op">(</span>events<span class="op">);</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> Task<span class="op">.</span><span class="fu">CompletedTask</span><span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Task<span class="op">&lt;</span>IReadOnlyList<span class="op">&lt;</span>IEvent<span class="op">&gt;&gt;</span> <span class="fu">GetStreamAsync</span><span class="op">(</span>Guid aggregateId<span class="op">)</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>_streams<span class="op">.</span><span class="fu">TryGetValue</span><span class="op">(</span>aggregateId<span class="op">,</span> <span class="kw">out</span> <span class="dt">var</span> stream<span class="op">))</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> Task<span class="op">.</span><span class="fu">FromResult</span><span class="op">&lt;</span>IReadOnlyList<span class="op">&lt;</span>IEvent<span class="op">&gt;&gt;(</span>stream<span class="op">.</span><span class="fu">AsReadOnly</span><span class="op">());</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> Task<span class="op">.</span><span class="fu">FromResult</span><span class="op">&lt;</span>IReadOnlyList<span class="op">&lt;</span>IEvent<span class="op">&gt;&gt;(</span>Array<span class="op">.</span><span class="fu">Empty</span><span class="op">&lt;</span>IEvent<span class="op">&gt;());</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="4-executing-commands-and-rehydrating-state">4. Executing
+Commands and Rehydrating State</h4>
+<p>The complete workflow involves fetching past events, rebuilding
+aggregate state, executing logic, and appending new events back to the
+stream:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> BankAccountService</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IEventStore _eventStore<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">BankAccountService</span><span class="op">(</span>IEventStore eventStore<span class="op">)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        _eventStore <span class="op">=</span> eventStore<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task <span class="fu">ProcessDepositAsync</span><span class="op">(</span>Guid accountId<span class="op">,</span> <span class="dt">decimal</span> amount<span class="op">)</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 1. Fetch historical event stream</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> history <span class="op">=</span> await _eventStore<span class="op">.</span><span class="fu">GetStreamAsync</span><span class="op">(</span>accountId<span class="op">);</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(!</span>history<span class="op">.</span><span class="fu">Any</span><span class="op">())</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">KeyNotFoundException</span><span class="op">(</span><span class="st">&quot;Account does not exist.&quot;</span><span class="op">);</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 2. Rehydrate aggregate to current state</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> account <span class="op">=</span> <span class="kw">new</span> <span class="fu">BankAccount</span><span class="op">();</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        account<span class="op">.</span><span class="fu">LoadFromHistory</span><span class="op">(</span>history<span class="op">);</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> originalVersion <span class="op">=</span> account<span class="op">.</span><span class="fu">Version</span><span class="op">;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 3. Execute domain logic</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>        account<span class="op">.</span><span class="fu">Deposit</span><span class="op">(</span>amount<span class="op">);</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 4. Persist uncommitted events</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>        await _eventStore<span class="op">.</span><span class="fu">AppendEventsAsync</span><span class="op">(</span>accountId<span class="op">,</span> account<span class="op">.</span><span class="fu">UncommittedEvents</span><span class="op">,</span> originalVersion<span class="op">);</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>        account<span class="op">.</span><span class="fu">ClearUncommittedEvents</span><span class="op">();</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="advantages-and-trade-offs">Advantages and Trade-offs</h3>
+<p>Event sourcing provides a 100% accurate audit trail by default,
+enables time-travel debugging (reconstructing the exact state at any
+timestamp), and eliminates object-relational mapping impedance
+mismatches.</p>
+<p>However, it introduces architectural complexity. Querying data across
+streams requires read-model projections (often implemented using CQRS),
+and long-lived streams may necessitate snapshots to prevent slow
+aggregate rehydration over time.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/event-sourcing-in-c-storing-state-as-event-streams';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

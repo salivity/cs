@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementing IDisposable for Resource Cleanup in C# - cs</title>
+    <meta name="description" content="This article provides a direct guide to implementing the IDisposable interface in C# to manage and release unmanaged resources effectively. You will learn the purpose of resource cleanup, the standard Dispose pattern recommended by Microsoft, how to handl">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/implementing-i-disposable-for-resource-cleanup-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Implementing IDisposable for Resource Cleanup in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/implementing-i-disposable-for-resource-cleanup-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a direct guide to implementing the IDisposable interface in C# to manage and release unmanaged resources effectively. You will learn the purpose of resource cleanup, the standard Dispose pattern recommended by Microsoft, how to handl" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="implementing-idisposable-for-resource-cleanup-in-c">Implementing
+IDisposable for Resource Cleanup in C</h1>
+<p>This article provides a direct guide to implementing the
+<code>IDisposable</code> interface in C# to manage and release unmanaged
+resources effectively. You will learn the purpose of resource cleanup,
+the standard Dispose pattern recommended by Microsoft, how to handle
+both managed and native resources, and how to properly consume
+disposable classes using the <code>using</code> statement.</p>
+<hr />
+<h3 id="why-implement-idisposable">Why Implement IDisposable?</h3>
+<p>The .NET Common Language Runtime (CLR) automatically manages memory
+allocation and deallocation via the Garbage Collector (GC). However, the
+GC only handles managed memory. It cannot automatically clean up
+unmanaged system resources such as file handles, database connections,
+network sockets, or OS window handles.</p>
+<p>Implementing the <code>IDisposable</code> interface provides a
+deterministic mechanism to free these unmanaged resources promptly
+rather than waiting for non-deterministic garbage collection.</p>
+<hr />
+<h3 id="the-standard-dispose-pattern">The Standard Dispose Pattern</h3>
+<p>The standard Dispose pattern provides a safe, reusable structure for
+resource cleanup. It ensures resources are freed whether the cleanup is
+invoked manually by consumer code or automatically by the finalizer.</p>
+<p>The pattern relies on four key components:</p>
+<ol type="1">
+<li><strong>Public <code>Dispose()</code> method:</strong> Exposed to
+consumers to initiate deterministic cleanup.</li>
+<li><strong>Protected virtual <code>Dispose(bool disposing)</code>
+method:</strong> Contains the actual cleanup logic.</li>
+<li><strong>A tracking flag (<code>_disposed</code>):</strong> Prevents
+redundant cleanup operations.</li>
+<li><strong>A finalizer (<code>~ClassName()</code>):</strong> Acts as a
+safety net if a consumer forgets to call <code>Dispose()</code>. (Only
+necessary if your class directly owns native resources).</li>
+</ol>
+<hr />
+<h3 id="complete-implementation-example">Complete Implementation
+Example</h3>
+<p>Below is the standard, thread-safe implementation of the Dispose
+pattern in C#:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">InteropServices</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ResourceHolder <span class="op">:</span> IDisposable</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Flag to track whether Dispose has already been called</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">bool</span> _disposed <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Example of a managed disposable resource</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> FileStream<span class="op">?</span> _managedResource<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Example of an unmanaged native resource handle</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> IntPtr _unmanagedResource<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">ResourceHolder</span><span class="op">(</span><span class="dt">string</span> filePath<span class="op">)</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        _managedResource <span class="op">=</span> <span class="kw">new</span> <span class="fu">FileStream</span><span class="op">(</span>filePath<span class="op">,</span> FileMode<span class="op">.</span><span class="fu">OpenOrCreate</span><span class="op">);</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        _unmanagedResource <span class="op">=</span> Marshal<span class="op">.</span><span class="fu">AllocHGlobal</span><span class="op">(</span><span class="dv">100</span><span class="op">);</span> <span class="co">// Allocate native memory</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Public implementation of Dispose (from IDisposable)</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Dispose</span><span class="op">()</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Perform cleanup (true indicates deterministic disposal)</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Dispose</span><span class="op">(</span><span class="kw">true</span><span class="op">);</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Tell the Garbage Collector not to call the finalizer</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        GC<span class="op">.</span><span class="fu">SuppressFinalize</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Core cleanup method</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">virtual</span> <span class="dt">void</span> <span class="fu">Dispose</span><span class="op">(</span><span class="dt">bool</span> disposing<span class="op">)</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>_disposed<span class="op">)</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span><span class="op">;</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>disposing<span class="op">)</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Free managed disposable objects here</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(</span>_managedResource <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>                _managedResource<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>                _managedResource <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Free native/unmanaged resources here</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>_unmanagedResource <span class="op">!=</span> IntPtr<span class="op">.</span><span class="fu">Zero</span><span class="op">)</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>            Marshal<span class="op">.</span><span class="fu">FreeHGlobal</span><span class="op">(</span>_unmanagedResource<span class="op">);</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>            _unmanagedResource <span class="op">=</span> IntPtr<span class="op">.</span><span class="fu">Zero</span><span class="op">;</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>        _disposed <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Finalizer (destructor): only include if holding direct unmanaged resources</span></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>    <span class="op">~</span><span class="fu">ResourceHolder</span><span class="op">()</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>        <span class="co">// False indicates non-deterministic cleanup via GC</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Dispose</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<hr />
+<h3 id="step-by-step-breakdown-of-the-implementation">Step-by-Step
+Breakdown of the Implementation</h3>
+<ol type="1">
+<li><strong><code>Dispose()</code> Method:</strong> Calls
+<code>Dispose(true)</code> to release both managed and unmanaged
+resources, followed by <code>GC.SuppressFinalize(this)</code>.
+Suppressing finalization removes the object from the GC finalization
+queue, which improves performance.</li>
+<li><strong><code>Dispose(bool disposing)</code> Parameter:</strong>
+<ul>
+<li><strong><code>disposing == true</code>:</strong> The method was
+called deterministically via code. It is safe to release both managed
+and unmanaged resources.</li>
+<li><strong><code>disposing == false</code>:</strong> The method was
+called by the GC finalizer. Managed references may have already been
+collected, so you must <strong>only</strong> clean up native unmanaged
+resources.</li>
+</ul></li>
+<li><strong>The Finalizer (<code>~ResourceHolder</code>):</strong>
+Serves as a fallback. If the consumer fails to call
+<code>Dispose()</code>, the GC eventually calls the finalizer, passing
+<code>disposing = false</code> to guarantee native memory is freed.</li>
+</ol>
+<hr />
+<h3 id="consuming-idisposable-objects">Consuming IDisposable
+Objects</h3>
+<p>To guarantee that <code>Dispose()</code> is executed—even if an
+exception occurs—use the C# <code>using</code> statement or
+declaration.</p>
+<h4 id="using-declaration-c-80">Using Declaration (C# 8.0+)</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessData</span><span class="op">()</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> <span class="dt">var</span> holder <span class="op">=</span> <span class="kw">new</span> <span class="fu">ResourceHolder</span><span class="op">(</span><span class="st">&quot;log.txt&quot;</span><span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Work with holder...</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Dispose() is automatically called when &#39;holder&#39; goes out of scope.</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="traditional-using-statement">Traditional Using Statement</h4>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessDataLegacy</span><span class="op">()</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> <span class="op">(</span><span class="dt">var</span> holder <span class="op">=</span> <span class="kw">new</span> <span class="fu">ResourceHolder</span><span class="op">(</span><span class="st">&quot;log.txt&quot;</span><span class="op">))</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Work with holder...</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="co">// Dispose() is automatically called at the closing bracket.</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/implementing-i-disposable-for-resource-cleanup-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

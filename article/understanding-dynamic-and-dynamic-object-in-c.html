@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding dynamic and DynamicObject in C# - cs</title>
+    <meta name="description" content="In C#, the dynamic keyword bypasses compile-time type checking, deferring member resolution to runtime via the Dynamic Language Runtime (DLR). When combined with the DynamicObject class, developers can intercept runtime operations such as property access,">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/understanding-dynamic-and-dynamic-object-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding dynamic and DynamicObject in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/understanding-dynamic-and-dynamic-object-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, the dynamic keyword bypasses compile-time type checking, deferring member resolution to runtime via the Dynamic Language Runtime (DLR). When combined with the DynamicObject class, developers can intercept runtime operations such as property access," />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-dynamic-and-dynamicobject-in-c">Understanding
+dynamic and DynamicObject in C</h1>
+<p>In C#, the <code>dynamic</code> keyword bypasses compile-time type
+checking, deferring member resolution to runtime via the Dynamic
+Language Runtime (DLR). When combined with the
+<code>DynamicObject</code> class, developers can intercept runtime
+operations such as property access, method calls, and indexers to define
+custom dynamic behaviors. This article explains how the
+<code>dynamic</code> static type works under the hood, how the DLR
+resolves calls at runtime, and how to create custom dynamic entities
+using <code>DynamicObject</code>.</p>
+<h2 id="the-dynamic-keyword">The <code>dynamic</code> Keyword</h2>
+<p>Introduced in C# 4.0, the <code>dynamic</code> keyword informs the
+compiler to ignore static type safety for the variable it annotates.
+Instead of resolving members at compile time, the compiler generates
+instructions that delegate member resolution to the Dynamic Language
+Runtime.</p>
+<p>Under the hood, the compiler converts dynamic variables to the
+<code>System.Object</code> type, annotating them with attributes like
+<code>DynamicAttribute</code>. While code using <code>dynamic</code>
+feels dynamically typed, C# remains a statically typed language. The
+static type of the variable is simply treated as dynamic, preventing
+compile-time errors when accessing properties or methods that the
+compiler cannot verify.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>dynamic value <span class="op">=</span> <span class="st">&quot;Hello, World!&quot;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>value<span class="op">.</span><span class="fu">Length</span><span class="op">);</span> <span class="co">// Resolved at runtime</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>value <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>value <span class="op">+</span> <span class="dv">5</span><span class="op">);</span>     <span class="co">// Resolved at runtime</span></span></code></pre></div>
+<p>If an invoked member does not exist at runtime, the DLR throws a
+<code>RuntimeBinderException</code>.</p>
+<h2 id="how-the-dynamic-language-runtime-dlr-works">How the Dynamic
+Language Runtime (DLR) Works</h2>
+<p>The Dynamic Language Runtime sits on top of the Common Language
+Runtime (CLR) and provides the infrastructure for dynamic programming in
+.NET. It accomplishes this through three primary components:</p>
+<ol type="1">
+<li><strong>Expression Trees:</strong> Represent runtime operations as
+code data structures.</li>
+<li><strong>Call Sites:</strong> The actual locations in code where
+dynamic operations occur. Call sites maintain a polymorphic cache of
+previous invocation targets to ensure dynamic calls perform similarly to
+static calls after the initial dispatch.</li>
+<li><strong>Binders:</strong> Language-specific components that
+translate dynamic calls into concrete operations. The C# binder enforces
+standard C# rules (such as overload resolution and accessibility) at
+runtime.</li>
+</ol>
+<p>When a dynamic call is invoked, the call site checks its cache. If
+the runtime types match a previous invocation, the cached delegate
+executes directly. If not, the binder determines the appropriate member
+on the object, creates a new execution rule, updates the cache, and
+executes the operation.</p>
+<h2 id="custom-late-binding-with-dynamicobject">Custom Late Binding with
+<code>DynamicObject</code></h2>
+<p>While standard objects bound to a <code>dynamic</code> variable rely
+on the DLR inspecting their static CLR types via reflection, custom
+dynamic behavior is achieved through the
+<code>IDynamicMetaObjectProvider</code> interface.</p>
+<p>Implementing <code>IDynamicMetaObjectProvider</code> directly is
+complex. To simplify this, .NET provides
+<code>System.Dynamic.DynamicObject</code>, an abstract base class that
+implements this interface and exposes virtual methods designed to
+intercept dynamic operations.</p>
+<p>By inheriting from <code>DynamicObject</code>, you can override
+specific runtime hooks:</p>
+<ul>
+<li><code>TryGetMember</code>: Intercepts dynamic property reads.</li>
+<li><code>TrySetMember</code>: Intercepts dynamic property
+assignments.</li>
+<li><code>TryInvokeMember</code>: Intercepts dynamic method calls.</li>
+<li><code>TryGetIndex</code> / <code>TrySetIndex</code>: Intercepts
+dynamic indexer access.</li>
+</ul>
+<h2 id="implementing-a-dynamic-dictionary">Implementing a Dynamic
+Dictionary</h2>
+<p>A common use case for <code>DynamicObject</code> is creating a
+dynamic property bag that allows properties to be added and read on the
+fly without defining a rigid class structure.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Collections</span><span class="op">.</span><span class="fu">Generic</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Dynamic</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DynamicDictionary <span class="op">:</span> DynamicObject</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> Dictionary<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">object</span><span class="op">&gt;</span> _properties <span class="op">=</span> <span class="kw">new</span><span class="op">();</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> <span class="dt">bool</span> <span class="fu">TryGetMember</span><span class="op">(</span>GetMemberBinder binder<span class="op">,</span> <span class="kw">out</span> <span class="dt">object</span><span class="op">?</span> result<span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> _properties<span class="op">.</span><span class="fu">TryGetValue</span><span class="op">(</span>binder<span class="op">.</span><span class="fu">Name</span><span class="op">,</span> <span class="kw">out</span> result<span class="op">);</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> <span class="dt">bool</span> <span class="fu">TrySetMember</span><span class="op">(</span>SetMemberBinder binder<span class="op">,</span> <span class="dt">object</span><span class="op">?</span> value<span class="op">)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        _properties<span class="op">[</span>binder<span class="op">.</span><span class="fu">Name</span><span class="op">]</span> <span class="op">=</span> value<span class="op">!;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> <span class="dt">bool</span> <span class="fu">TryInvokeMember</span><span class="op">(</span>InvokeMemberBinder binder<span class="op">,</span> <span class="dt">object</span><span class="op">?[]?</span> args<span class="op">,</span> <span class="kw">out</span> <span class="dt">object</span><span class="op">?</span> result<span class="op">)</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>binder<span class="op">.</span><span class="fu">Name</span> <span class="op">==</span> <span class="st">&quot;Print&quot;</span> <span class="op">&amp;&amp;</span> args<span class="op">?.</span><span class="fu">Length</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{args[0]}: {_properties.GetValueOrDefault(args[0]?.ToString() ?? string.Empty)}&quot;</span><span class="op">);</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>            result <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This class can then be consumed via the <code>dynamic</code>
+keyword:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>dynamic person <span class="op">=</span> <span class="kw">new</span> <span class="fu">DynamicDictionary</span><span class="op">();</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// TrySetMember is invoked</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>person<span class="op">.</span><span class="fu">FirstName</span> <span class="op">=</span> <span class="st">&quot;Jane&quot;</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>person<span class="op">.</span><span class="fu">Age</span> <span class="op">=</span> <span class="dv">30</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// TryGetMember is invoked</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{person.FirstName} is {person.Age} years old.&quot;</span><span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">// TryInvokeMember is invoked</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>person<span class="op">.</span><span class="fu">Print</span><span class="op">(</span><span class="st">&quot;FirstName&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>Returning <code>true</code> from these methods signals to the DLR
+that the dynamic operation succeeded. If an override returns
+<code>false</code>, the runtime binder defaults to standard member
+resolution and throws a <code>RuntimeBinderException</code> if the
+static member does not exist.</p>
+<h2 id="when-to-use-dynamic-and-dynamicobject">When to Use
+<code>dynamic</code> and <code>DynamicObject</code></h2>
+<p>Dynamic typing introduces flexibility at the expense of compile-time
+guarantees, tooling support, and raw execution speed.</p>
+<p>It is best suited for:</p>
+<ul>
+<li><strong>Interacting with non-static data structures:</strong>
+Parsing unstructured JSON, XML, or YAML configurations.</li>
+<li><strong>COM Interop:</strong> Interacting with Office automation
+APIs where types are often loosely bound.</li>
+<li><strong>Interoperability with dynamic languages:</strong> Working
+with IronPython or JavaScript engines running on the CLR.</li>
+<li><strong>Creating Domain-Specific Languages (DSLs):</strong> Creating
+fluent dynamic interfaces or wrappers.</li>
+</ul>
+<p>Avoid dynamic dispatch in high-throughput, performance-critical code
+where static typing provides better execution speed, memory efficiency,
+and compile-time validation.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/understanding-dynamic-and-dynamic-object-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

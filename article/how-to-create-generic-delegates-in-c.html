@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Create Generic Delegates in C# - cs</title>
+    <meta name="description" content="Generic delegates in C# allow you to define type-safe callback functions and method references without locking them to a single data type. By using type parameters, generic delegates provide maximum reusability and efficiency across different parts of you">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-create-generic-delegates-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Create Generic Delegates in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-create-generic-delegates-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Generic delegates in C# allow you to define type-safe callback functions and method references without locking them to a single data type. By using type parameters, generic delegates provide maximum reusability and efficiency across different parts of you" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-create-generic-delegates-in-c">How to Create Generic
+Delegates in C</h1>
+<p>Generic delegates in C# allow you to define type-safe callback
+functions and method references without locking them to a single data
+type. By using type parameters, generic delegates provide maximum
+reusability and efficiency across different parts of your application.
+This guide covers how to define custom generic delegates, apply type
+constraints to them, and leverage built-in generic delegates such as
+<code>Action</code> and <code>Func</code>.</p>
+<h2 id="defining-a-custom-generic-delegate">Defining a Custom Generic
+Delegate</h2>
+<p>To create a generic delegate, use the <code>delegate</code> keyword
+followed by the return type, the delegate name, and angle brackets
+<code>&lt; &gt;</code> containing one or more type parameters.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Definition of a generic delegate</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">delegate</span> TResult Transformer<span class="op">&lt;</span>TInput<span class="op">,</span> TResult<span class="op">&gt;(</span>TInput input<span class="op">);</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Instantiate the delegate with specific types (string, int)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        Transformer<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;</span> stringLengthCalculator <span class="op">=</span> CountCharacters<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> length <span class="op">=</span> <span class="fu">stringLengthCalculator</span><span class="op">(</span><span class="st">&quot;Hello World&quot;</span><span class="op">);</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Character count: {length}&quot;</span><span class="op">);</span> <span class="co">// Output: 11</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Reuse the same delegate definition with different types (double, double)</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        Transformer<span class="op">&lt;</span><span class="dt">double</span><span class="op">,</span> <span class="dt">double</span><span class="op">&gt;</span> squareCalculator <span class="op">=</span> Square<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">double</span> result <span class="op">=</span> <span class="fu">squareCalculator</span><span class="op">(</span><span class="fl">5.0</span><span class="op">);</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Square result: {result}&quot;</span><span class="op">);</span> <span class="co">// Output: 25</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">int</span> <span class="fu">CountCharacters</span><span class="op">(</span><span class="dt">string</span> text<span class="op">)</span> <span class="op">=&gt;</span> text<span class="op">.</span><span class="fu">Length</span><span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">double</span> <span class="fu">Square</span><span class="op">(</span><span class="dt">double</span> number<span class="op">)</span> <span class="op">=&gt;</span> number <span class="op">*</span> number<span class="op">;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="adding-generic-constraints">Adding Generic Constraints</h2>
+<p>You can restrict the types that can be supplied to your generic
+delegate by using generic constraints with the <code>where</code>
+keyword. This ensures compile-time validation for required base classes,
+interfaces, or constructors.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">delegate</span> <span class="dt">void</span> EntityHandler<span class="op">&lt;</span>T<span class="op">&gt;(</span>T entity<span class="op">)</span> where T <span class="op">:</span> <span class="kw">class</span><span class="op">,</span> IComparable<span class="op">&lt;</span>T<span class="op">&gt;;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">ProcessItem</span><span class="op">(</span><span class="dt">string</span> item<span class="op">)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Processing: {item}&quot;</span><span class="op">);</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Valid because string is a class and implements IComparable&lt;string&gt;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        EntityHandler<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> handler <span class="op">=</span> ProcessItem<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="fu">handler</span><span class="op">(</span><span class="st">&quot;Valid Entity&quot;</span><span class="op">);</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="using-built-in-generic-delegates">Using Built-in Generic
+Delegates</h2>
+<p>In modern C#, creating custom delegates is often unnecessary because
+the .NET framework provides flexible built-in generic delegates:</p>
+<ol type="1">
+<li><p><strong><code>Action&lt;...&gt;</code></strong>: Used for methods
+that return <code>void</code> and accept from 0 to 16 parameters.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Action<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;</span> printDetails <span class="op">=</span> <span class="op">(</span>name<span class="op">,</span> age<span class="op">)</span> <span class="op">=&gt;</span> </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{name} is {age} years old.&quot;</span><span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">printDetails</span><span class="op">(</span><span class="st">&quot;Alice&quot;</span><span class="op">,</span> <span class="dv">30</span><span class="op">);</span></span></code></pre></div></li>
+<li><p><strong><code>Func&lt;..., TResult&gt;</code></strong>: Used for
+methods that return a value and accept from 0 to 16 parameters (the last
+type parameter denotes the return type).</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;</span> add <span class="op">=</span> <span class="op">(</span>a<span class="op">,</span> b<span class="op">)</span> <span class="op">=&gt;</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> sum <span class="op">=</span> <span class="fu">add</span><span class="op">(</span><span class="dv">10</span><span class="op">,</span> <span class="dv">20</span><span class="op">);</span> <span class="co">// sum is 30</span></span></code></pre></div></li>
+<li><p><strong><code>Predicate&lt;T&gt;</code></strong>: Used
+specifically for methods that evaluate an input against a condition and
+return a <code>bool</code>.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Predicate<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> isEven <span class="op">=</span> x <span class="op">=&gt;</span> x <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> check <span class="op">=</span> <span class="fu">isEven</span><span class="op">(</span><span class="dv">4</span><span class="op">);</span> <span class="co">// check is true</span></span></code></pre></div></li>
+</ol>
+<p>Custom generic delegates should primarily be declared when you need
+custom parameter attributes, specific variance keywords (<code>in</code>
+for contravariance, <code>out</code> for covariance), or distinct
+descriptive naming beyond what <code>Action</code> and <code>Func</code>
+offer.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-create-generic-delegates-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

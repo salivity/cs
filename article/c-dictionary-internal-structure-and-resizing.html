@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Dictionary: Internal Structure and Resizing - cs</title>
+    <meta name="description" content="This article explores the inner workings of Dictionary&lt;TKey, TValue&gt; in .NET, detailing how it stores data and expands under the hood. You will learn about the foundational dual-array layout used for collision resolution, how key lookups map to specific m">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-dictionary-internal-structure-and-resizing">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Dictionary: Internal Structure and Resizing - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-dictionary-internal-structure-and-resizing" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the inner workings of Dictionary&lt;TKey, TValue&gt; in .NET, detailing how it stores data and expands under the hood. You will learn about the foundational dual-array layout used for collision resolution, how key lookups map to specific m" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-dictionary-internal-structure-and-resizing">C# Dictionary:
+Internal Structure and Resizing</h1>
+<p>This article explores the inner workings of
+<code>Dictionary&lt;TKey, TValue&gt;</code> in .NET, detailing how it
+stores data and expands under the hood. You will learn about the
+foundational dual-array layout used for collision resolution, how key
+lookups map to specific memory locations, and the step-by-step process
+the runtime executes when resizing and rehashing the dictionary to
+accommodate new elements.</p>
+<h2 id="the-internal-data-structure">The Internal Data Structure</h2>
+<p>The .NET <code>Dictionary&lt;TKey, TValue&gt;</code> is implemented
+as a hash table using a technique known as <strong>separate chaining via
+array indices</strong>. Unlike classic chaining implementations that use
+allocated linked-list nodes, the .NET dictionary achieves high cache
+locality and avoids garbage collection overhead by keeping all nodes
+inside contiguous arrays.</p>
+<p>Internally, the dictionary is driven by two primary arrays and
+several supporting fields:</p>
+<ul>
+<li><strong><code>int[] _buckets</code></strong>: An array where each
+element stores a 1-based index (stored internally as 0-based index + 1,
+or -1 when empty) pointing to the head of a chain in the entries
+array.</li>
+<li><strong><code>Entry[] _entries</code></strong>: An array that holds
+the actual key-value data and collision chain metadata.</li>
+<li><strong><code>int _count</code></strong>: The number of valid items
+in the dictionary.</li>
+<li><strong><code>int _freeList</code></strong>: The index of the first
+available slot created by removed elements.</li>
+<li><strong><code>int _freeCount</code></strong>: The number of removed
+elements available for reuse.</li>
+</ul>
+<p>Each element in the <code>_entries</code> array is a struct defined
+roughly as follows:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="kw">struct</span> Entry</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">uint</span> HashCode<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Next<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> TKey Key<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> TValue Value<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<ul>
+<li><code>HashCode</code>: The cached 31-bit positive hash code of the
+key, preventing redundant calls to <code>GetHashCode()</code>.</li>
+<li><code>Next</code>: The index of the next entry in the same bucket
+collision chain, or <code>-1</code> if it is the end of the chain.</li>
+<li><code>Key</code> and <code>Value</code>: The stored pair.</li>
+</ul>
+<h2 id="how-insertion-and-lookup-work">How Insertion and Lookup
+Work</h2>
+<p>When an item is added or retrieved:</p>
+<ol type="1">
+<li><strong>Hash Generation</strong>: The dictionary invokes the key's
+<code>IEqualityComparer&lt;TKey&gt;.GetHashCode(key)</code> to produce a
+32-bit signed integer. The runtime casts or masks this to a
+<code>uint</code> to eliminate negative values.</li>
+<li><strong>Bucket Mapping</strong>: The dictionary maps the hash code
+to a bucket index using the modulo operation: <span
+class="math display">\[\text{bucketIndex} = \text{hashCode}
+\pmod{\text{\_buckets.Length}}\]</span> <em>(Note: Modern .NET Core /
+.NET 5+ versions optimize this operation using fast multiplication
+rather than native integer division).</em></li>
+<li><strong>Traversal</strong>: The value in
+<code>_buckets[bucketIndex]</code> yields the index of the first
+<code>Entry</code> in <code>_entries</code>.</li>
+<li><strong>Comparison</strong>: The runtime walks through the chain
+following the <code>Next</code> indices. For each entry, it first
+compares the cached <code>HashCode</code> (a fast integer comparison)
+and, if matching, calls
+<code>IEqualityComparer&lt;TKey&gt;.Equals(entry.Key, key)</code>.</li>
+<li><strong>Storage</strong>: For insertions, if the key is not found,
+the item is placed into the next available slot—either reclaimed from
+<code>_freeList</code> or appended at <code>_count</code>—and the new
+entry becomes the new head of the bucket chain.</li>
+</ol>
+<h2 id="the-resizing-mechanism">The Resizing Mechanism</h2>
+<p>A dictionary cannot grow indefinitely without expanding its backing
+arrays. Resizing is triggered during an <code>Add</code> operation when
+<code>_entries</code> is full (<code>_count == _entries.Length</code>)
+and there are no free slots (<code>_freeCount == 0</code>).</p>
+<p>The resize routine follows these distinct phases:</p>
+<h3 id="1-determining-the-new-capacity">1. Determining the New
+Capacity</h3>
+<p>The dictionary requests a new capacity that is at least twice the
+current size. To reduce hash clustering and ensure an even distribution
+across buckets, the runtime uses the <code>HashHelpers.GetPrime</code>
+method to select the smallest prime number that is larger than double
+the current size.</p>
+<h3 id="2-allocating-new-arrays">2. Allocating New Arrays</h3>
+<p>Once the new prime capacity is determined:</p>
+<ul>
+<li>A new <code>_buckets</code> array is allocated with the new prime
+length and initialized with <code>-1</code> (indicating empty
+chains).</li>
+<li>A new <code>_entries</code> array is allocated with the matching
+capacity.</li>
+</ul>
+<h3 id="3-copying-and-rehashing">3. Copying and Rehashing</h3>
+<p>Because bucket assignment relies on the total number of buckets via
+the modulo operation, altering the size of <code>_buckets</code>
+invalidates all existing bucket mappings. However, because each entry
+caches its original <code>HashCode</code>, the dictionary does not
+re-invoke <code>GetHashCode()</code> on the keys.</p>
+<p>Instead, the dictionary executes a fast rehashing loop:</p>
+<ol type="1">
+<li>Existing entries are copied into the new <code>_entries</code>
+array.</li>
+<li>The dictionary iterates through every valid entry in the copied
+array.</li>
+<li>It recalculates the bucket index:
+<code>newBucket = entry.HashCode % newBuckets.Length</code>.</li>
+<li>It updates <code>entry.Next</code> to point to whatever index is
+currently at <code>newBuckets[newBucket]</code>.</li>
+<li>It sets <code>newBuckets[newBucket]</code> to the entry's current
+array index.</li>
+</ol>
+<p>This rebuilds the collision chains inside the new bucket array in
+<span class="math inline">\(O(N)\)</span> time.</p>
+<h3 id="performance-impact">Performance Impact</h3>
+<p>While resizing is an <span class="math inline">\(O(N)\)</span>
+operation, it occurs exponentially less frequently as the collection
+grows, preserving an amortized <span class="math inline">\(O(1)\)</span>
+time complexity for insertions. If the final collection size is known in
+advance, passing the expected capacity to the
+<code>Dictionary&lt;TKey, TValue&gt;(int capacity)</code> constructor
+avoids all intermediate allocations, rehashing cycles, and garbage
+collector pressure.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-dictionary-internal-structure-and-resizing';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

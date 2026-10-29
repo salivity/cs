@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How C# HashSet Guarantees Fast Uniqueness Checks - cs</title>
+    <meta name="description" content="In C#, the HashSet&lt;T&gt; collection provides high-performance uniqueness checks by leveraging hash-based indexing, allowing it to determine whether an element exists in near constant time—an average time complexity of $O(1)$. Instead of performing linear sca">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-c-hash-set-guarantees-fast-uniqueness-checks">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How C# HashSet Guarantees Fast Uniqueness Checks - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-c-hash-set-guarantees-fast-uniqueness-checks" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, the HashSet&lt;T&gt; collection provides high-performance uniqueness checks by leveraging hash-based indexing, allowing it to determine whether an element exists in near constant time—an average time complexity of $O(1)$. Instead of performing linear sca" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-c-hashset-guarantees-fast-uniqueness-checks">How C# HashSet
+Guarantees Fast Uniqueness Checks</h1>
+<p>In C#, the <code>HashSet&lt;T&gt;</code> collection provides
+high-performance uniqueness checks by leveraging hash-based indexing,
+allowing it to determine whether an element exists in near constant
+time—an average time complexity of <span
+class="math inline">\(O(1)\)</span>. Instead of performing linear scans
+across every element, <code>HashSet&lt;T&gt;</code> uses an internal
+array of buckets alongside an array of entries. By transforming elements
+into numerical hash codes, mapping those codes to bucket indices, and
+performing targeted equality checks only when hash collisions occur,
+<code>HashSet&lt;T&gt;</code> reliably enforces element uniqueness with
+minimal overhead.</p>
+<h2 id="the-internal-structure-buckets-and-slots">The Internal
+Structure: Buckets and Slots</h2>
+<p>Internally, <code>HashSet&lt;T&gt;</code> is built on two primary
+arrays:</p>
+<ul>
+<li><strong><code>buckets</code> (integer array):</strong> Stores
+indices that point to the first entry in a particular hash chain within
+the entries array.</li>
+<li><strong><code>entries</code> (struct array):</strong> Stores the
+actual values, the computed hash code for each item, and a
+<code>next</code> pointer (index) to handle collisions.</li>
+</ul>
+<p>This separated array architecture allows the collection to maintain
+cache locality while minimizing the memory overhead of reference-heavy
+node structures.</p>
+<h2 id="step-1-computing-the-hash-code">Step 1: Computing the Hash
+Code</h2>
+<p>When you call <code>Add</code> or <code>Contains</code>,
+<code>HashSet&lt;T&gt;</code> starts by obtaining the object's 32-bit
+signed integer hash code via
+<code>IEqualityComparer&lt;T&gt;.GetHashCode(item)</code> (or the
+object's default <code>GetHashCode()</code> implementation).</p>
+<p>This numerical value acts as a condensed digital fingerprint of the
+item. To ensure the index is always valid, the implementation removes
+the sign bit using a bitwise mask:</p>
+<p><span class="math display">\[\text{positiveHashCode} =
+\text{hashCode} \ \&amp; \ \text{0x7FFFFFFF}\]</span></p>
+<h2 id="step-2-mapping-hash-codes-to-buckets">Step 2: Mapping Hash Codes
+to Buckets</h2>
+<p>Once the hash code is positive, <code>HashSet&lt;T&gt;</code> maps it
+to a valid index in the <code>buckets</code> array using the modulo
+operator against the total bucket length:</p>
+<p><span class="math display">\[\text{bucketIndex} =
+\text{positiveHashCode} \pmod{\text{buckets.Length}}\]</span></p>
+<p>Because array indexing is instantaneous, determining which bucket
+could possibly contain the target value takes <span
+class="math inline">\(O(1)\)</span> time. If the value at
+<code>buckets[bucketIndex]</code> is <code>-1</code> (indicating empty),
+the element is definitively new and unique, requiring no further
+comparisons.</p>
+<h2 id="step-3-resolving-collisions-with-separate-chaining">Step 3:
+Resolving Collisions with Separate Chaining</h2>
+<p>Different objects can produce identical bucket indices—either because
+they produced the exact same hash code or because the modulo operation
+mapped different hash codes to the same bucket index. This is known as a
+hash collision.</p>
+<p><code>HashSet&lt;T&gt;</code> resolves collisions using an
+array-based variation of separate chaining:</p>
+<ol type="1">
+<li>It navigates to the entry index specified in the bucket.</li>
+<li>It compares the target item's stored hash code against the entry's
+hash code.</li>
+<li>If the hash codes match, it calls
+<code>IEqualityComparer&lt;T&gt;.Equals(item, entry.Value)</code> to
+verify actual equality.</li>
+<li>If they are equal, a duplicate is found, and <code>Add</code>
+returns <code>false</code> without modifying the set.</li>
+<li>If they are not equal, it follows the entry's <code>next</code>
+field to examine the next element in the collision chain.</li>
+</ol>
+<p>Because well-distributed hash codes produce very short collision
+chains, the number of actual <code>Equals</code> evaluations rarely
+exceeds one or two iterations.</p>
+<h2 id="step-4-dynamic-resizing-and-rehashing">Step 4: Dynamic Resizing
+and Rehashing</h2>
+<p>As elements are added, the ratio of elements to bucket capacity (the
+load factor) increases. High load factors lead to longer collision
+chains, which degrade lookup performance toward <span
+class="math inline">\(O(n)\)</span>.</p>
+<p>To avoid this, <code>HashSet&lt;T&gt;</code> automatically resizes
+when it reaches capacity:</p>
+<ol type="1">
+<li>It allocates new <code>buckets</code> and <code>entries</code>
+arrays, scaling up to the next available prime number from an internal
+lookup table. Prime sizes are critical because they significantly reduce
+clustering when using the modulo operator.</li>
+<li>It rehashes every existing item to recalculate its position in the
+newly sized bucket array.</li>
+</ol>
+<p>While resizing is an <span class="math inline">\(O(n)\)</span>
+operation, it happens infrequently enough that the amortized insertion
+time remains <span class="math inline">\(O(1)\)</span>.</p>
+<h2 id="requirements-for-fast-guarantees">Requirements for Fast
+Guarantees</h2>
+<p>The <span class="math inline">\(O(1)\)</span> uniqueness guarantee
+depends on two developer-controlled rules:</p>
+<ul>
+<li><strong>Consistent <code>Equals</code> and
+<code>GetHashCode</code>:</strong> If two items are considered equal by
+<code>Equals</code>, they must return identical values from
+<code>GetHashCode</code>.</li>
+<li><strong>Immutability of Key State:</strong> If an item is modified
+while inside a <code>HashSet&lt;T&gt;</code> in a way that alters its
+hash code, its bucket location becomes invalid, breaking future
+uniqueness and lookup checks.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-c-hash-set-guarantees-fast-uniqueness-checks';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

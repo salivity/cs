@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# UnsafeAccessor: Access Private Members in .NET - cs</title>
+    <meta name="description" content="The UnsafeAccessor attribute, introduced in .NET 8, provides a high-performance mechanism to access private and internal members of a class or struct without the runtime overhead of traditional reflection. This article covers what the [UnsafeAccessor] att">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-unsafe-accessor-access-private-members-in-net">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# UnsafeAccessor: Access Private Members in .NET - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-unsafe-accessor-access-private-members-in-net" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The UnsafeAccessor attribute, introduced in .NET 8, provides a high-performance mechanism to access private and internal members of a class or struct without the runtime overhead of traditional reflection. This article covers what the [UnsafeAccessor] att" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-unsafeaccessor-access-private-members-in-net">C#
+UnsafeAccessor: Access Private Members in .NET</h1>
+<p>The <code>UnsafeAccessor</code> attribute, introduced in .NET 8,
+provides a high-performance mechanism to access private and internal
+members of a class or struct without the runtime overhead of traditional
+reflection. This article covers what the <code>[UnsafeAccessor]</code>
+attribute is, how it compares to standard reflection and
+source-generated approaches, how to implement it for fields, methods,
+and constructors, and why it is essential for modern Native AOT
+(Ahead-of-Time) compilation.</p>
+<h2 id="what-is-unsafeaccessor">What is UnsafeAccessor?</h2>
+<p>In C# and .NET, accessing non-public members historically required
+using reflection via <code>System.Reflection</code> APIs (such as
+<code>GetField</code>, <code>GetMethod</code>, or
+<code>BindingFlags.NonPublic</code>). While functional, reflection
+incurs significant performance penalties due to string lookups, member
+resolution, dynamic dispatch, and boxing/unboxing.</p>
+<p>The <code>UnsafeAccessorAttribute</code>, located in the
+<code>System.Runtime.CompilerServices</code> namespace, resolves this
+issue. It instructs the runtime (CoreCLR or Native AOT) to create an
+optimized, direct bridge to the target private member during compilation
+or JIT time.</p>
+<h2 id="how-unsafeaccessor-works">How UnsafeAccessor Works</h2>
+<p>To use <code>UnsafeAccessor</code>, you define an
+<code>extern static</code> method matching the signature of the target
+member and annotate it with the <code>[UnsafeAccessor]</code> attribute.
+The compiler and the runtime generate code that accesses the member
+directly, achieving near-native performance identical to calling a
+public member directly.</p>
+<p>The attribute requires an <code>UnsafeAccessorKind</code> enum
+parameter, which specifies what type of member is being targeted:</p>
+<ul>
+<li><code>Constructor</code>: Accesses a private constructor.</li>
+<li><code>Method</code>: Accesses a private instance method.</li>
+<li><code>StaticMethod</code>: Accesses a private static method.</li>
+<li><code>Field</code>: Reads or writes a private instance field.</li>
+<li><code>StaticField</code>: Reads or writes a private static
+field.</li>
+</ul>
+<h2 id="code-examples">Code Examples</h2>
+<p>Consider the following target class with private members:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> App<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> TargetClass</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">string</span> _secretField <span class="op">=</span> <span class="st">&quot;Original Secret&quot;</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="fu">TargetClass</span><span class="op">(</span><span class="dt">string</span> initialValue<span class="op">)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        _secretField <span class="op">=</span> initialValue<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">string</span> <span class="fu">GetSecretMessage</span><span class="op">(</span><span class="dt">string</span> prefix<span class="op">)</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> $<span class="st">&quot;{prefix}: {_secretField}&quot;</span><span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="1-accessing-a-private-constructor">1. Accessing a Private
+Constructor</h3>
+<p>To instantiate <code>TargetClass</code> through its private
+constructor, define an accessor with
+<code>UnsafeAccessorKind.Constructor</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">CompilerServices</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> App<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> Accessors</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">UnsafeAccessor</span><span class="op">(</span>UnsafeAccessorKind<span class="op">.</span><span class="fu">Constructor</span><span class="op">)]</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> TargetClass <span class="fu">CreateInstance</span><span class="op">(</span><span class="dt">string</span> initialValue<span class="op">);</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>TargetClass instance <span class="op">=</span> Accessors<span class="op">.</span><span class="fu">CreateInstance</span><span class="op">(</span><span class="st">&quot;New Secret&quot;</span><span class="op">);</span></span></code></pre></div>
+<h3 id="2-reading-and-modifying-a-private-field">2. Reading and
+Modifying a Private Field</h3>
+<p>To access an instance field, the first parameter must be the target
+instance. To allow both reading and modifying the field, return the
+field type by reference (<code>ref</code>):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> Accessors</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">UnsafeAccessor</span><span class="op">(</span>UnsafeAccessorKind<span class="op">.</span><span class="fu">Field</span><span class="op">,</span> Name <span class="op">=</span> <span class="st">&quot;_secretField&quot;</span><span class="op">)]</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> <span class="kw">ref</span> <span class="dt">string</span> <span class="fu">GetSecretField</span><span class="op">(</span>TargetClass target<span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>TargetClass instance <span class="op">=</span> Accessors<span class="op">.</span><span class="fu">CreateInstance</span><span class="op">(</span><span class="st">&quot;Initial&quot;</span><span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Read private field</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="kw">ref</span> <span class="dt">string</span> secret <span class="op">=</span> <span class="kw">ref</span> Accessors<span class="op">.</span><span class="fu">GetSecretField</span><span class="op">(</span>instance<span class="op">);</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>secret<span class="op">);</span> <span class="co">// Output: Initial</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Modify private field directly</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>secret <span class="op">=</span> <span class="st">&quot;Updated via ref&quot;</span><span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>Accessors<span class="op">.</span><span class="fu">GetSecretField</span><span class="op">(</span>instance<span class="op">));</span> <span class="co">// Output: Updated via ref</span></span></code></pre></div>
+<h3 id="3-invoking-a-private-method">3. Invoking a Private Method</h3>
+<p>For private instance methods, the first parameter represents the
+target instance, followed by any parameters the target method
+expects:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> Accessors</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">UnsafeAccessor</span><span class="op">(</span>UnsafeAccessorKind<span class="op">.</span><span class="fu">Method</span><span class="op">,</span> Name <span class="op">=</span> <span class="st">&quot;GetSecretMessage&quot;</span><span class="op">)]</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> <span class="dt">string</span> <span class="fu">CallGetSecretMessage</span><span class="op">(</span>TargetClass target<span class="op">,</span> <span class="dt">string</span> prefix<span class="op">);</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> result <span class="op">=</span> Accessors<span class="op">.</span><span class="fu">CallGetSecretMessage</span><span class="op">(</span>instance<span class="op">,</span> <span class="st">&quot;CONFIDENTIAL&quot;</span><span class="op">);</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>result<span class="op">);</span> <span class="co">// Output: CONFIDENTIAL: Updated via ref</span></span></code></pre></div>
+<h2 id="key-advantages-over-reflection">Key Advantages Over
+Reflection</h2>
+<ol type="1">
+<li><strong>Near-Zero Overhead</strong>: Calls to
+<code>UnsafeAccessor</code> methods are inlined by the JIT/AOT compiler,
+bypassing metadata lookup and dynamic dispatch entirely.</li>
+<li><strong>Native AOT Compatible</strong>: Reflection often fails in
+Native AOT because the trimmer strips private members deemed unused.
+<code>UnsafeAccessor</code> signals to the compiler that the target
+member is strictly referenced, preventing trimming.</li>
+<li><strong>No Boxing for Value Types</strong>: Primitive values and
+structs do not need to be boxed into <code>object</code>, eliminating
+garbage collection pressure.</li>
+<li><strong>Clean Syntax</strong>: Interacting with members via strongly
+typed C# signatures prevents runtime casting and stringly-typed
+member-name errors.</li>
+</ol>
+<h2 id="limitations">Limitations</h2>
+<ul>
+<li><strong>Safety Guarantee</strong>: Because access modifiers exist to
+protect state invariants, bypassing them can result in unexpected
+behavior if internal invariants are broken.</li>
+<li><strong>Generic Constraints</strong>: Accessing private members on
+open generic types requires defining accessors that mirror the target
+type's generic parameters.</li>
+<li><strong>Runtime Resolution</strong>: If the target member signature
+changes or is renamed in a dependency update, the runtime throws a
+<code>MissingFieldException</code> or
+<code>MissingMethodException</code> at execution time.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-unsafe-accessor-access-private-members-in-net';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

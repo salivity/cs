@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implement the Mediator Pattern in C# - cs</title>
+    <meta name="description" content="The Mediator pattern is a behavioral design pattern that reduces chaotic dependencies between objects by restricting direct communication and forcing them to collaborate through a central mediator object. In this article, you will learn the core concepts">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/implement-the-mediator-pattern-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Implement the Mediator Pattern in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/implement-the-mediator-pattern-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Mediator pattern is a behavioral design pattern that reduces chaotic dependencies between objects by restricting direct communication and forcing them to collaborate through a central mediator object. In this article, you will learn the core concepts" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="implement-the-mediator-pattern-in-c">Implement the Mediator
+Pattern in C</h1>
+<p>The Mediator pattern is a behavioral design pattern that reduces
+chaotic dependencies between objects by restricting direct communication
+and forcing them to collaborate through a central mediator object. In
+this article, you will learn the core concepts of the Mediator pattern,
+walk through a step-by-step implementation in C# using pure
+object-oriented principles, and see how this approach decouples
+individual classes to improve testability and maintainability.</p>
+<h3 id="the-problem-tight-coupling-between-components">The Problem:
+Tight Coupling Between Components</h3>
+<p>When multiple classes interact directly, they form a tightly coupled
+web of dependencies. For instance, in a user interface dialog, a
+checkbox might need to update a text field, toggle a submit button, and
+clear a label. If each component directly references every other
+component, changing one class risks breaking others, and reusing a
+single component elsewhere becomes nearly impossible.</p>
+<p>The Mediator pattern solves this by making individual components
+(colleagues) interact only with an intermediary interface rather than
+referencing each other directly.</p>
+<hr />
+<h3 id="key-components-of-the-mediator-pattern">Key Components of the
+Mediator Pattern</h3>
+<ol type="1">
+<li><strong>Mediator Interface:</strong> Defines methods for
+communication between colleague components.</li>
+<li><strong>Concrete Mediator:</strong> Implements the mediator
+interface and coordinates interaction between colleague objects.</li>
+<li><strong>Colleague Classes:</strong> Individual classes that contain
+business logic and communicate exclusively through the mediator.</li>
+</ol>
+<hr />
+<h3 id="step-by-step-implementation-in-c">Step-by-Step Implementation in
+C</h3>
+<p>The following example demonstrates a form dialog where UI elements
+(colleagues) communicate changes through a dialog mediator.</p>
+<h4 id="step-1-define-the-mediator-interface">Step 1: Define the
+Mediator Interface</h4>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IMediator</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">Notify</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> <span class="dt">string</span> eventCode<span class="op">);</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="step-2-define-the-base-colleague">Step 2: Define the Base
+Colleague</h4>
+<p>Colleague classes keep a reference to the mediator instance to send
+notifications when their state changes.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">abstract</span> <span class="kw">class</span> Component</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> IMediator Mediator<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Component</span><span class="op">(</span>IMediator mediator <span class="op">=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        Mediator <span class="op">=</span> mediator<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">SetMediator</span><span class="op">(</span>IMediator mediator<span class="op">)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        Mediator <span class="op">=</span> mediator<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="step-3-implement-concrete-colleague-classes">Step 3: Implement
+Concrete Colleague Classes</h4>
+<p>These components contain specific behavior. They notify the mediator
+when an action occurs, rather than calling other components
+directly.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Button <span class="op">:</span> Component</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">bool</span> IsEnabled <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">SetEnabled</span><span class="op">(</span><span class="dt">bool</span> enabled<span class="op">)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        IsEnabled <span class="op">=</span> enabled<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Button enabled status: {IsEnabled}&quot;</span><span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Click</span><span class="op">()</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Button clicked.&quot;</span><span class="op">);</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        Mediator<span class="op">.</span><span class="fu">Notify</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;ButtonClick&quot;</span><span class="op">);</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> TextBox <span class="op">:</span> Component</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Text <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> <span class="dt">string</span><span class="op">.</span><span class="fu">Empty</span><span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">EnterText</span><span class="op">(</span><span class="dt">string</span> text<span class="op">)</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        Text <span class="op">=</span> text<span class="op">;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;TextBox text changed to: &#39;{Text}&#39;&quot;</span><span class="op">);</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>        Mediator<span class="op">.</span><span class="fu">Notify</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;TextChanged&quot;</span><span class="op">);</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> CheckBox <span class="op">:</span> Component</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">bool</span> IsChecked <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Check</span><span class="op">()</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>        IsChecked <span class="op">=</span> <span class="op">!</span>IsChecked<span class="op">;</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;CheckBox toggled to: {IsChecked}&quot;</span><span class="op">);</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>        Mediator<span class="op">.</span><span class="fu">Notify</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;CheckboxToggled&quot;</span><span class="op">);</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="step-4-implement-the-concrete-mediator">Step 4: Implement the
+Concrete Mediator</h4>
+<p>The concrete mediator holds references to all components and
+encapsulates the conditional logic that determines how they respond to
+events.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> RegistrationDialogMediator <span class="op">:</span> IMediator</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> TextBox _usernameTextBox<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> CheckBox _termsCheckBox<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> Button _submitButton<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">RegistrationDialogMediator</span><span class="op">(</span>TextBox textBox<span class="op">,</span> CheckBox checkBox<span class="op">,</span> Button button<span class="op">)</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        _usernameTextBox <span class="op">=</span> textBox<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        _usernameTextBox<span class="op">.</span><span class="fu">SetMediator</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        _termsCheckBox <span class="op">=</span> checkBox<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        _termsCheckBox<span class="op">.</span><span class="fu">SetMediator</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        _submitButton <span class="op">=</span> button<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        _submitButton<span class="op">.</span><span class="fu">SetMediator</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Notify</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> <span class="dt">string</span> eventCode<span class="op">)</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">switch</span> <span class="op">(</span>eventCode<span class="op">)</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>            <span class="kw">case</span> <span class="st">&quot;TextChanged&quot;</span><span class="op">:</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>            <span class="kw">case</span> <span class="st">&quot;CheckboxToggled&quot;</span><span class="op">:</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>                <span class="fu">ValidateForm</span><span class="op">();</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>                <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>            <span class="kw">case</span> <span class="st">&quot;ButtonClick&quot;</span><span class="op">:</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>                <span class="fu">SaveData</span><span class="op">();</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>                <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">ValidateForm</span><span class="op">()</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        <span class="dt">bool</span> isValid <span class="op">=</span> <span class="op">!</span><span class="dt">string</span><span class="op">.</span><span class="fu">IsNullOrWhiteSpace</span><span class="op">(</span>_usernameTextBox<span class="op">.</span><span class="fu">Text</span><span class="op">)</span> <span class="op">&amp;&amp;</span> _termsCheckBox<span class="op">.</span><span class="fu">IsChecked</span><span class="op">;</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>        _submitButton<span class="op">.</span><span class="fu">SetEnabled</span><span class="op">(</span>isValid<span class="op">);</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">SaveData</span><span class="op">()</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Registration data saved successfully.&quot;</span><span class="op">);</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="step-5-execute-the-pattern">Step 5: Execute the Pattern</h4>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> textBox <span class="op">=</span> <span class="kw">new</span> <span class="fu">TextBox</span><span class="op">();</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> checkBox <span class="op">=</span> <span class="kw">new</span> <span class="fu">CheckBox</span><span class="op">();</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> button <span class="op">=</span> <span class="kw">new</span> <span class="fu">Button</span><span class="op">();</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// The mediator registers and binds the components</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> mediator <span class="op">=</span> <span class="kw">new</span> <span class="fu">RegistrationDialogMediator</span><span class="op">(</span>textBox<span class="op">,</span> checkBox<span class="op">,</span> button<span class="op">);</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Simulate user input</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        textBox<span class="op">.</span><span class="fu">EnterText</span><span class="op">(</span><span class="st">&quot;john_doe&quot;</span><span class="op">);</span> <span class="co">// Checkbox is still false -&gt; Button remains disabled</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        checkBox<span class="op">.</span><span class="fu">Check</span><span class="op">();</span>              <span class="co">// Checkbox true and text present -&gt; Button becomes enabled</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        button<span class="op">.</span><span class="fu">Click</span><span class="op">();</span>                <span class="co">// Triggers form submission via mediator</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<hr />
+<h3 id="benefits-of-using-the-mediator-pattern">Benefits of Using the
+Mediator Pattern</h3>
+<ul>
+<li><strong>Single Responsibility Principle:</strong> Communication
+rules are centralized inside the mediator rather than scattered across
+various colleague classes.</li>
+<li><strong>Open/Closed Principle:</strong> New mediators can be
+introduced without modifying existing colleague components.</li>
+<li><strong>Decoupled Architecture:</strong> Individual components can
+be isolated and unit tested without instantiating the entire network of
+related objects.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/implement-the-mediator-pattern-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

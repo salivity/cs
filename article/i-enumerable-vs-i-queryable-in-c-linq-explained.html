@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEnumerable vs IQueryable in C# LINQ Explained - cs</title>
+    <meta name="description" content="Understanding the difference between IEnumerable and IQueryable is essential for writing efficient, high-performance data access code in C# and LINQ. While both interfaces represent forward-only collections of data and support LINQ query operations, they">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/i-enumerable-vs-i-queryable-in-c-linq-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="IEnumerable vs IQueryable in C# LINQ Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/i-enumerable-vs-i-queryable-in-c-linq-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Understanding the difference between IEnumerable and IQueryable is essential for writing efficient, high-performance data access code in C# and LINQ. While both interfaces represent forward-only collections of data and support LINQ query operations, they" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="ienumerable-vs-iqueryable-in-c-linq-explained">IEnumerable vs
+IQueryable in C# LINQ Explained</h1>
+<p>Understanding the difference between <code>IEnumerable</code> and
+<code>IQueryable</code> is essential for writing efficient,
+high-performance data access code in C# and LINQ. While both interfaces
+represent forward-only collections of data and support LINQ query
+operations, they execute queries differently. This article breaks down
+how each interface works under the hood, examines their execution
+mechanisms, and outlines best practices for choosing the right one for
+your application.</p>
+<h2 id="understanding-ienumerable">Understanding IEnumerable</h2>
+<p><code>IEnumerable</code> resides in the
+<code>System.Collections</code> (and generic
+<code>System.Collections.Generic</code>) namespace. It is the base
+interface for all non-generic and generic collections in .NET, such as
+<code>List&lt;T&gt;</code>, <code>Array</code>, and
+<code>Dictionary&lt;TKey, TValue&gt;</code>.</p>
+<p>When you use LINQ extension methods on an <code>IEnumerable</code>
+collection, you are using <strong>LINQ to Objects</strong>.</p>
+<h3 id="key-characteristics">Key Characteristics:</h3>
+<ul>
+<li><strong>In-Memory Execution:</strong> Queries defined on
+<code>IEnumerable</code> execute directly in the client application's
+memory.</li>
+<li><strong>Delegate-Based:</strong> LINQ methods on
+<code>IEnumerable</code> take delegates, specifically
+<code>Func&lt;T, bool&gt;</code>, as arguments.</li>
+<li><strong>Client-Side Filtering:</strong> If used with a database
+context (such as Entity Framework), calling an <code>IEnumerable</code>
+causes the database to execute the query as written up to that point,
+return the entire result set across the network, and perform subsequent
+filtering, sorting, or pagination entirely in the application's local
+memory.</li>
+</ul>
+<h2 id="understanding-iqueryable">Understanding IQueryable</h2>
+<p><code>IQueryable</code> resides in the <code>System.Linq</code>
+namespace and inherits from <code>IEnumerable</code>. It is designed to
+evaluate queries against external data sources, such as relational
+databases, web services, or custom data providers.</p>
+<p>When you use LINQ extension methods on an <code>IQueryable</code>
+collection, you are typically using <strong>LINQ to Entities</strong> or
+another query provider.</p>
+<h3 id="key-characteristics-1">Key Characteristics:</h3>
+<ul>
+<li><strong>Server-Side Execution:</strong> Queries defined on
+<code>IQueryable</code> are converted into the native query language of
+the underlying provider (such as SQL) and executed directly on the data
+server.</li>
+<li><strong>Expression Tree-Based:</strong> LINQ methods on
+<code>IQueryable</code> take expression trees, specifically
+<code>Expression&lt;Func&lt;T, bool&gt;&gt;</code>, as arguments. The
+query provider parses this expression tree at runtime to generate the
+target query.</li>
+<li><strong>Optimized Data Retrieval:</strong> Only the data that
+matches the final composed query is transmitted across the network from
+the database to your application.</li>
+</ul>
+<h2 id="key-differences">Key Differences</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>IEnumerable&lt;T&gt;</code></th>
+<th style="text-align: left;"><code>IQueryable&lt;T&gt;</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Namespace</strong></td>
+<td
+style="text-align: left;"><code>System.Collections.Generic</code></td>
+<td style="text-align: left;"><code>System.Linq</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Target Data</strong></td>
+<td style="text-align: left;">In-memory collections</td>
+<td style="text-align: left;">External data sources (SQL, APIs)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Location</strong></td>
+<td style="text-align: left;">Client-side (in application memory)</td>
+<td style="text-align: left;">Server-side (database engine)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Query Representation</strong></td>
+<td style="text-align: left;">Compiled delegates
+(<code>Func&lt;T, bool&gt;</code>)</td>
+<td style="text-align: left;">Expression trees
+(<code>Expression&lt;Func&lt;T, bool&gt;&gt;</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Paging &amp;
+Filtering</strong></td>
+<td style="text-align: left;">Retrieves all data first, filters
+locally</td>
+<td style="text-align: left;">Translates filters into SQL before
+retrieval</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Lazy Evaluation</strong></td>
+<td style="text-align: left;">Yes (via iteration)</td>
+<td style="text-align: left;">Yes (via deferred execution)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="practical-scenario-query-filtering-and-pagination">Practical
+Scenario: Query Filtering and Pagination</h2>
+<p>Consider an Entity Framework Core query on a table containing 100,000
+users where you only need the first 10 active records:</p>
+<h3 id="using-ienumerable">Using IEnumerable</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>IEnumerable<span class="op">&lt;</span>User<span class="op">&gt;</span> users <span class="op">=</span> dbContext<span class="op">.</span><span class="fu">Users</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> activeUsers <span class="op">=</span> users<span class="op">.</span><span class="fu">Where</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">IsActive</span><span class="op">).</span><span class="fu">Take</span><span class="op">(</span><span class="dv">10</span><span class="op">).</span><span class="fu">ToList</span><span class="op">();</span></span></code></pre></div>
+<p>In this scenario, <code>dbContext.Users</code> cast to
+<code>IEnumerable</code> causes the runtime to load all 100,000 rows
+from the database into memory. The <code>Where</code> and
+<code>Take</code> operations then filter down to the 10 records
+client-side. This results in heavy memory usage, network congestion, and
+slow performance.</p>
+<h3 id="using-iqueryable">Using IQueryable</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>IQueryable<span class="op">&lt;</span>User<span class="op">&gt;</span> users <span class="op">=</span> dbContext<span class="op">.</span><span class="fu">Users</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> activeUsers <span class="op">=</span> users<span class="op">.</span><span class="fu">Where</span><span class="op">(</span>u <span class="op">=&gt;</span> u<span class="op">.</span><span class="fu">IsActive</span><span class="op">).</span><span class="fu">Take</span><span class="op">(</span><span class="dv">10</span><span class="op">).</span><span class="fu">ToList</span><span class="op">();</span></span></code></pre></div>
+<p>In this scenario, the <code>Where</code> and <code>Take</code> calls
+modify the internal expression tree. When <code>.ToList()</code>
+triggers execution, the provider translates the whole expression into
+SQL:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> TOP (<span class="dv">10</span>) <span class="op">*</span> <span class="kw">FROM</span> [Users] <span class="kw">WHERE</span> [IsActive] <span class="op">=</span> <span class="dv">1</span>;</span></code></pre></div>
+<p>Only 10 records are transferred from the database to application
+memory.</p>
+<h2 id="when-to-use-each-interface">When to Use Each Interface</h2>
+<h3 id="use-iqueryable-when">Use <code>IQueryable</code> when:</h3>
+<ul>
+<li>Querying external databases or remote services.</li>
+<li>Implementing pagination, server-side filtering, or sorting.</li>
+<li>Composing queries conditionally before sending a single, optimized
+query to the data store.</li>
+</ul>
+<h3 id="use-ienumerable-when">Use <code>IEnumerable</code> when:</h3>
+<ul>
+<li>Working with data that is already loaded into local memory (arrays,
+lists).</li>
+<li>Executing custom C# methods or logic within queries that a SQL
+provider cannot translate into valid database expressions.</li>
+<li>Building simple, in-memory collection transformations.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/i-enumerable-vs-i-queryable-in-c-linq-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

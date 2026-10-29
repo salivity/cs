@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COM Interop and Runtime Callable Wrappers in C# - cs</title>
+    <meta name="description" content="This article provides an overview of COM Interop and Runtime Callable Wrappers (RCWs) in C#, detailing how .NET applications communicate seamlessly with unmanaged Component Object Model (COM) libraries. You will learn the fundamental concepts of COM Inter">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/com-interop-and-runtime-callable-wrappers-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="COM Interop and Runtime Callable Wrappers in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/com-interop-and-runtime-callable-wrappers-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of COM Interop and Runtime Callable Wrappers (RCWs) in C#, detailing how .NET applications communicate seamlessly with unmanaged Component Object Model (COM) libraries. You will learn the fundamental concepts of COM Inter" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="com-interop-and-runtime-callable-wrappers-in-c">COM Interop and
+Runtime Callable Wrappers in C</h1>
+<p>This article provides an overview of COM Interop and Runtime Callable
+Wrappers (RCWs) in C#, detailing how .NET applications communicate
+seamlessly with unmanaged Component Object Model (COM) libraries. You
+will learn the fundamental concepts of COM Interop, how the CLR uses
+RCWs as proxy objects, the mechanics of type marshaling and reference
+counting, and the essential best practices for managing COM object
+lifecycles in managed code.</p>
+<h3 id="understanding-com-interop">Understanding COM Interop</h3>
+<p>COM Interop (Component Object Model Interoperability) is a feature of
+the .NET Common Language Runtime (CLR) that allows managed .NET code to
+interact with unmanaged COM components, and vice versa. Because COM was
+the primary component architecture for Windows software prior to .NET,
+many legacy enterprise systems, third-party libraries, and Windows OS
+APIs are built as COM objects.</p>
+<p>COM Interop bridges the architectural differences between .NET and
+COM, such as memory management, error handling, and type systems,
+enabling developers to reuse existing COM libraries without rewriting
+them.</p>
+<h3 id="what-is-a-runtime-callable-wrapper-rcw">What is a Runtime
+Callable Wrapper (RCW)?</h3>
+<p>A Runtime Callable Wrapper (RCW) is a proxy object created
+automatically by the CLR to facilitate communication from a .NET client
+to a COM server. Because .NET code cannot directly invoke methods on
+unmanaged COM interfaces, the RCW acts as an intermediary.</p>
+<p>To the C# application, the RCW appears to be a standard managed
+object subject to normal .NET rules. To the COM component, the RCW acts
+like any standard COM client that requests interfaces and invokes
+methods.</p>
+<h3 id="core-functions-of-the-rcw">Core Functions of the RCW</h3>
+<p>The RCW handles several critical tasks during interoperability:</p>
+<ul>
+<li><strong>Data Marshaling:</strong> The RCW converts method arguments
+and return values between managed types (such as
+<code>System.String</code> or managed arrays) and unmanaged COM types
+(such as <code>BSTR</code>, <code>VARIANT</code>, or
+<code>SAFEARRAY</code>).</li>
+<li><strong>Interface Mapping:</strong> COM objects expose functionality
+through interfaces (<code>IUnknown</code>, <code>IDispatch</code>, or
+custom interfaces). The RCW exposes these interfaces as .NET interfaces
+and handles internal calls to <code>QueryInterface</code> on behalf of
+the managed code.</li>
+<li><strong>Error Handling:</strong> The RCW translates COM failure
+codes (<code>HRESULT</code>s) into managed .NET exceptions (such as
+<code>COMException</code>).</li>
+<li><strong>Object Identity:</strong> The CLR maintains a single RCW per
+COM object per thread. If managed code requests the same COM object
+multiple times, the CLR points to the existing RCW, preserving object
+identity.</li>
+</ul>
+<h3 id="lifetime-and-memory-management">Lifetime and Memory
+Management</h3>
+<p>COM and .NET use fundamentally different memory management
+models:</p>
+<ol type="1">
+<li><strong>COM Uses Reference Counting:</strong> COM components track
+their own lifetime using internal reference counts incremented by
+<code>AddRef</code> and decremented by <code>Release</code>. When the
+count reaches zero, the object deletes itself.</li>
+<li><strong>.NET Uses Garbage Collection:</strong> .NET objects are
+managed by an automatic, non-deterministic Garbage Collector (GC) that
+periodically frees memory when references are no longer rooted.</li>
+</ol>
+<p>The RCW bridges this gap by holding an internal reference to the COM
+object. When the .NET Garbage Collector collects the RCW, the RCW calls
+<code>Release</code> on the COM object.</p>
+<p>However, relying strictly on the garbage collector to release COM
+resources can lead to memory pressure or locked external resources (such
+as Excel processes remaining open in the background). To release a COM
+object deterministically, developers use the <code>Marshal</code>
+class:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">InteropServices</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create COM instance via RCW</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> comObject <span class="op">=</span> <span class="kw">new</span> SomeComLibrary<span class="op">.</span><span class="fu">SomeComClass</span><span class="op">();</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    comObject<span class="op">.</span><span class="fu">PerformAction</span><span class="op">();</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">finally</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Deterministically decrement the COM reference count</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>comObject <span class="op">!=</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> Marshal<span class="op">.</span><span class="fu">IsComObject</span><span class="op">(</span>comObject<span class="op">))</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        Marshal<span class="op">.</span><span class="fu">ReleaseComObject</span><span class="op">(</span>comObject<span class="op">);</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="implementing-com-interop-in-c">Implementing COM Interop in
+C</h3>
+<p>To consume a COM component in C#:</p>
+<ol type="1">
+<li><strong>Add a Reference:</strong> In Visual Studio, right-click the
+project, select <strong>Add Project Reference</strong>, navigate to the
+<strong>COM</strong> tab, and select the desired type library.
+Alternatively, use the Type Library Importer tool
+(<code>tlbimp.exe</code>) via the command line to generate an interop
+assembly.</li>
+<li><strong>Instantiate the Object:</strong> Use standard C#
+<code>new</code> syntax to instantiate the imported class. The CLR
+automatically generates the RCW in the background.</li>
+<li><strong>Use the Dynamic Keyword (Optional):</strong> For late-bound
+COM components that rely heavily on <code>IDispatch</code>, C# provides
+the <code>dynamic</code> keyword, which bypasses static compile-time
+checking and directs the runtime to resolve member invocations
+dynamically.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/com-interop-and-runtime-callable-wrappers-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

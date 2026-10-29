@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use the LINQ Zip Operator in C# - cs</title>
+    <meta name="description" content="The Zip operator in C# LINQ merges two sequences into a single result sequence by pairing elements that share the same index. This article explains how the Zip method operates, how it handles sequences of unequal lengths, and how to implement it using cus">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-use-the-linq-zip-operator-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use the LINQ Zip Operator in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-use-the-linq-zip-operator-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Zip operator in C# LINQ merges two sequences into a single result sequence by pairing elements that share the same index. This article explains how the Zip method operates, how it handles sequences of unequal lengths, and how to implement it using cus" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-the-linq-zip-operator-in-c">How to Use the LINQ Zip
+Operator in C</h1>
+<p>The <code>Zip</code> operator in C# LINQ merges two sequences into a
+single result sequence by pairing elements that share the same index.
+This article explains how the <code>Zip</code> method operates, how it
+handles sequences of unequal lengths, and how to implement it using
+custom result selectors or C# value tuples.</p>
+<h2 id="what-is-the-zip-operator">What is the Zip Operator?</h2>
+<p>The <code>Zip</code> extension method is part of the
+<code>System.Linq</code> namespace. It walks through two enumerable
+sequences in parallel, taking one element from the first sequence and
+the corresponding element from the second sequence, then combining them
+into a new element.</p>
+<p>Its name comes from the concept of a physical zipper, where teeth
+from both sides interlock sequentially one by one.</p>
+<h2 id="basic-syntax-and-usage">Basic Syntax and Usage</h2>
+<p>The <code>Zip</code> method has two primary overloads: one that takes
+a result selector function, and another (introduced in .NET Core 3.0)
+that directly combines elements into value tuples.</p>
+<h3 id="1-using-a-result-selector-function">1. Using a Result Selector
+Function</h3>
+<p>You provide a lambda expression that defines how the paired elements
+should be transformed.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Linq</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span><span class="op">[]</span> numbers <span class="op">=</span> <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span> <span class="op">};</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span><span class="op">[]</span> words <span class="op">=</span> <span class="op">{</span> <span class="st">&quot;One&quot;</span><span class="op">,</span> <span class="st">&quot;Two&quot;</span><span class="op">,</span> <span class="st">&quot;Three&quot;</span> <span class="op">};</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> combined <span class="op">=</span> numbers<span class="op">.</span><span class="fu">Zip</span><span class="op">(</span>words<span class="op">,</span> <span class="op">(</span>num<span class="op">,</span> word<span class="op">)</span> <span class="op">=&gt;</span> $<span class="st">&quot;{num}: {word}&quot;</span><span class="op">);</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> item <span class="kw">in</span> combined<span class="op">)</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>item<span class="op">);</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Output:</strong></p>
+<pre class="text"><code>1: One
+2: Two
+3: Three</code></pre>
+<h3 id="2-using-tuple-projections-net-core-30">2. Using Tuple
+Projections (.NET Core 3.0+)</h3>
+<p>If you do not provide a selector function, <code>Zip</code>
+automatically produces a sequence of <code>(TFirst, TSecond)</code>
+value tuples.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[]</span> ids <span class="op">=</span> <span class="op">{</span> <span class="dv">101</span><span class="op">,</span> <span class="dv">102</span><span class="op">,</span> <span class="dv">103</span> <span class="op">};</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span><span class="op">[]</span> names <span class="op">=</span> <span class="op">{</span> <span class="st">&quot;Alice&quot;</span><span class="op">,</span> <span class="st">&quot;Bob&quot;</span><span class="op">,</span> <span class="st">&quot;Charlie&quot;</span> <span class="op">};</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> pairs <span class="op">=</span> ids<span class="op">.</span><span class="fu">Zip</span><span class="op">(</span>names<span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span><span class="fu">var</span> <span class="op">(</span>id<span class="op">,</span> name<span class="op">)</span> <span class="kw">in</span> pairs<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;ID: {id}, Name: {name}&quot;</span><span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="handling-sequences-of-unequal-length">Handling Sequences of
+Unequal Length</h2>
+<p>When the two input sequences do not have the same number of elements,
+<code>Zip</code> stops processing as soon as it reaches the end of the
+shorter sequence. Any remaining elements in the longer sequence are
+ignored.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[]</span> shortList <span class="op">=</span> <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span> <span class="op">};</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span><span class="op">[]</span> longList <span class="op">=</span> <span class="op">{</span> <span class="st">&quot;A&quot;</span><span class="op">,</span> <span class="st">&quot;B&quot;</span><span class="op">,</span> <span class="st">&quot;C&quot;</span><span class="op">,</span> <span class="st">&quot;D&quot;</span> <span class="op">};</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> result <span class="op">=</span> shortList<span class="op">.</span><span class="fu">Zip</span><span class="op">(</span>longList<span class="op">,</span> <span class="op">(</span>n<span class="op">,</span> s<span class="op">)</span> <span class="op">=&gt;</span> $<span class="st">&quot;{n}-{s}&quot;</span><span class="op">);</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Result contains only two items: &quot;1-A&quot;, &quot;2-B&quot;</span></span></code></pre></div>
+<h2 id="zipping-three-sequences-net-6">Zipping Three Sequences (.NET
+6+)</h2>
+<p>Starting with .NET 6, LINQ supports combining three sequences
+directly using an overload that takes two additional sequences:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[]</span> ids <span class="op">=</span> <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span> <span class="op">};</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span><span class="op">[]</span> names <span class="op">=</span> <span class="op">{</span> <span class="st">&quot;Widget&quot;</span><span class="op">,</span> <span class="st">&quot;Gadget&quot;</span> <span class="op">};</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="dt">decimal</span><span class="op">[]</span> prices <span class="op">=</span> <span class="op">{</span> <span class="fl">9.99m</span><span class="op">,</span> <span class="fl">14.50m</span> <span class="op">};</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> products <span class="op">=</span> ids<span class="op">.</span><span class="fu">Zip</span><span class="op">(</span>names<span class="op">,</span> prices<span class="op">);</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span><span class="fu">var</span> <span class="op">(</span>id<span class="op">,</span> name<span class="op">,</span> price<span class="op">)</span> <span class="kw">in</span> products<span class="op">)</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{id}: {name} costs ${price}&quot;</span><span class="op">);</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="key-characteristics-of-zip">Key Characteristics of Zip</h2>
+<ul>
+<li><strong>Deferred Execution:</strong> Like most LINQ operators,
+<code>Zip</code> evaluates lazily. It does not iterate over either
+sequence until the result is enumerated (e.g., via <code>foreach</code>,
+<code>ToList()</code>, or <code>ToArray()</code>).</li>
+<li><strong>Streaming Behavior:</strong> Elements are read on demand. It
+does not need to buffer the entire collection in memory to yield paired
+results.</li>
+<li><strong>Null Reference Handling:</strong> Calling <code>Zip</code>
+on a <code>null</code> collection or passing a <code>null</code> second
+sequence throws an <code>ArgumentNullException</code>.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-use-the-linq-zip-operator-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

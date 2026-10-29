@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marshal Complex Structures and String Arrays in C# - cs</title>
+    <meta name="description" content="Interoperability between managed .NET code and unmanaged C/C++ libraries requires precise control over memory layouts and data representation. This guide covers how to marshal complex nested structures, fixed and variable string arrays, and custom unmanag">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/marshal-complex-structures-and-string-arrays-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Marshal Complex Structures and String Arrays in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/marshal-complex-structures-and-string-arrays-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Interoperability between managed .NET code and unmanaged C/C++ libraries requires precise control over memory layouts and data representation. This guide covers how to marshal complex nested structures, fixed and variable string arrays, and custom unmanag" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="marshal-complex-structures-and-string-arrays-in-c">Marshal
+Complex Structures and String Arrays in C</h1>
+<p>Interoperability between managed .NET code and unmanaged C/C++
+libraries requires precise control over memory layouts and data
+representation. This guide covers how to marshal complex nested
+structures, fixed and variable string arrays, and custom unmanaged
+pointers using C#'s Platform Invoke (P/Invoke) layer. By properly
+configuring attributes such as <code>StructLayoutAttribute</code> and
+<code>MarshalAsAttribute</code>, you can pass rich data models
+seamlessly across the native boundary without memory corruption or
+memory leaks.</p>
+<h2 id="marshaling-complex-structures">Marshaling Complex
+Structures</h2>
+<p>Unmanaged memory layouts must align exactly with managed structures.
+When dealing with complex structures containing primitive types,
+fixed-size buffers, or nested structures, you must explicitly declare
+how the Common Language Runtime (CLR) positions fields in memory.</p>
+<h3 id="1-struct-layout-configuration">1. Struct Layout
+Configuration</h3>
+<p>Use the <code>[StructLayout]</code> attribute to define field
+alignment. In most C-compatible ABIs, <code>LayoutKind.Sequential</code>
+is used:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">InteropServices</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">StructLayout</span><span class="op">(</span>LayoutKind<span class="op">.</span><span class="fu">Sequential</span><span class="op">,</span> CharSet <span class="op">=</span> CharSet<span class="op">.</span><span class="fu">Ansi</span><span class="op">)]</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> NativeChild</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Id<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">MarshalAs</span><span class="op">(</span>UnmanagedType<span class="op">.</span><span class="fu">ByValTStr</span><span class="op">,</span> SizeConst <span class="op">=</span> <span class="dv">32</span><span class="op">)]</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">StructLayout</span><span class="op">(</span>LayoutKind<span class="op">.</span><span class="fu">Sequential</span><span class="op">,</span> CharSet <span class="op">=</span> CharSet<span class="op">.</span><span class="fu">Ansi</span><span class="op">)]</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> NativeParent</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Version<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> NativeChild Details<span class="op">;</span> <span class="co">// Embedded nested structure</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IntPtr OptionalData<span class="op">;</span>  <span class="co">// Pointer to external memory/payload</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<ul>
+<li><code>LayoutKind.Sequential</code>: Orders fields in physical memory
+in the order they appear in the source code.</li>
+<li><code>Pack</code>: Can be set (e.g., <code>Pack = 4</code> or
+<code>Pack = 8</code>) if the native library was compiled with specific
+compiler packing pragmas.</li>
+<li><code>MarshalAs(UnmanagedType.ByValTStr, SizeConst = N)</code>:
+Inlines an array of characters directly inside the struct rather than
+treating the string as a pointer (<code>char*</code>).</li>
+</ul>
+<h2 id="marshaling-string-arrays-string">Marshaling String Arrays
+(<code>string[]</code>)</h2>
+<p>An array of strings in C# is an array of object references. In native
+C/C++, a string array is typically represented as an array of pointers
+(<code>char**</code> or <code>wchar_t**</code>).</p>
+<h3 id="passing-a-string-array-to-unmanaged-code-in">Passing a String
+Array to Unmanaged Code (In)</h3>
+<p>To pass an array of strings to a function expecting
+<code>const char**</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">DllImport</span><span class="op">(</span><span class="st">&quot;NativeLib.dll&quot;</span><span class="op">,</span> CallingConvention <span class="op">=</span> CallingConvention<span class="op">.</span><span class="fu">Cdecl</span><span class="op">,</span> CharSet <span class="op">=</span> CharSet<span class="op">.</span><span class="fu">Ansi</span><span class="op">)]</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> <span class="dt">void</span> <span class="fu">ProcessStrings</span><span class="op">(</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>In<span class="op">,</span> <span class="fu">MarshalAs</span><span class="op">(</span>UnmanagedType<span class="op">.</span><span class="fu">LPArray</span><span class="op">,</span> ArraySubType <span class="op">=</span> UnmanagedType<span class="op">.</span><span class="fu">LPStr</span><span class="op">)]</span> </span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">string</span><span class="op">[]</span> strings<span class="op">,</span> </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> count</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span></code></pre></div>
+<ul>
+<li><code>UnmanagedType.LPArray</code>: Instructs the marshaler to pack
+the array as a contiguous native array of pointers.</li>
+<li><code>ArraySubType = UnmanagedType.LPStr</code>: Tells the marshaler
+that each pointer in the array points to a null-terminated ANSI C-string
+(<code>char*</code>). For Unicode, change <code>CharSet</code> to
+<code>CharSet.Unicode</code> and <code>ArraySubType</code> to
+<code>UnmanagedType.LPWStr</code>.</li>
+</ul>
+<h2 id="marshaling-structures-containing-string-arrays">Marshaling
+Structures Containing String Arrays</h2>
+<p>When a structure contains an array of strings (e.g.,
+<code>char** items</code>), the CLR cannot automatically determine the
+array length at runtime. You must handle this scenario using manual
+pointer allocation via <code>IntPtr</code>.</p>
+<h3 id="example-native-definition">Example Native Definition</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span> <span class="op">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> count<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">**</span> items<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> BatchData<span class="op">;</span></span></code></pre></div>
+<h3 id="managed-representation-and-manual-allocation">Managed
+Representation and Manual Allocation</h3>
+<p>In C#, define the pointer as an <code>IntPtr</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">StructLayout</span><span class="op">(</span>LayoutKind<span class="op">.</span><span class="fu">Sequential</span><span class="op">)]</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> BatchData</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Count<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IntPtr Items<span class="op">;</span> <span class="co">// Represents char**</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To populate and send this structure to unmanaged code:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">SendBatch</span><span class="op">(</span><span class="dt">string</span><span class="op">[]</span> managedStrings<span class="op">)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> count <span class="op">=</span> managedStrings<span class="op">.</span><span class="fu">Length</span><span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    IntPtr<span class="op">[]</span> stringPointers <span class="op">=</span> <span class="kw">new</span> IntPtr<span class="op">[</span>count<span class="op">];</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">try</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 1. Allocate native memory for each string (char*)</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> count<span class="op">;</span> i<span class="op">++)</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>            stringPointers<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> Marshal<span class="op">.</span><span class="fu">StringToHGlobalAnsi</span><span class="op">(</span>managedStrings<span class="op">[</span>i<span class="op">]);</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 2. Allocate native memory for the array of pointers (char**)</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> pointerSize <span class="op">=</span> IntPtr<span class="op">.</span><span class="fu">Size</span><span class="op">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>        IntPtr nativeArrayPtr <span class="op">=</span> Marshal<span class="op">.</span><span class="fu">AllocHGlobal</span><span class="op">(</span>pointerSize <span class="op">*</span> count<span class="op">);</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>            <span class="co">// 3. Copy pointer array to unmanaged buffer</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>            Marshal<span class="op">.</span><span class="fu">Copy</span><span class="op">(</span>stringPointers<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> nativeArrayPtr<span class="op">,</span> count<span class="op">);</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>            <span class="co">// 4. Construct the managed structure</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>            BatchData batch <span class="op">=</span> <span class="kw">new</span> BatchData</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>                Count <span class="op">=</span> count<span class="op">,</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>                Items <span class="op">=</span> nativeArrayPtr</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>            <span class="op">};</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>            <span class="co">// 5. Call the native API</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>            NativeMethods<span class="op">.</span><span class="fu">ProcessBatch</span><span class="op">(</span><span class="kw">ref</span> batch<span class="op">);</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>        <span class="kw">finally</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Free the pointer array memory</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>            Marshal<span class="op">.</span><span class="fu">FreeHGlobal</span><span class="op">(</span>nativeArrayPtr<span class="op">);</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>    <span class="kw">finally</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Free individual allocated strings</span></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>        <span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> count<span class="op">;</span> i<span class="op">++)</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(</span>stringPointers<span class="op">[</span>i<span class="op">]</span> <span class="op">!=</span> IntPtr<span class="op">.</span><span class="fu">Zero</span><span class="op">)</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>                Marshal<span class="op">.</span><span class="fu">FreeHGlobal</span><span class="op">(</span>stringPointers<span class="op">[</span>i<span class="op">]);</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2
+id="receiving-dynamic-structures-and-string-arrays-from-native-code">Receiving
+Dynamic Structures and String Arrays from Native Code</h2>
+<p>When native code allocates a structure containing dynamic arrays and
+returns it to C#, the managed side must deconstruct the pointers.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">DllImport</span><span class="op">(</span><span class="st">&quot;NativeLib.dll&quot;</span><span class="op">,</span> CallingConvention <span class="op">=</span> CallingConvention<span class="op">.</span><span class="fu">Cdecl</span><span class="op">)]</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> <span class="dt">void</span> <span class="fu">GetBatchData</span><span class="op">(</span><span class="kw">out</span> BatchData data<span class="op">);</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">DllImport</span><span class="op">(</span><span class="st">&quot;NativeLib.dll&quot;</span><span class="op">,</span> CallingConvention <span class="op">=</span> CallingConvention<span class="op">.</span><span class="fu">Cdecl</span><span class="op">)]</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> <span class="dt">void</span> <span class="fu">FreeBatchData</span><span class="op">(</span><span class="kw">ref</span> BatchData data<span class="op">);</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="dt">string</span><span class="op">[]</span> <span class="fu">ReadBatchData</span><span class="op">()</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">GetBatchData</span><span class="op">(</span><span class="kw">out</span> BatchData data<span class="op">);</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">string</span><span class="op">[]</span> result <span class="op">=</span> <span class="kw">new</span> <span class="dt">string</span><span class="op">[</span>data<span class="op">.</span><span class="fu">Count</span><span class="op">];</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>data<span class="op">.</span><span class="fu">Count</span> <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> data<span class="op">.</span><span class="fu">Items</span> <span class="op">!=</span> IntPtr<span class="op">.</span><span class="fu">Zero</span><span class="op">)</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        IntPtr<span class="op">[]</span> nativePointers <span class="op">=</span> <span class="kw">new</span> IntPtr<span class="op">[</span>data<span class="op">.</span><span class="fu">Count</span><span class="op">];</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        Marshal<span class="op">.</span><span class="fu">Copy</span><span class="op">(</span>data<span class="op">.</span><span class="fu">Items</span><span class="op">,</span> nativePointers<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> data<span class="op">.</span><span class="fu">Count</span><span class="op">);</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> data<span class="op">.</span><span class="fu">Count</span><span class="op">;</span> i<span class="op">++)</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>            result<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> Marshal<span class="op">.</span><span class="fu">PtrToStringAnsi</span><span class="op">(</span>nativePointers<span class="op">[</span>i<span class="op">]);</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Call native cleanup function to let the native allocator free memory</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">FreeBatchData</span><span class="op">(</span><span class="kw">ref</span> data<span class="op">);</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> result<span class="op">;</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="key-guidelines">Key Guidelines</h2>
+<ul>
+<li><strong>Match Architecture:</strong> Ensure that pointer arithmetic
+respects target platform architecture. <code>IntPtr.Size</code> is 4
+bytes on x86 and 8 bytes on x64.</li>
+<li><strong>Respect Ownership:</strong> If unmanaged code allocates
+memory, use a corresponding native exported function to release it,
+rather than calling managed <code>Marshal.FreeHGlobal</code> or
+<code>Marshal.FreeCoTaskMem</code>, unless the native function
+explicitly used <code>malloc</code> or <code>CoTaskMemAlloc</code>.</li>
+<li><strong>String Encodings:</strong> Verify whether the native code
+expects ANSI (UTF-8 on modern Linux/macOS runtimes or local code page on
+Windows) or wide characters (UTF-16 on Windows). Keep
+<code>CharSet</code> and <code>MarshalAs</code> configurations aligned
+with the native compiler settings.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/marshal-complex-structures-and-string-arrays-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

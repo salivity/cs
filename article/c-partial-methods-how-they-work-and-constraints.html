@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Partial Methods: How They Work and Constraints - cs</title>
+    <meta name="description" content="Partial methods in C# allow developers to declare a method signature in one part of a partial type and optionally implement it in another part or source file. Primarily utilized in code generation and source generators, they provide clean, compile-time ho">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-partial-methods-how-they-work-and-constraints">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Partial Methods: How They Work and Constraints - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-partial-methods-how-they-work-and-constraints" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Partial methods in C# allow developers to declare a method signature in one part of a partial type and optionally implement it in another part or source file. Primarily utilized in code generation and source generators, they provide clean, compile-time ho" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-partial-methods-how-they-work-and-constraints">C# Partial
+Methods: How They Work and Constraints</h1>
+<p>Partial methods in C# allow developers to declare a method signature
+in one part of a partial type and optionally implement it in another
+part or source file. Primarily utilized in code generation and source
+generators, they provide clean, compile-time hooks for extending
+generated logic without introducing runtime overhead. This article
+explains how partial methods work, the distinction between optional and
+required partial methods, and the strict constraints that govern their
+implementation.</p>
+<h2 id="how-partial-methods-work">How Partial Methods Work</h2>
+<p>A partial method consists of two parts: the definition (the method
+signature) and the implementation (the method body). Both parts must
+reside within a <code>partial</code> type, such as a
+<code>partial class</code>, <code>partial struct</code>, or
+<code>partial interface</code>.</p>
+<p>Depending on how they are declared, partial methods function in one
+of two modes:</p>
+<h3 id="1-optional-partial-methods-classic">1. Optional Partial Methods
+(Classic)</h3>
+<p>Introduced in C# 3.0, optional partial methods act as lightweight
+hooks. If a defining declaration is present but no implementing
+declaration is provided:</p>
+<ul>
+<li>The C# compiler removes the method signature during
+compilation.</li>
+<li>All calls to the method are completely eliminated from the generated
+Intermediate Language (IL).</li>
+<li>Any arguments evaluated solely for the method call are also
+stripped, avoiding performance penalties.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">partial</span> <span class="kw">class</span> OrderProcessor</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Defining declaration</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">partial</span> <span class="dt">void</span> <span class="fu">OnOrderProcessed</span><span class="op">(</span><span class="dt">int</span> orderId<span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessOrder</span><span class="op">(</span><span class="dt">int</span> orderId<span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// If OnOrderProcessed is not implemented, this call is erased at compile time</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">OnOrderProcessed</span><span class="op">(</span>orderId<span class="op">);</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-extended-partial-methods-required">2. Extended Partial Methods
+(Required)</h3>
+<p>Starting with C# 9.0 to support Roslyn Source Generators, partial
+methods can be extended to require an implementation. If an
+accessibility modifier (such as <code>public</code>,
+<code>internal</code>, or an explicit <code>private</code>) is provided
+on the defining signature:</p>
+<ul>
+<li>The method must have an implementation somewhere within the partial
+type.</li>
+<li>The method is not erased at compile time.</li>
+<li>It can return values and participate in standard object-oriented
+patterns.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">partial</span> <span class="kw">class</span> UserValidator</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Defining declaration (requires an implementation because it has an access modifier)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> partial <span class="dt">bool</span> <span class="fu">ValidateUsername</span><span class="op">(</span><span class="dt">string</span> username<span class="op">);</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">partial</span> <span class="kw">class</span> UserValidator</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Implementing declaration</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> partial <span class="dt">bool</span> <span class="fu">ValidateUsername</span><span class="op">(</span><span class="dt">string</span> username<span class="op">)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="op">!</span><span class="dt">string</span><span class="op">.</span><span class="fu">IsNullOrWhiteSpace</span><span class="op">(</span>username<span class="op">);</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="constraints-on-partial-methods">Constraints on Partial
+Methods</h2>
+<p>The C# compiler enforces specific rules depending on whether the
+partial method is optional or required.</p>
+<h3 id="universal-constraints">Universal Constraints</h3>
+<ul>
+<li><strong>Enclosing Types:</strong> The method must be declared inside
+a <code>partial class</code>, <code>partial struct</code>,
+<code>partial interface</code>, or <code>partial record</code>.</li>
+<li><strong>Matching Signatures:</strong> The defining and implementing
+declarations must match exactly in method name, parameter types, generic
+constraints, and parameter modifiers (<code>ref</code>,
+<code>in</code>).</li>
+<li><strong>Static Modifiers:</strong> A partial method can be
+<code>static</code>, but both declarations must include the
+<code>static</code> modifier.</li>
+<li><strong>Delegate Creation:</strong> You cannot create a delegate
+pointing to an optional partial method that has no implementation.</li>
+</ul>
+<h3 id="constraints-on-optional-partial-methods">Constraints on Optional
+Partial Methods</h3>
+<p>If a partial method does not specify an explicit access modifier, it
+defaults to optional mode and is subjected to the following
+limitations:</p>
+<ul>
+<li><strong>Return Type:</strong> Must return <code>void</code>.</li>
+<li><strong>Accessibility:</strong> Cannot have explicit access
+modifiers (they are implicitly <code>private</code>).</li>
+<li><strong>Parameters:</strong> Cannot have <code>out</code>
+parameters, because the compiler cannot guarantee the variable would be
+assigned if the method call is removed.</li>
+<li><strong>Inheritance Modifiers:</strong> Cannot use
+<code>virtual</code>, <code>abstract</code>, <code>override</code>,
+<code>new</code>, or <code>sealed</code>.</li>
+<li><strong>Extern Modifier:</strong> Cannot be marked as
+<code>extern</code>.</li>
+</ul>
+<h3 id="constraints-on-extended-required-partial-methods">Constraints on
+Extended (Required) Partial Methods</h3>
+<p>If a partial method includes an explicit access modifier, it is
+considered required:</p>
+<ul>
+<li><strong>Mandatory Implementation:</strong> If a definition exists
+with an access modifier, failing to provide an implementation generates
+a compile-time error.</li>
+<li><strong>Return Type Flexibility:</strong> Can return any type, not
+just <code>void</code>.</li>
+<li><strong>Parameters:</strong> <code>out</code> parameters are
+permitted because the method is guaranteed to exist and execute.</li>
+<li><strong>Inheritance Modifiers:</strong> Can be marked with
+<code>virtual</code>, <code>override</code>, <code>abstract</code>, or
+<code>sealed</code>, provided the access modifiers and context allow
+it.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-partial-methods-how-they-work-and-constraints';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

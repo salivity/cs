@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding EF Core DbContext and DbSet in C# - cs</title>
+    <meta name="description" content="In modern C# development, Entity Framework Core (EF Core) simplifies data persistence by bridging the gap between object-oriented code and relational databases. At the core of this Object-Relational Mapping (ORM) framework are two primary components: DbCo">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/understanding-ef-core-db-context-and-db-set-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding EF Core DbContext and DbSet in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/understanding-ef-core-db-context-and-db-set-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In modern C# development, Entity Framework Core (EF Core) simplifies data persistence by bridging the gap between object-oriented code and relational databases. At the core of this Object-Relational Mapping (ORM) framework are two primary components: DbCo" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-ef-core-dbcontext-and-dbset-in-c">Understanding EF
+Core DbContext and DbSet in C</h1>
+<p>In modern C# development, Entity Framework Core (EF Core) simplifies
+data persistence by bridging the gap between object-oriented code and
+relational databases. At the core of this Object-Relational Mapping
+(ORM) framework are two primary components: <code>DbContext</code> and
+<code>DbSet&lt;T&gt;</code>. This article explains the distinct roles of
+these classes, how they function together to execute queries and manage
+state, and why they are essential for data access in .NET
+applications.</p>
+<h2 id="what-is-the-dbcontext-class">What Is the DbContext Class?</h2>
+<p>The <code>DbContext</code> class acts as the bridge between your C#
+application and the database. It represents a single database session
+and manages the underlying connection, configuration, and data
+transactions.</p>
+<p>Architecturally, <code>DbContext</code> implements both the
+<strong>Unit of Work</strong> and <strong>Repository</strong> design
+patterns. Its key responsibilities include:</p>
+<ul>
+<li><strong>Connection Management:</strong> Opening, managing, and
+closing the connection to the underlying database engine (such as SQL
+Server, PostgreSQL, or SQLite).</li>
+<li><strong>Change Tracking:</strong> Keeping track of any
+modifications, insertions, or deletions made to entity instances
+retrieved during the session.</li>
+<li><strong>Transaction Management:</strong> Bundling multiple
+operations into a single transaction to ensure atomicity when writing
+data.</li>
+<li><strong>Data Persistence:</strong> Generating and executing the
+appropriate SQL commands (such as <code>INSERT</code>,
+<code>UPDATE</code>, and <code>DELETE</code>) when the
+<code>SaveChanges()</code> or <code>SaveChangesAsync()</code> method is
+called.</li>
+<li><strong>Model Configuration:</strong> Defining table schemas,
+relationships, keys, and constraints via the
+<code>OnModelCreating</code> method using the Fluent API.</li>
+</ul>
+<h2 id="what-is-the-dbset-class">What Is the DbSet Class?</h2>
+<p>A <code>DbSet&lt;TEntity&gt;</code> represents a collection of a
+specific entity type mapped directly to a database table or view. While
+<code>DbContext</code> manages the overarching session,
+<code>DbSet</code> provides the API to interact with specific sets of
+data.</p>
+<p>Key capabilities of <code>DbSet&lt;TEntity&gt;</code> include:</p>
+<ul>
+<li><strong>LINQ Querying:</strong> Providing an
+<code>IQueryable&lt;T&gt;</code> interface that allows developers to
+write standard C# LINQ queries. These queries are translated by EF Core
+into SQL queries executed on the database server.</li>
+<li><strong>CRUD Operations:</strong> Exposing methods such as
+<code>Add()</code>, <code>AddRange()</code>, <code>Remove()</code>, and
+<code>Find()</code> to manipulate rows within that specific table.</li>
+<li><strong>In-Memory Representation:</strong> Serving as the local
+representation of the table data that EF Core monitors for updates.</li>
+</ul>
+<h2 id="how-dbcontext-and-dbset-work-together">How DbContext and DbSet
+Work Together</h2>
+<p>In a typical EF Core implementation, you create a custom class that
+inherits from <code>DbContext</code> and declare one or more
+<code>DbSet&lt;TEntity&gt;</code> properties.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ApplicationDbContext <span class="op">:</span> DbContext</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">ApplicationDbContext</span><span class="op">(</span>DbContextOptions<span class="op">&lt;</span>ApplicationDbContext<span class="op">&gt;</span> options<span class="op">)</span> </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="op">:</span> <span class="kw">base</span><span class="op">(</span>options<span class="op">)</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> DbSet<span class="op">&lt;</span>Product<span class="op">&gt;</span> Products <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> DbSet<span class="op">&lt;</span>Category<span class="op">&gt;</span> Categories <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The interaction follows a clear operational lifecycle:</p>
+<ol type="1">
+<li><strong>Querying:</strong> When you access
+<code>context.Products.Where(p =&gt; p.Price &gt; 50).ToList()</code>,
+the <code>DbSet&lt;Product&gt;</code> translates the LINQ expression to
+a SQL <code>SELECT</code> statement and executes it through the
+<code>DbContext</code> connection.</li>
+<li><strong>Tracking:</strong> Once the records are materialized into C#
+<code>Product</code> objects, the <code>DbContext</code> change tracker
+registers them. Any property changes made to these objects in memory are
+flagged as modified.</li>
+<li><strong>Persisting:</strong> When calling
+<code>context.SaveChangesAsync()</code>, the <code>DbContext</code>
+examines all tracked entities across all <code>DbSet</code> properties,
+generates the required SQL statements, and commits the changes inside a
+single database transaction.</li>
+</ol>
+<p>Together, <code>DbContext</code> and <code>DbSet</code> abstract
+low-level database operations, allowing developers to interact with
+relational data using strongly typed C# objects.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/understanding-ef-core-db-context-and-db-set-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

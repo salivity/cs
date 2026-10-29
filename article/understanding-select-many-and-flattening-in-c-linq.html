@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding SelectMany and Flattening in C# LINQ - cs</title>
+    <meta name="description" content="In C# LINQ, SelectMany is a powerful query operator used to project each element of a sequence to an IEnumerable&lt;T&gt; and flatten the resulting sequences into one continuous collection. While a standard Select maintains the nested hierarchy of data—producin">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/understanding-select-many-and-flattening-in-c-linq">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding SelectMany and Flattening in C# LINQ - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/understanding-select-many-and-flattening-in-c-linq" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C# LINQ, SelectMany is a powerful query operator used to project each element of a sequence to an IEnumerable&lt;T&gt; and flatten the resulting sequences into one continuous collection. While a standard Select maintains the nested hierarchy of data—producin" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-selectmany-and-flattening-in-c-linq">Understanding
+SelectMany and Flattening in C# LINQ</h1>
+<p>In C# LINQ, <code>SelectMany</code> is a powerful query operator used
+to project each element of a sequence to an
+<code>IEnumerable&lt;T&gt;</code> and flatten the resulting sequences
+into one continuous collection. While a standard <code>Select</code>
+maintains the nested hierarchy of data—producing collections within
+collections—<code>SelectMany</code> unpacks these child structures into
+a single-dimensional list. This article explains the mechanics of
+<code>SelectMany</code>, contrasts it with <code>Select</code>, and
+demonstrates how to effectively flatten nested arrays, collections, and
+parent-child domain models.</p>
+<hr />
+<h3 id="what-is-a-flattening-operation">What Is a Flattening
+Operation?</h3>
+<p>Flattening refers to transforming a hierarchical or multi-dimensional
+structure (such as a list of lists, or an object containing an inner
+collection) into a single, linear sequence.</p>
+<p>Consider this scenario:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span>List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;&gt;</span> nestedNumbers <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span>List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span> <span class="op">},</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> <span class="op">{</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">5</span> <span class="op">},</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> <span class="op">{</span> <span class="dv">6</span><span class="op">,</span> <span class="dv">7</span><span class="op">,</span> <span class="dv">8</span> <span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<p>A flattening operation extracts all internal integers and produces a
+single sequence: <code>[1, 2, 3, 4, 5, 6, 7, 8]</code>.</p>
+<hr />
+<h3 id="select-vs-selectmany"><code>Select</code> vs.
+<code>SelectMany</code></h3>
+<p>The core distinction between <code>Select</code> and
+<code>SelectMany</code> lies in the mapping relationship:</p>
+<ul>
+<li><strong><code>Select</code> (One-to-One):</strong> Maps each source
+element to a single target element. If the projection returns an
+enumerable, <code>Select</code> produces an
+<code>IEnumerable&lt;IEnumerable&lt;T&gt;&gt;</code>.</li>
+<li><strong><code>SelectMany</code> (One-to-Many):</strong> Maps each
+source element to an enumerable, enumerates through that enumerable, and
+streams every element directly into a single
+<code>IEnumerable&lt;T&gt;</code>.</li>
+</ul>
+<h4 id="example-comparison">Example Comparison</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> teams <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span>Team<span class="op">&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> Team <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Alpha&quot;</span><span class="op">,</span> Members <span class="op">=</span> <span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="st">&quot;Alice&quot;</span><span class="op">,</span> <span class="st">&quot;Bob&quot;</span> <span class="op">}</span> <span class="op">},</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> Team <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Beta&quot;</span><span class="op">,</span> Members <span class="op">=</span> <span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="st">&quot;Charlie&quot;</span><span class="op">,</span> <span class="st">&quot;Diana&quot;</span> <span class="op">}</span> <span class="op">}</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Using Select: Result is IEnumerable&lt;string[]&gt;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> selectResult <span class="op">=</span> teams<span class="op">.</span><span class="fu">Select</span><span class="op">(</span>t <span class="op">=&gt;</span> t<span class="op">.</span><span class="fu">Members</span><span class="op">);</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Using SelectMany: Result is IEnumerable&lt;string&gt;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> selectManyResult <span class="op">=</span> teams<span class="op">.</span><span class="fu">SelectMany</span><span class="op">(</span>t <span class="op">=&gt;</span> t<span class="op">.</span><span class="fu">Members</span><span class="op">);</span></span></code></pre></div>
+<p><code>selectResult</code> contains two string arrays, whereas
+<code>selectManyResult</code> produces a flat list containing
+<code>["Alice", "Bob", "Charlie", "Diana"]</code>.</p>
+<hr />
+<h3 id="how-selectmany-works-internally">How SelectMany Works
+Internally</h3>
+<p>Under the hood, <code>SelectMany</code> acts as a nested
+<code>foreach</code> loop. It iterates through the outer sequence,
+extracts the inner collection for each item, and yields each inner item
+individually:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> IEnumerable<span class="op">&lt;</span>TResult<span class="op">&gt;</span> CustomSelectMany<span class="op">&lt;</span>TSource<span class="op">,</span> TResult<span class="op">&gt;(</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span> IEnumerable<span class="op">&lt;</span>TSource<span class="op">&gt;</span> source<span class="op">,</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    Func<span class="op">&lt;</span>TSource<span class="op">,</span> IEnumerable<span class="op">&lt;</span>TResult<span class="op">&gt;&gt;</span> selector<span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> parent <span class="kw">in</span> source<span class="op">)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> child <span class="kw">in</span> <span class="fu">selector</span><span class="op">(</span>parent<span class="op">))</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>            <span class="kw">yield</span> <span class="kw">return</span> child<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Because it uses deferred execution (<code>yield return</code>), the
+flattening happens on demand as the caller iterates through the
+resulting enumerable.</p>
+<hr />
+<h3 id="preserving-parent-context-with-result-selectors">Preserving
+Parent Context with Result Selectors</h3>
+<p>A common requirement is to flatten an inner list while retaining
+properties from the outer parent object. <code>SelectMany</code>
+provides an overload that accepts a second lambda expression—a
+<strong>result selector</strong>—taking both the parent item and the
+child item as parameters.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> memberDetails <span class="op">=</span> teams<span class="op">.</span><span class="fu">SelectMany</span><span class="op">(</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    team <span class="op">=&gt;</span> team<span class="op">.</span><span class="fu">Members</span><span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">(</span>team<span class="op">,</span> member<span class="op">)</span> <span class="op">=&gt;</span> <span class="kw">new</span> </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span> </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        TeamName <span class="op">=</span> team<span class="op">.</span><span class="fu">Name</span><span class="op">,</span> </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        MemberName <span class="op">=</span> member </span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span></code></pre></div>
+<p>This query outputs a flattened list of anonymous objects where each
+team member is paired with their respective team name:</p>
+<ul>
+<li><code>{ TeamName = "Alpha", MemberName = "Alice" }</code></li>
+<li><code>{ TeamName = "Alpha", MemberName = "Bob" }</code></li>
+<li><code>{ TeamName = "Beta", MemberName = "Charlie" }</code></li>
+<li><code>{ TeamName = "Beta", MemberName = "Diana" }</code></li>
+</ul>
+<hr />
+<h3 id="flattening-with-query-syntax">Flattening with Query Syntax</h3>
+<p>In LINQ query syntax, <code>SelectMany</code> is represented by using
+multiple <code>from</code> clauses. Each subsequent <code>from</code>
+clause unwraps a nested collection:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> query <span class="op">=</span> from team <span class="kw">in</span> teams</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>            from member <span class="kw">in</span> team<span class="op">.</span><span class="fu">Members</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>            select <span class="kw">new</span> </span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span> </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>                TeamName <span class="op">=</span> team<span class="op">.</span><span class="fu">Name</span><span class="op">,</span> </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>                MemberName <span class="op">=</span> member </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            <span class="op">};</span></span></code></pre></div>
+<p>The C# compiler automatically translates this query syntax into a
+<code>SelectMany</code> method call with a result selector.</p>
+<hr />
+<h3 id="deep-flattening-multiple-nested-levels">Deep Flattening:
+Multiple Nested Levels</h3>
+<p><code>SelectMany</code> can be chained to traverse arbitrarily deep
+object hierarchies, such as flattening a list of companies, their
+departments, and their employees:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> allEmployees <span class="op">=</span> companies</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">SelectMany</span><span class="op">(</span>c <span class="op">=&gt;</span> c<span class="op">.</span><span class="fu">Departments</span><span class="op">)</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">SelectMany</span><span class="op">(</span>d <span class="op">=&gt;</span> d<span class="op">.</span><span class="fu">Employees</span><span class="op">);</span></span></code></pre></div>
+<p>Each call strips away one layer of nesting, sequentially resolving
+<code>IEnumerable&lt;Company&gt;</code> to
+<code>IEnumerable&lt;Department&gt;</code>, and finally to
+<code>IEnumerable&lt;Employee&gt;</code>.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/understanding-select-many-and-flattening-in-c-linq';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

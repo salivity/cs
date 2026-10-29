@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# 8 Nullable Reference Types Explained - cs</title>
+    <meta name="description" content="Nullable reference types, introduced in C# 8.0, are a compile-time feature designed to minimize or entirely eliminate NullReferenceException errors—historically known as the &quot;billion-dollar mistake.&quot; This article explores the purpose of nullable reference">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-8-nullable-reference-types-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# 8 Nullable Reference Types Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-8-nullable-reference-types-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Nullable reference types, introduced in C# 8.0, are a compile-time feature designed to minimize or entirely eliminate NullReferenceException errors—historically known as the &quot;billion-dollar mistake.&quot; This article explores the purpose of nullable reference" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-8-nullable-reference-types-explained">C# 8 Nullable Reference
+Types Explained</h1>
+<p>Nullable reference types, introduced in C# 8.0, are a compile-time
+feature designed to minimize or entirely eliminate
+<code>NullReferenceException</code> errors—historically known as the
+"billion-dollar mistake." This article explores the purpose of nullable
+reference types, how to enable and configure them, the syntax used to
+express intent, and how the C# compiler uses static flow analysis to
+enforce null safety across your codebase.</p>
+<h3 id="the-problem-with-reference-types">The Problem with Reference
+Types</h3>
+<p>Prior to C# 8.0, all reference types (such as <code>string</code>,
+<code>class</code>, or interface types) were inherently nullable. A
+variable typed as <code>string</code> could hold either a valid string
+reference or <code>null</code>. Because the compiler did not track
+whether a reference was null, dereferencing a variable that unexpectedly
+held <code>null</code> resulted in a runtime
+<code>NullReferenceException</code>. Developers had to rely on defensive
+coding patterns, manual null checks, or runtime unit tests to prevent
+crashes.</p>
+<h3 id="what-are-nullable-reference-types">What Are Nullable Reference
+Types?</h3>
+<p>Nullable reference types do not change how the Common Language
+Runtime (CLR) executes code; instead, they alter how the C# compiler
+interprets reference types at compile time. When this feature is
+enabled:</p>
+<ul>
+<li><strong>Non-nullable reference types (default):</strong> Variables
+are expected to never hold <code>null</code>. If you assign
+<code>null</code> to them, or fail to initialize them before use, the
+compiler generates a warning.</li>
+<li><strong>Nullable reference types:</strong> Variables explicitly
+allowed to hold <code>null</code> must be declared with a <code>?</code>
+suffix (e.g., <code>string?</code>). The compiler warns you if you
+attempt to dereference such variables without first checking for
+<code>null</code>.</li>
+</ul>
+<h3 id="enabling-nullable-contexts">Enabling Nullable Contexts</h3>
+<p>Because introducing nullability checks to existing codebases would
+generate thousands of breaking warnings, the feature is opt-in. You can
+enable it globally in your <code>.csproj</code> file:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">PropertyGroup</span>&gt;</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">Nullable</span>&gt;enable&lt;/<span class="kw">Nullable</span>&gt;</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">PropertyGroup</span>&gt;</span></code></pre></div>
+<p>Alternatively, you can toggle the context within specific files or
+code blocks using preprocessor directives:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>#nullable enable</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">// Nullable checks are active here</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>#nullable restore</span></code></pre></div>
+<h3 id="syntax-and-core-concepts">Syntax and Core Concepts</h3>
+<h4 id="1-non-nullable-reference-types">1. Non-Nullable Reference
+Types</h4>
+<p>When enabled, standard type declarations cannot accept
+<code>null</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> name <span class="op">=</span> <span class="st">&quot;Alice&quot;</span><span class="op">;</span> <span class="co">// Valid</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>name <span class="op">=</span> <span class="kw">null</span><span class="op">;</span>           <span class="co">// Compiler Warning: Cannot convert null literal to non-nullable reference type.</span></span></code></pre></div>
+<h4 id="2-nullable-reference-types-">2. Nullable Reference Types
+(<code>?</code>)</h4>
+<p>To permit <code>null</code>, append the <code>?</code> operator to
+the type name:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span><span class="op">?</span> middleName <span class="op">=</span> <span class="kw">null</span><span class="op">;</span> <span class="co">// Valid</span></span></code></pre></div>
+<h4 id="3-static-flow-analysis">3. Static Flow Analysis</h4>
+<p>The compiler tracks the state of variables through execution paths.
+If a nullable variable is safely checked, the compiler temporarily
+treats it as non-nullable:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">PrintLength</span><span class="op">(</span><span class="dt">string</span><span class="op">?</span> input<span class="op">)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Warning: Dereference of a possibly null reference.</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Console.WriteLine(input.Length); </span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>input <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Safe: Compiler knows input cannot be null here</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>input<span class="op">.</span><span class="fu">Length</span><span class="op">);</span> </span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="4-the-null-forgiving-operator-">4. The Null-Forgiving Operator
+(<code>!</code>)</h4>
+<p>In scenarios where you know a reference is not null, but the
+compiler's static analysis cannot prove it, you can append the
+null-forgiving (or "dammit") operator <code>!</code> to suppress the
+warning:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span><span class="op">?</span> possibleNull <span class="op">=</span> <span class="fu">GetValueFromLegacySystem</span><span class="op">();</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> confirmedValue <span class="op">=</span> possibleNull<span class="op">!;</span> <span class="co">// Suppresses compiler warning</span></span></code></pre></div>
+<h3 id="benefits-of-the-feature">Benefits of the Feature</h3>
+<ul>
+<li><strong>Compile-Time Detection:</strong> Catches potential
+null-dereference bugs during development rather than in production
+environments.</li>
+<li><strong>Expressive API Design:</strong> Signatures explicitly
+communicate intent. A method returning <code>User</code> guarantees a
+value, whereas <code>User?</code> warns consumers to handle the absent
+case.</li>
+<li><strong>Improved Maintainability:</strong> Reduces the need for
+redundant defensive null-checks throughout internal application
+layers.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-8-nullable-reference-types-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

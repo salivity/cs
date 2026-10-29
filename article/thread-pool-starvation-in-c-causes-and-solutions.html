@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thread Pool Starvation in C#: Causes and Solutions - cs</title>
+    <meta name="description" content="Thread pool starvation occurs when all available worker threads in the .NET ThreadPool are blocked, preventing queued tasks from executing and causing severe application latency or deadlocks. This article explains what thread pool starvation is, how the .">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/thread-pool-starvation-in-c-causes-and-solutions">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Thread Pool Starvation in C#: Causes and Solutions - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/thread-pool-starvation-in-c-causes-and-solutions" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Thread pool starvation occurs when all available worker threads in the .NET ThreadPool are blocked, preventing queued tasks from executing and causing severe application latency or deadlocks. This article explains what thread pool starvation is, how the ." />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="thread-pool-starvation-in-c-causes-and-solutions">Thread Pool
+Starvation in C#: Causes and Solutions</h1>
+<p>Thread pool starvation occurs when all available worker threads in
+the .NET ThreadPool are blocked, preventing queued tasks from executing
+and causing severe application latency or deadlocks. This article
+explains what thread pool starvation is, how the .NET ThreadPool manages
+concurrency, the common anti-patterns that trigger starvation, and the
+best practices required to prevent and resolve it in C#.</p>
+<h2 id="understanding-thread-pool-starvation">Understanding Thread Pool
+Starvation</h2>
+<p>The .NET runtime maintains a shared pool of worker threads to handle
+asynchronous callbacks, timer events, and queued tasks
+(<code>Task.Run</code>). Instead of creating a new OS thread for every
+operation, the runtime reuses existing threads to reduce allocation
+overhead.</p>
+<p>When demand increases, the ThreadPool can spin up new threads, but it
+throttles thread creation to roughly one or two new threads per second
+(via hill-climbing heuristics) to prevent CPU thrashing. If running
+threads are synchronously blocked waiting on I/O, locks, or other tasks,
+newly queued work must wait in line. When the queue grows faster than
+the rate at which threads unblock or new threads are injected, the
+application enters thread pool starvation.</p>
+<h2 id="common-causes-in-c">Common Causes in C</h2>
+<h3 id="1-sync-over-async">1. Sync-Over-Async</h3>
+<p>The most frequent cause of thread pool starvation is blocking on
+asynchronous code using <code>.Result</code>, <code>.Wait()</code>, or
+<code>.GetAwaiter().GetResult()</code>.</p>
+<p>When a thread calls <code>.Result</code> on an unfinished
+<code>Task</code>, that thread is held hostage doing nothing until the
+awaited work completes. If the awaited work itself requires a thread
+pool thread to complete its continuation, both threads are occupied for
+a single operation. Under load, this cascades until every thread is
+blocked.</p>
+<h3 id="2-long-running-synchronous-io">2. Long-Running Synchronous
+I/O</h3>
+<p>Using blocking APIs—such as <code>Thread.Sleep()</code>, synchronous
+database drivers, or synchronous file streams (<code>File.Read</code>
+instead of <code>File.ReadAsync</code>)—monopolizes thread pool threads
+during operations where the CPU is completely idle.</p>
+<h3 id="3-starving-work-via-taskrun-for-cpu-loops">3. Starving Work via
+Task.Run for CPU Loops</h3>
+<p>Offloading indefinite background loops or heavy, long-lived
+background processing to <code>Task.Run</code> occupies pool threads
+permanently, reducing the capacity available for short-lived operational
+tasks.</p>
+<h2 id="how-to-avoid-thread-pool-starvation">How to Avoid Thread Pool
+Starvation</h2>
+<h3 id="1-adopt-asyncawait-end-to-end">1. Adopt Async/Await
+End-to-End</h3>
+<p>Convert all blocking I/O calls to their asynchronous counterparts and
+propagate <code>async</code> and <code>await</code> all the way through
+the call stack:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// BAD: Blocks the thread pool worker</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">string</span> <span class="fu">FetchData</span><span class="op">()</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> httpClient<span class="op">.</span><span class="fu">GetStringAsync</span><span class="op">(</span><span class="st">&quot;https://api.example.com&quot;</span><span class="op">).</span><span class="fu">Result</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// GOOD: Releases the thread back to the pool while waiting for I/O</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> async Task<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> <span class="fu">FetchDataAsync</span><span class="op">()</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> await httpClient<span class="op">.</span><span class="fu">GetStringAsync</span><span class="op">(</span><span class="st">&quot;https://api.example.com&quot;</span><span class="op">);</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Never use <code>.GetAwaiter().GetResult()</code> or
+<code>.Wait()</code> to satisfy synchronous interface contracts.
+Refactor the interface to return a <code>Task</code> instead.</p>
+<h3 id="2-use-dedicated-threads-for-long-running-operations">2. Use
+Dedicated Threads for Long-Running Operations</h3>
+<p>If an operation must run for the lifetime of an application or
+execute a continuous loop, bypass the thread pool using
+<code>TaskCreationOptions.LongRunning</code> or a dedicated
+<code>Thread</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Task<span class="op">.</span><span class="fu">Factory</span><span class="op">.</span><span class="fu">StartNew</span><span class="op">(</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    ProcessContinuousQueue<span class="op">,</span> </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    CancellationToken<span class="op">.</span><span class="fu">None</span><span class="op">,</span> </span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    TaskCreationOptions<span class="op">.</span><span class="fu">LongRunning</span><span class="op">,</span> </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    TaskScheduler<span class="op">.</span><span class="fu">Default</span><span class="op">);</span></span></code></pre></div>
+<p>This hints to the runtime to allocate a standalone OS thread rather
+than claiming a pooled worker.</p>
+<h3 id="3-configure-minimum-threads-for-spiky-workloads">3. Configure
+Minimum Threads for Spiky Workloads</h3>
+<p>By default, the ThreadPool starts with a low number of threads (often
+matching the core count). For applications that experience sudden,
+massive traffic bursts, the thread injection rate (1–2 threads/sec) may
+be too slow to absorb the initial shock.</p>
+<p>You can increase the baseline minimum thread count at startup using
+<code>ThreadPool.SetMinThreads</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Set minimum worker and completion port threads</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>ThreadPool<span class="op">.</span><span class="fu">SetMinThreads</span><span class="op">(</span><span class="dv">200</span><span class="op">,</span> <span class="dv">200</span><span class="op">);</span></span></code></pre></div>
+<p>While this helps handle bursty traffic without waiting for the
+throttling algorithm, it is a mitigation rather than a cure for bad
+blocking patterns.</p>
+<h3 id="4-monitor-threadpool-metrics">4. Monitor ThreadPool Metrics</h3>
+<p>Monitor runtime health using .NET CLI tools
+(<code>dotnet-counters</code>) or OpenTelemetry. Pay attention to:</p>
+<ul>
+<li><code>System.Runtime</code> -&gt;
+<code>threadpool-thread-count</code></li>
+<li><code>System.Runtime</code> -&gt;
+<code>threadpool-queue-length</code></li>
+<li><code>System.Runtime</code> -&gt;
+<code>threadpool-completed-items-count</code></li>
+</ul>
+<p>A rapidly increasing queue length paired with a slowly growing thread
+count is the primary signature of thread pool starvation.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/thread-pool-starvation-in-c-causes-and-solutions';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

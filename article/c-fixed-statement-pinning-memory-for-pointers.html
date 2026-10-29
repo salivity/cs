@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# fixed Statement: Pinning Memory for Pointers - cs</title>
+    <meta name="description" content="The fixed statement in C# prevents the Garbage Collector (GC) from relocating a movable variable during runtime, providing a stable memory address required for direct pointer operations. In managed environments, the garbage collector periodically compacts">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-fixed-statement-pinning-memory-for-pointers">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# fixed Statement: Pinning Memory for Pointers - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-fixed-statement-pinning-memory-for-pointers" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The fixed statement in C# prevents the Garbage Collector (GC) from relocating a movable variable during runtime, providing a stable memory address required for direct pointer operations. In managed environments, the garbage collector periodically compacts" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-fixed-statement-pinning-memory-for-pointers">C# fixed
+Statement: Pinning Memory for Pointers</h1>
+<p>The <code>fixed</code> statement in C# prevents the Garbage Collector
+(GC) from relocating a movable variable during runtime, providing a
+stable memory address required for direct pointer operations. In managed
+environments, the garbage collector periodically compacts memory,
+shifting objects to optimize space. By using <code>fixed</code> inside
+an <code>unsafe</code> context, developers can temporarily "pin" an
+object in place, safely obtaining a raw pointer to interact with native
+APIs, perform high-performance memory manipulation, or handle unmanaged
+buffers without risking memory corruption.</p>
+<h2 id="why-memory-pinning-is-necessary">Why Memory Pinning Is
+Necessary</h2>
+<p>The .NET Garbage Collector uses a mark-and-sweep algorithm with
+compaction. During compaction, active objects residing on the managed
+heap are moved to contiguous memory locations to reduce
+fragmentation.</p>
+<p>If you take the memory address of a managed object and the GC
+relocates that object immediately afterward, your pointer points to
+invalid memory or another unrelated object. The <code>fixed</code>
+statement resolves this issue by informing the runtime's execution
+engine that a specific managed object must remain at its exact physical
+address until the execution exits the <code>fixed</code> block.</p>
+<h2 id="how-the-fixed-statement-works">How the fixed Statement
+Works</h2>
+<p>When a <code>fixed</code> block executes:</p>
+<ol type="1">
+<li><strong>Pinning:</strong> The runtime marks the object's header with
+a pin flag, instructing the GC's compaction phase to skip moving this
+particular instance.</li>
+<li><strong>Pointer Initialization:</strong> A pointer variable declared
+within the <code>fixed</code> statement receives the exact physical
+address of the pinned data.</li>
+<li><strong>Execution:</strong> Code inside the block executes with
+direct, unmanaged memory access via the pointer. The initialized pointer
+is read-only; you cannot reassign it to point elsewhere.</li>
+<li><strong>Unpinning:</strong> Once execution leaves the scope of the
+<code>fixed</code> block, the pin flag is cleared. The GC is once again
+free to relocate or collect the object during its next cycle.</li>
+</ol>
+<h2 id="syntax-and-example">Syntax and Example</h2>
+<p>To use pointers and the <code>fixed</code> statement, your project
+must have unmanaged code enabled
+(<code>&lt;AllowUnsafeBlocks&gt;true&lt;/AllowUnsafeBlocks&gt;</code> in
+the <code>.csproj</code> file).</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">unsafe</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">byte</span><span class="op">[]</span> buffer <span class="op">=</span> <span class="kw">new</span> <span class="dt">byte</span><span class="op">[]</span> <span class="op">{</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">20</span><span class="op">,</span> <span class="dv">30</span><span class="op">,</span> <span class="dv">40</span><span class="op">,</span> <span class="dv">50</span> <span class="op">};</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Pin the array in memory</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">fixed</span> <span class="op">(</span><span class="dt">byte</span><span class="op">*</span> pBuffer <span class="op">=</span> buffer<span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// pBuffer points directly to the first element (buffer[0])</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> buffer<span class="op">.</span><span class="fu">Length</span><span class="op">;</span> i<span class="op">++)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="op">*(</span>pBuffer <span class="op">+</span> i<span class="op">)</span> <span class="op">+=</span> <span class="dv">5</span><span class="op">;</span> <span class="co">// Directly modify memory</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="co">// The array is automatically unpinned here</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="supported-types-for-pinning">Supported Types for Pinning</h2>
+<p>The <code>fixed</code> statement works with several types of data
+structures:</p>
+<ul>
+<li><strong>Arrays:</strong> Pinning an array (e.g.,
+<code>fixed (int* p = array)</code>) yields a pointer to its first
+element.</li>
+<li><strong>Strings:</strong> Pinning a string (e.g.,
+<code>fixed (char* p = str)</code>) yields a pointer to the first
+character, making it easy to pass strings to unmanaged C-style APIs
+expecting a <code>const wchar_t*</code>.</li>
+<li><strong>Variables and Fields:</strong> Any value type variable or
+field residing on the heap can be pinned (e.g.,
+<code>fixed (int* p = &amp;myClass.myInt)</code>).</li>
+<li><strong>Pinnable Types:</strong> Any custom class or struct that
+implements a <code>GetPinnableReference()</code> method returning a
+<code>ref</code> to an unmanaged type can be used directly in a
+<code>fixed</code> statement.</li>
+</ul>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<p>While pinning is essential for interoperability and extreme
+performance optimization, it should be used sparingly and for the
+shortest duration possible. Pinned objects create "islands" in memory
+that the garbage collector cannot shift. If objects are pinned
+frequently or for long periods, it leads to managed heap fragmentation,
+degraded allocation performance, and premature out-of-memory
+conditions.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-fixed-statement-pinning-memory-for-pointers';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

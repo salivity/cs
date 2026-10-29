@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Implement JWT Authentication in C# Web API - cs</title>
+    <meta name="description" content="This article provides a straightforward guide on implementing JSON Web Token (JWT) authentication and bearer token validation in an ASP.NET Core Web API. You will learn which NuGet packages to install, how to store configuration settings, how to configure">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-implement-jwt-authentication-in-c-web-api">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Implement JWT Authentication in C# Web API - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-implement-jwt-authentication-in-c-web-api" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a straightforward guide on implementing JSON Web Token (JWT) authentication and bearer token validation in an ASP.NET Core Web API. You will learn which NuGet packages to install, how to store configuration settings, how to configure" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-implement-jwt-authentication-in-c-web-api">How to
+Implement JWT Authentication in C# Web API</h1>
+<p>This article provides a straightforward guide on implementing JSON
+Web Token (JWT) authentication and bearer token validation in an ASP.NET
+Core Web API. You will learn which NuGet packages to install, how to
+store configuration settings, how to configure the authentication
+middleware in your application pipeline, how to generate a token, and
+how to secure API endpoints using authorization attributes.</p>
+<h3 id="1-install-the-required-nuget-package">1. Install the Required
+NuGet Package</h3>
+<p>To validate JWTs, install the
+<code>Microsoft.AspNetCore.Authentication.JwtBearer</code> package via
+the .NET CLI or the NuGet Package Manager:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> add package Microsoft.AspNetCore.Authentication.JwtBearer</span></code></pre></div>
+<h3 id="2-configure-token-settings-in-appsettingsjson">2. Configure
+Token Settings in <code>appsettings.json</code></h3>
+<p>Define your token parameters in <code>appsettings.json</code>. The
+secret key must be sufficiently long (at least 256 bits / 32 characters)
+to satisfy cryptographic requirements.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;Jwt&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;Key&quot;</span><span class="fu">:</span> <span class="st">&quot;YourSuperSecretKeyWithSufficientLength32CharactersLong!&quot;</span><span class="fu">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;Issuer&quot;</span><span class="fu">:</span> <span class="st">&quot;https://yourdomain.com&quot;</span><span class="fu">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;Audience&quot;</span><span class="fu">:</span> <span class="st">&quot;https://yourdomain.com&quot;</span><span class="fu">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;DurationInMinutes&quot;</span><span class="fu">:</span> <span class="dv">60</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<h3 id="3-register-authentication-services-in-programcs">3. Register
+Authentication Services in <code>Program.cs</code></h3>
+<p>Add the authentication service and configure the JWT Bearer
+validation options. This tells the application how to inspect and
+validate incoming tokens.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Text</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Authentication</span><span class="op">.</span><span class="fu">JwtBearer</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">IdentityModel</span><span class="op">.</span><span class="fu">Tokens</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddControllers</span><span class="op">();</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> jwtSettings <span class="op">=</span> builder<span class="op">.</span><span class="fu">Configuration</span><span class="op">.</span><span class="fu">GetSection</span><span class="op">(</span><span class="st">&quot;Jwt&quot;</span><span class="op">);</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> key <span class="op">=</span> Encoding<span class="op">.</span><span class="fu">UTF8</span><span class="op">.</span><span class="fu">GetBytes</span><span class="op">(</span>jwtSettings<span class="op">[</span><span class="st">&quot;Key&quot;</span><span class="op">]!);</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddAuthentication</span><span class="op">(</span>options <span class="op">=&gt;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    options<span class="op">.</span><span class="fu">DefaultAuthenticateScheme</span> <span class="op">=</span> JwtBearerDefaults<span class="op">.</span><span class="fu">AuthenticationScheme</span><span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    options<span class="op">.</span><span class="fu">DefaultChallengeScheme</span> <span class="op">=</span> JwtBearerDefaults<span class="op">.</span><span class="fu">AuthenticationScheme</span><span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="op">})</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">AddJwtBearer</span><span class="op">(</span>options <span class="op">=&gt;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    options<span class="op">.</span><span class="fu">RequireHttpsMetadata</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    options<span class="op">.</span><span class="fu">SaveToken</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    options<span class="op">.</span><span class="fu">TokenValidationParameters</span> <span class="op">=</span> <span class="kw">new</span> TokenValidationParameters</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        ValidateIssuerSigningKey <span class="op">=</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        IssuerSigningKey <span class="op">=</span> <span class="kw">new</span> <span class="fu">SymmetricSecurityKey</span><span class="op">(</span>key<span class="op">),</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        ValidateIssuer <span class="op">=</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>        ValidIssuer <span class="op">=</span> jwtSettings<span class="op">[</span><span class="st">&quot;Issuer&quot;</span><span class="op">],</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        ValidateAudience <span class="op">=</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>        ValidAudience <span class="op">=</span> jwtSettings<span class="op">[</span><span class="st">&quot;Audience&quot;</span><span class="op">],</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>        ValidateLifetime <span class="op">=</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        ClockSkew <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">Zero</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddAuthorization</span><span class="op">();</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">UseHttpsRedirection</span><span class="op">();</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="co">// Place UseAuthentication before UseAuthorization</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">UseAuthentication</span><span class="op">();</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">UseAuthorization</span><span class="op">();</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapControllers</span><span class="op">();</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">Run</span><span class="op">();</span></span></code></pre></div>
+<h3 id="4-generate-the-jwt-bearer-token">4. Generate the JWT Bearer
+Token</h3>
+<p>Create a method or an authentication endpoint to validate user
+credentials and issue a signed token containing user claims.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IdentityModel</span><span class="op">.</span><span class="fu">Tokens</span><span class="op">.</span><span class="fu">Jwt</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Security</span><span class="op">.</span><span class="fu">Claims</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Text</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Mvc</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">IdentityModel</span><span class="op">.</span><span class="fu">Tokens</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>ApiController<span class="op">]</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">Route</span><span class="op">(</span><span class="st">&quot;api/[controller]&quot;</span><span class="op">)]</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> AuthController <span class="op">:</span> ControllerBase</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IConfiguration _configuration<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">AuthController</span><span class="op">(</span>IConfiguration configuration<span class="op">)</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        _configuration <span class="op">=</span> configuration<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">HttpPost</span><span class="op">(</span><span class="st">&quot;login&quot;</span><span class="op">)]</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IActionResult <span class="fu">Login</span><span class="op">([</span>FromBody<span class="op">]</span> LoginRequest request<span class="op">)</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Replace with actual database user verification</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>request<span class="op">.</span><span class="fu">Username</span> <span class="op">!=</span> <span class="st">&quot;testuser&quot;</span> <span class="op">||</span> request<span class="op">.</span><span class="fu">Password</span> <span class="op">!=</span> <span class="st">&quot;password123&quot;</span><span class="op">)</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> <span class="fu">Unauthorized</span><span class="op">(</span><span class="st">&quot;Invalid credentials.&quot;</span><span class="op">);</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> jwtSettings <span class="op">=</span> _configuration<span class="op">.</span><span class="fu">GetSection</span><span class="op">(</span><span class="st">&quot;Jwt&quot;</span><span class="op">);</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> key <span class="op">=</span> <span class="kw">new</span> <span class="fu">SymmetricSecurityKey</span><span class="op">(</span>Encoding<span class="op">.</span><span class="fu">UTF8</span><span class="op">.</span><span class="fu">GetBytes</span><span class="op">(</span>jwtSettings<span class="op">[</span><span class="st">&quot;Key&quot;</span><span class="op">]!));</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> credentials <span class="op">=</span> <span class="kw">new</span> <span class="fu">SigningCredentials</span><span class="op">(</span>key<span class="op">,</span> SecurityAlgorithms<span class="op">.</span><span class="fu">HmacSha256</span><span class="op">);</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> claims <span class="op">=</span> <span class="kw">new</span><span class="op">[]</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>            <span class="kw">new</span> <span class="fu">Claim</span><span class="op">(</span>JwtRegisteredClaimNames<span class="op">.</span><span class="fu">Sub</span><span class="op">,</span> request<span class="op">.</span><span class="fu">Username</span><span class="op">),</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>            <span class="kw">new</span> <span class="fu">Claim</span><span class="op">(</span>JwtRegisteredClaimNames<span class="op">.</span><span class="fu">Jti</span><span class="op">,</span> Guid<span class="op">.</span><span class="fu">NewGuid</span><span class="op">().</span><span class="fu">ToString</span><span class="op">()),</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>            <span class="kw">new</span> <span class="fu">Claim</span><span class="op">(</span>ClaimTypes<span class="op">.</span><span class="fu">Role</span><span class="op">,</span> <span class="st">&quot;User&quot;</span><span class="op">)</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> token <span class="op">=</span> <span class="kw">new</span> <span class="fu">JwtSecurityToken</span><span class="op">(</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>            issuer<span class="op">:</span> jwtSettings<span class="op">[</span><span class="st">&quot;Issuer&quot;</span><span class="op">],</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>            audience<span class="op">:</span> jwtSettings<span class="op">[</span><span class="st">&quot;Audience&quot;</span><span class="op">],</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>            claims<span class="op">:</span> claims<span class="op">,</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>            expires<span class="op">:</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">.</span><span class="fu">AddMinutes</span><span class="op">(</span><span class="dt">double</span><span class="op">.</span><span class="fu">Parse</span><span class="op">(</span>jwtSettings<span class="op">[</span><span class="st">&quot;DurationInMinutes&quot;</span><span class="op">]!)),</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>            signingCredentials<span class="op">:</span> credentials<span class="op">);</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="fu">Ok</span><span class="op">(</span><span class="kw">new</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>            Token <span class="op">=</span> <span class="kw">new</span> <span class="fu">JwtSecurityTokenHandler</span><span class="op">().</span><span class="fu">WriteToken</span><span class="op">(</span>token<span class="op">)</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>        <span class="op">});</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">LoginRequest</span><span class="op">(</span><span class="dt">string</span> Username<span class="op">,</span> <span class="dt">string</span> Password<span class="op">);</span></span></code></pre></div>
+<h3 id="5-secure-endpoints-with-the-authorize-attribute">5. Secure
+Endpoints with the <code>[Authorize]</code> Attribute</h3>
+<p>Apply the <code>[Authorize]</code> attribute to controllers or action
+methods to restrict access to requests containing a valid JWT.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Authorization</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Mvc</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>ApiController<span class="op">]</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">Route</span><span class="op">(</span><span class="st">&quot;api/[controller]&quot;</span><span class="op">)]</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Authorize<span class="op">]</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DataController <span class="op">:</span> ControllerBase</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>HttpGet<span class="op">]</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IActionResult <span class="fu">GetSecureData</span><span class="op">()</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> username <span class="op">=</span> User<span class="op">.</span><span class="fu">Identity</span><span class="op">?.</span><span class="fu">Name</span><span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="fu">Ok</span><span class="op">(</span><span class="kw">new</span> <span class="op">{</span> Message <span class="op">=</span> $<span class="st">&quot;Access granted for {username}.&quot;</span> <span class="op">});</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Clients must include the token in the <code>Authorization</code>
+header formatted as <code>Bearer &lt;your-token&gt;</code> when making
+requests to protected endpoints. In response, ASP.NET Core will validate
+the token against the defined <code>TokenValidationParameters</code>
+before granting access.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-implement-jwt-authentication-in-c-web-api';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

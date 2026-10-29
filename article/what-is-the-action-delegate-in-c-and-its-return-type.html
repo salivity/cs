@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Is the Action Delegate in C# and Its Return Type - cs</title>
+    <meta name="description" content="This article provides a comprehensive overview of the Action delegate in C#, detailing its fundamental purpose, syntax, and operational mechanics. You will learn what role this built-in delegate plays in the .NET framework, how it simplifies passing metho">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/what-is-the-action-delegate-in-c-and-its-return-type">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Is the Action Delegate in C# and Its Return Type - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/what-is-the-action-delegate-in-c-and-its-return-type" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comprehensive overview of the Action delegate in C#, detailing its fundamental purpose, syntax, and operational mechanics. You will learn what role this built-in delegate plays in the .NET framework, how it simplifies passing metho" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-is-the-action-delegate-in-c-and-its-return-type">What Is
+the Action Delegate in C# and Its Return Type</h1>
+<p>This article provides a comprehensive overview of the
+<code>Action</code> delegate in C#, detailing its fundamental purpose,
+syntax, and operational mechanics. You will learn what role this
+built-in delegate plays in the .NET framework, how it simplifies passing
+methods as arguments, its parameter capabilities, and specifically what
+type of data it returns.</p>
+<h2 id="understanding-the-action-delegate">Understanding the Action
+Delegate</h2>
+<p>In C#, a delegate is a type-safe function pointer that references one
+or more methods with a specific parameter list and return type. Before
+generic delegates were introduced, developers had to define custom
+delegates for every unique method signature.</p>
+<p>To streamline this, the .NET framework introduced predefined generic
+delegates in the <code>System</code> namespace. The <code>Action</code>
+delegate is one of these standard delegates. It is designed to
+encapsulate a method that takes zero or more input parameters and
+executes a set of operations without returning a result.</p>
+<h2 id="the-return-type-of-the-action-delegate">The Return Type of the
+Action Delegate</h2>
+<p>The return type of an <code>Action</code> delegate is always
+<code>void</code>.</p>
+<p>Regardless of whether an <code>Action</code> delegate takes no
+parameters or multiple parameters, it can only point to methods that
+return nothing. If you need a delegate that returns a value, C# provides
+the <code>Func</code> delegate family instead.</p>
+<h2 id="syntax-and-variations">Syntax and Variations</h2>
+<p>The <code>Action</code> delegate is overloaded to support anywhere
+from zero up to 16 input parameters:</p>
+<ul>
+<li><code>Action</code>: References a method that takes no parameters
+and returns <code>void</code>.</li>
+<li><code>Action&lt;T&gt;</code>: References a method that takes one
+parameter of type <code>T</code> and returns <code>void</code>.</li>
+<li><code>Action&lt;T1, T2&gt;</code>: References a method that takes
+two parameters of types <code>T1</code> and <code>T2</code> and returns
+<code>void</code>.</li>
+<li>This pattern continues up to
+<code>Action&lt;T1, T2, ..., T16&gt;</code>.</li>
+</ul>
+<h3 id="code-example">Code Example</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Parameterless Action</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        Action greet <span class="op">=</span> <span class="op">()</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Hello, World!&quot;</span><span class="op">);</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">greet</span><span class="op">();</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Action with parameters</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        Action<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;</span> printPerson <span class="op">=</span> <span class="op">(</span>name<span class="op">,</span> age<span class="op">)</span> <span class="op">=&gt;</span> </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{name} is {age} years old.&quot;</span><span class="op">);</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="fu">printPerson</span><span class="op">(</span><span class="st">&quot;Alice&quot;</span><span class="op">,</span> <span class="dv">30</span><span class="op">);</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="when-to-use-action">When to Use Action</h2>
+<p>The <code>Action</code> delegate is commonly used in scenarios such
+as:</p>
+<ul>
+<li><strong>Callbacks:</strong> Passing a notification or follow-up
+operation to a method that performs work asynchronously or in the
+background.</li>
+<li><strong>Event Handling:</strong> Executing logic in response to a
+trigger where no computed value needs to be handed back to the
+caller.</li>
+<li><strong>LINQ and Collections:</strong> Performing operations on
+elements in a collection, such as with
+<code>List&lt;T&gt;.ForEach(Action&lt;T&gt;)</code>.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/what-is-the-action-delegate-in-c-and-its-return-type';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generic Classes and Type Safety in C# - cs</title>
+    <meta name="description" content="This article explores generic classes in C#, explaining what they are, how they work, and the critical role they play in modern software development. You will learn how generics replace non-generic collections, eliminate runtime casting errors, and enforc">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/generic-classes-and-type-safety-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Generic Classes and Type Safety in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/generic-classes-and-type-safety-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores generic classes in C#, explaining what they are, how they work, and the critical role they play in modern software development. You will learn how generics replace non-generic collections, eliminate runtime casting errors, and enforc" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="generic-classes-and-type-safety-in-c">Generic Classes and Type
+Safety in C</h1>
+<p>This article explores generic classes in C#, explaining what they
+are, how they work, and the critical role they play in modern software
+development. You will learn how generics replace non-generic
+collections, eliminate runtime casting errors, and enforce strict
+compile-time type checking to improve code reliability, readability, and
+performance.</p>
+<h2 id="what-are-generic-classes-in-c">What Are Generic Classes in
+C#?</h2>
+<p>A generic class is a blueprint that defines a class with
+placeholders, known as type parameters, for the data types it stores or
+manipulates. Instead of committing to a specific data type like
+<code>int</code>, <code>string</code>, or <code>object</code> during
+class definition, you specify the type parameter using angle brackets
+(commonly <code>&lt;T&gt;</code>).</p>
+<p>When an instance of the generic class is created, the developer
+specifies the actual data type to substitute for <code>T</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Storage<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> T _data<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">SetData</span><span class="op">(</span>T data<span class="op">)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        _data <span class="op">=</span> data<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> T <span class="fu">GetData</span><span class="op">()</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> _data<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>In this example, <code>Storage&lt;T&gt;</code> can be instantiated as
+<code>Storage&lt;int&gt;</code>, <code>Storage&lt;string&gt;</code>, or
+any custom class without rewriting the underlying logic.</p>
+<h2 id="how-generic-classes-improve-type-safety">How Generic Classes
+Improve Type Safety</h2>
+<p>Before generics were introduced in C# 2.0, developers relied on
+generalized classes like <code>ArrayList</code> that stored elements as
+the base <code>System.Object</code> type. While this allowed collections
+to hold any data type, it severely compromised type safety. Generics
+resolve these issues through three primary mechanisms:</p>
+<h3 id="1-enforcing-compile-time-type-checking">1. Enforcing
+Compile-Time Type Checking</h3>
+<p>When using <code>System.Object</code>, a collection can accept any
+data type, which often leads to errors that are only discovered at
+runtime:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Non-generic approach</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>ArrayList list <span class="op">=</span> <span class="kw">new</span> <span class="fu">ArrayList</span><span class="op">();</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>list<span class="op">.</span><span class="fu">Add</span><span class="op">(</span><span class="dv">42</span><span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>list<span class="op">.</span><span class="fu">Add</span><span class="op">(</span><span class="st">&quot;Hello&quot;</span><span class="op">);</span> <span class="co">// Compiles fine, but introduces mixed types</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> number <span class="op">=</span> <span class="op">(</span><span class="dt">int</span><span class="op">)</span>list<span class="op">[</span><span class="dv">1</span><span class="op">];</span> <span class="co">// Throws InvalidCastException at runtime</span></span></code></pre></div>
+<p>Generic classes prevent this scenario entirely. The C# compiler
+enforces that only elements matching the declared type parameter can be
+passed into the class:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Generic approach</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> list <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;();</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>list<span class="op">.</span><span class="fu">Add</span><span class="op">(</span><span class="dv">42</span><span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// list.Add(&quot;Hello&quot;); // Compiler Error: Argument cannot convert from &#39;string&#39; to &#39;int&#39;</span></span></code></pre></div>
+<p>By shifting type validation from runtime to compile time, generic
+classes catch mistakes during the build phase, preventing unexpected
+crashes in production.</p>
+<h3 id="2-eliminating-explicit-type-casting">2. Eliminating Explicit
+Type Casting</h3>
+<p>Because non-generic collections store objects, every retrieved item
+requires explicit casting back to its original type. Explicit casts
+introduce human error and make the codebase brittle to refactoring.</p>
+<p>With generic classes, the compiler already knows the return type.
+When you invoke <code>GetData()</code> on a
+<code>Storage&lt;string&gt;</code>, the compiler guarantees that the
+return value is a <code>string</code>, removing the need for manual type
+casting and reducing boilerplate code.</p>
+<h3 id="3-preventing-boxing-and-unboxing-overhead">3. Preventing Boxing
+and Unboxing Overhead</h3>
+<p>Type safety directly affects application performance when dealing
+with value types (such as <code>int</code>, <code>double</code>, or
+custom <code>struct</code> types). Storing a value type inside a
+non-generic <code>object</code> container triggers "boxing," which wraps
+the value type into a reference object allocated on the managed heap.
+Extracting the value triggers "unboxing," requiring an explicit
+cast.</p>
+<p>Generic classes instantiate specialized versions of the code for each
+value type at runtime via the Common Language Runtime (CLR). A
+<code>List&lt;int&gt;</code> stores integers directly in a contiguous
+block of memory, avoiding the performance and memory penalties of boxing
+while maintaining strict type boundaries.</p>
+<h2 id="constraining-generic-types">Constraining Generic Types</h2>
+<p>To ensure even greater type safety, C# allows you to apply generic
+constraints using the <code>where</code> keyword. Constraints restrict
+the types of arguments a client can use when instantiating a generic
+class:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Repository<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> <span class="kw">class</span><span class="op">,</span> <span class="kw">new</span><span class="op">()</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> T <span class="fu">CreateDefault</span><span class="op">()</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">new</span> <span class="fu">T</span><span class="op">();</span> <span class="co">// Safe because of the &#39;new()&#39; constraint</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Constraints allow you to specify that <code>T</code> must be a
+reference type (<code>class</code>), a value type (<code>struct</code>),
+implement a specific interface, or inherit from a particular base class.
+This gives your generic class safe access to specific methods and
+properties on <code>T</code> without relying on casting or
+reflection.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/generic-classes-and-type-safety-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

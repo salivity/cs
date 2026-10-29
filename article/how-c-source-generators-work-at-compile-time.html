@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How C# Source Generators Work at Compile-Time - cs</title>
+    <meta name="description" content="C# Source Generators are a Roslyn compiler feature that inspects a codebase during compilation and emits additional C# source files directly into the build pipeline. This article explains the underlying mechanics of how source generators hook into the Ros">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-c-source-generators-work-at-compile-time">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How C# Source Generators Work at Compile-Time - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-c-source-generators-work-at-compile-time" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="C# Source Generators are a Roslyn compiler feature that inspects a codebase during compilation and emits additional C# source files directly into the build pipeline. This article explains the underlying mechanics of how source generators hook into the Ros" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-c-source-generators-work-at-compile-time">How C# Source
+Generators Work at Compile-Time</h1>
+<p>C# Source Generators are a Roslyn compiler feature that inspects a
+codebase during compilation and emits additional C# source files
+directly into the build pipeline. This article explains the underlying
+mechanics of how source generators hook into the Roslyn compiler, how
+they analyze existing code via syntax trees and semantic models, and how
+they produce new, strongly typed code without relying on runtime
+reflection or external post-build tools.</p>
+<h2 id="the-roslyn-compilation-hook">The Roslyn Compilation Hook</h2>
+<p>A source generator runs as an active phase within the Roslyn
+compilation pipeline rather than as a separate pre-build or post-build
+script. When you compile a project, Roslyn processes source files in
+distinct stages:</p>
+<ol type="1">
+<li><strong>Syntax Analysis:</strong> The compiler parses source files
+into Abstract Syntax Trees (ASTs).</li>
+<li><strong>Semantic Analysis:</strong> The compiler resolves types,
+symbols, and references across all syntax trees.</li>
+<li><strong>Generator Execution:</strong> The compiler hands the syntax
+trees and semantic models over to the source generator.</li>
+<li><strong>Final Compilation:</strong> The compiler takes both original
+source files and generator-produced source files, emits the final
+Intermediate Language (IL), and produces the binary.</li>
+</ol>
+<p>Because generators execute directly inside Roslyn, the generated code
+has access to the same language features, namespaces, and dependencies
+as handwritten code.</p>
+<h2 id="additive-only-execution">Additive-Only Execution</h2>
+<p>A foundational rule of C# source generators is that they are strictly
+<strong>additive</strong>. A generator cannot:</p>
+<ul>
+<li>Modify existing user code.</li>
+<li>Delete existing code.</li>
+<li>Alter method bodies or signatures defined in other files.</li>
+</ul>
+<p>Instead, generators augment existing code. They achieve this
+primarily through <strong>partial classes</strong> and <strong>partial
+methods</strong>. If a user defines
+<code>public partial class UserViewModel</code>, the generator can emit
+another file containing <code>public partial class UserViewModel</code>
+to add properties, methods, or interface implementations.</p>
+<h2 id="how-the-generator-processes-code">How the Generator Processes
+Code</h2>
+<p>Modern C# source generators typically implement the
+<code>IIncrementalGenerator</code> interface, which optimizes build
+performance through caching. The generation process works in three
+distinct phases:</p>
+<h3 id="1-filtering-syntax-syntactic-phase">1. Filtering Syntax
+(Syntactic Phase)</h3>
+<p>The generator first registers a syntax provider that listens for
+specific code constructs, such as classes with a specific attribute or
+specific interface implementations. This step operates solely on raw
+syntax nodes, avoiding expensive semantic checks on code that does not
+matter to the generator.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>context<span class="op">.</span><span class="fu">SyntaxProvider</span><span class="op">.</span><span class="fu">CreateSyntaxProvider</span><span class="op">(</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    predicate<span class="op">:</span> <span class="kw">static</span> <span class="op">(</span>node<span class="op">,</span> _<span class="op">)</span> <span class="op">=&gt;</span> node <span class="kw">is</span> ClassDeclarationSyntax c <span class="op">&amp;&amp;</span> c<span class="op">.</span><span class="fu">AttributeLists</span><span class="op">.</span><span class="fu">Count</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    transform<span class="op">:</span> <span class="kw">static</span> <span class="op">(</span>ctx<span class="op">,</span> _<span class="op">)</span> <span class="op">=&gt;</span> <span class="fu">GetSemanticTarget</span><span class="op">(</span>ctx<span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span></code></pre></div>
+<h3 id="2-inspecting-symbols-semantic-phase">2. Inspecting Symbols
+(Semantic Phase)</h3>
+<p>Once candidate syntax nodes are isolated, the generator accesses
+Roslyn's <code>SemanticModel</code>. This model provides full type
+information, allowing the generator to resolve:</p>
+<ul>
+<li>Fully qualified type names.</li>
+<li>Applied attributes and their constructor arguments.</li>
+<li>Property types, accessibility modifiers, and inheritance
+hierarchies.</li>
+</ul>
+<h3 id="3-emitting-source-code-generation-phase">3. Emitting Source Code
+(Generation Phase)</h3>
+<p>Using the extracted metadata, the generator constructs new C# source
+code as text or a formatted string. It then passes this string back to
+the compilation context:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>context<span class="op">.</span><span class="fu">RegisterSourceOutput</span><span class="op">(</span>source<span class="op">,</span> <span class="kw">static</span> <span class="op">(</span>spc<span class="op">,</span> sourceText<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    spc<span class="op">.</span><span class="fu">AddSource</span><span class="op">(</span><span class="st">&quot;GeneratedClass.g.cs&quot;</span><span class="op">,</span> SourceText<span class="op">.</span><span class="fu">From</span><span class="op">(</span>sourceText<span class="op">,</span> Encoding<span class="op">.</span><span class="fu">UTF8</span><span class="op">));</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<p>The compiler adds this emitted text directly into memory as a new
+syntax tree for the remaining compilation steps.</p>
+<h2 id="integration-with-the-ide">Integration with the IDE</h2>
+<p>Source generators integrate directly with Visual Studio and the .NET
+Language Server. As a developer types, the IDE triggers the incremental
+generator in the background. Because the output is added to the
+compilation in memory, features like IntelliSense, code completion, and
+inline error diagnostics immediately recognize the generated members
+without requiring a manual project rebuild.</p>
+<h2 id="key-advantages-over-traditional-alternatives">Key Advantages
+over Traditional Alternatives</h2>
+<ul>
+<li><strong>Zero Runtime Overhead:</strong> Boilerplate code,
+serialization logic, or dependency mappings are resolved at
+compile-time, eliminating the CPU and memory costs of runtime
+reflection.</li>
+<li><strong>Native AOT Compatibility:</strong> Because all code is
+generated before IL generation, the resulting application is fully
+compatible with Ahead-Of-Time (AOT) compilation and tree-shaking.</li>
+<li><strong>Type Safety:</strong> Any errors in generated code produce
+standard compile-time errors (CS codes), preventing silent runtime
+failures.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-c-source-generators-work-at-compile-time';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

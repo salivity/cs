@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Read C# Custom Attributes Using Reflection - cs</title>
+    <meta name="description" content="Custom attributes in C# provide a powerful way to associate declarative metadata with code elements such as classes, methods, properties, and assemblies. At runtime, this metadata can be inspected and acted upon using reflection. This article explains wha">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-read-c-custom-attributes-using-reflection">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Read C# Custom Attributes Using Reflection - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-read-c-custom-attributes-using-reflection" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Custom attributes in C# provide a powerful way to associate declarative metadata with code elements such as classes, methods, properties, and assemblies. At runtime, this metadata can be inspected and acted upon using reflection. This article explains wha" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-read-c-custom-attributes-using-reflection">How to Read C#
+Custom Attributes Using Reflection</h1>
+<p>Custom attributes in C# provide a powerful way to associate
+declarative metadata with code elements such as classes, methods,
+properties, and assemblies. At runtime, this metadata can be inspected
+and acted upon using reflection. This article explains what custom
+attributes are, how to define and apply them, and how to read their data
+at runtime using the <code>System.Reflection</code> API with practical,
+straightforward code examples.</p>
+<hr />
+<h3 id="what-are-custom-attributes">What Are Custom Attributes?</h3>
+<p>Attributes are classes that inherit from the abstract base class
+<code>System.Attribute</code>. When applied to a code element, an
+attribute embeds additional metadata into the compiled assembly. Custom
+attributes allow developers to define their own metadata tags to drive
+runtime behaviors, such as serialization mapping, validation rules,
+dependency injection rules, or logging configurations.</p>
+<h3 id="defining-a-custom-attribute">Defining a Custom Attribute</h3>
+<p>To create a custom attribute:</p>
+<ol type="1">
+<li>Inherit from <code>System.Attribute</code>.</li>
+<li>(Optional but recommended) Decorate the class with
+<code>[AttributeUsage]</code> to specify where the attribute can be used
+and whether multiple instances are permitted.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">AttributeUsage</span><span class="op">(</span>AttributeTargets<span class="op">.</span><span class="fu">Class</span> <span class="op">|</span> AttributeTargets<span class="op">.</span><span class="fu">Method</span><span class="op">,</span> AllowMultiple <span class="op">=</span> <span class="kw">false</span><span class="op">)]</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DeveloperInfoAttribute <span class="op">:</span> Attribute</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> DeveloperName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Version <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">DeveloperInfoAttribute</span><span class="op">(</span><span class="dt">string</span> developerName<span class="op">,</span> <span class="dt">string</span> version<span class="op">)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        DeveloperName <span class="op">=</span> developerName<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        Version <span class="op">=</span> version<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="applying-the-custom-attribute">Applying the Custom
+Attribute</h3>
+<p>You apply the attribute by enclosing its name (with or without the
+<code>Attribute</code> suffix) in square brackets above the target
+element:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">DeveloperInfo</span><span class="op">(</span><span class="st">&quot;Alice Smith&quot;</span><span class="op">,</span> <span class="st">&quot;1.0&quot;</span><span class="op">)]</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> PaymentService</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">DeveloperInfo</span><span class="op">(</span><span class="st">&quot;Bob Jones&quot;</span><span class="op">,</span> <span class="st">&quot;1.1&quot;</span><span class="op">)]</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessTransaction</span><span class="op">()</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Transaction logic</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="reading-custom-attributes-via-reflection">Reading Custom
+Attributes via Reflection</h3>
+<p>Reflection allows you to inspect types and their metadata at runtime.
+The <code>System.Reflection</code> namespace provides several methods to
+retrieve attribute instances from types, methods, and properties.</p>
+<h4 id="1-reading-an-attribute-from-a-class">1. Reading an Attribute
+from a Class</h4>
+<p>To read an attribute applied to a class, retrieve the
+<code>Type</code> object and call the generic extension method
+<code>GetCustomAttribute&lt;T&gt;()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Reflection</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        Type targetType <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>PaymentService<span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Retrieve the custom attribute</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        DeveloperInfoAttribute<span class="op">?</span> classAttribute <span class="op">=</span> targetType<span class="op">.</span><span class="fu">GetCustomAttribute</span><span class="op">&lt;</span>DeveloperInfoAttribute<span class="op">&gt;();</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>classAttribute <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Class: {targetType.Name}&quot;</span><span class="op">);</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Developer: {classAttribute.DeveloperName}&quot;</span><span class="op">);</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Version: {classAttribute.Version}&quot;</span><span class="op">);</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="2-reading-an-attribute-from-a-method-or-property">2. Reading an
+Attribute from a Method or Property</h4>
+<p>To read attributes on members (methods, properties, fields), obtain
+the <code>MemberInfo</code> reference using reflection, then call
+<code>GetCustomAttribute&lt;T&gt;()</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Type targetType <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>PaymentService<span class="op">);</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>MethodInfo<span class="op">?</span> methodInfo <span class="op">=</span> targetType<span class="op">.</span><span class="fu">GetMethod</span><span class="op">(</span><span class="st">&quot;ProcessTransaction&quot;</span><span class="op">);</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>methodInfo <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    DeveloperInfoAttribute<span class="op">?</span> methodAttribute <span class="op">=</span> methodInfo<span class="op">.</span><span class="fu">GetCustomAttribute</span><span class="op">&lt;</span>DeveloperInfoAttribute<span class="op">&gt;();</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>methodAttribute <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Method: {methodInfo.Name}&quot;</span><span class="op">);</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Developer: {methodAttribute.DeveloperName}&quot;</span><span class="op">);</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Version: {methodAttribute.Version}&quot;</span><span class="op">);</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="3-checking-for-attribute-existence">3. Checking for Attribute
+Existence</h4>
+<p>If you only need to determine whether an attribute is present without
+reading its properties, use <code>Attribute.IsDefined()</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Type targetType <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>PaymentService<span class="op">);</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> hasDeveloperInfo <span class="op">=</span> Attribute<span class="op">.</span><span class="fu">IsDefined</span><span class="op">(</span>targetType<span class="op">,</span> <span class="kw">typeof</span><span class="op">(</span>DeveloperInfoAttribute<span class="op">));</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>hasDeveloperInfo<span class="op">)</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;The class contains developer tracking metadata.&quot;</span><span class="op">);</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="4-handling-multiple-attributes">4. Handling Multiple
+Attributes</h4>
+<p>If <code>AllowMultiple = true</code> was specified in the
+<code>AttributeUsage</code>, use
+<code>GetCustomAttributes&lt;T&gt;()</code> to retrieve an enumerable
+collection of all applied instances:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>IEnumerable<span class="op">&lt;</span>DeveloperInfoAttribute<span class="op">&gt;</span> attributes <span class="op">=</span> targetType<span class="op">.</span><span class="fu">GetCustomAttributes</span><span class="op">&lt;</span>DeveloperInfoAttribute<span class="op">&gt;();</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> attr <span class="kw">in</span> attributes<span class="op">)</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{attr.DeveloperName} - {attr.Version}&quot;</span><span class="op">);</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="summary-of-key-methods">Summary of Key Methods</h3>
+<ul>
+<li><code>GetCustomAttribute&lt;T&gt;()</code>: Returns a single
+instance of attribute <code>T</code>, or <code>null</code> if not found.
+Throws an exception if multiple instances exist.</li>
+<li><code>GetCustomAttributes&lt;T&gt;()</code>: Returns an
+<code>IEnumerable&lt;T&gt;</code> containing all matching attributes
+applied to the element.</li>
+<li><code>IsDefined()</code>: Returns a boolean indicating whether the
+target element has the specified attribute applied, avoiding unnecessary
+object instantiation.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-read-c-custom-attributes-using-reflection';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

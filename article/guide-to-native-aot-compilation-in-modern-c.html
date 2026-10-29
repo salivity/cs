@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide to Native AOT Compilation in Modern C# - cs</title>
+    <meta name="description" content="This article explores Ahead-Of-Time (AOT) and native compilation in modern C#, detailing how it transforms the traditional .NET execution model. You will learn the fundamental differences between Just-In-Time (JIT) and Native AOT compilation, the primary">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/guide-to-native-aot-compilation-in-modern-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Guide to Native AOT Compilation in Modern C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/guide-to-native-aot-compilation-in-modern-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores Ahead-Of-Time (AOT) and native compilation in modern C#, detailing how it transforms the traditional .NET execution model. You will learn the fundamental differences between Just-In-Time (JIT) and Native AOT compilation, the primary" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="guide-to-native-aot-compilation-in-modern-c">Guide to Native AOT
+Compilation in Modern C</h1>
+<p>This article explores Ahead-Of-Time (AOT) and native compilation in
+modern C#, detailing how it transforms the traditional .NET execution
+model. You will learn the fundamental differences between Just-In-Time
+(JIT) and Native AOT compilation, the primary advantages regarding
+startup performance and memory usage, the technical trade-offs involved,
+and the scenarios where adopting Native AOT makes the most sense for
+your applications.</p>
+<h3 id="understanding-the-traditional-c-execution-model">Understanding
+the Traditional C# Execution Model</h3>
+<p>Traditionally, C# follows a two-step execution process driven by
+Just-In-Time (JIT) compilation:</p>
+<ol type="1">
+<li><strong>Compile Time:</strong> The C# compiler (<code>Roslyn</code>)
+compiles source code into an Intermediate Language (IL) packaged within
+standard <code>.dll</code> assemblies.</li>
+<li><strong>Runtime:</strong> When the application runs, the Common
+Language Runtime (CLR) loads the IL. The JIT compiler then translates
+this IL into machine code specific to the host processor on demand.</li>
+</ol>
+<p>While JIT compilation allows for runtime optimizations based on the
+exact host architecture, it introduces overhead: the application must
+initialize the CLR, load assemblies, and compile methods while the user
+waits. This causes slower startup times and higher initial memory
+usage.</p>
+<h3 id="what-is-ahead-of-time-aot-compilation">What is Ahead-Of-Time
+(AOT) Compilation?</h3>
+<p>Ahead-Of-Time (AOT) compilation shifts the generation of machine code
+from runtime to build time. Instead of packaging IL code into an
+assembly that requires a runtime JIT engine, an AOT compiler parses the
+C# or IL code and compiles it directly into platform-specific machine
+code (such as x64 or ARM64) before deployment.</p>
+<h3 id="what-is-native-aot-in-modern-net">What is Native AOT in Modern
+.NET?</h3>
+<p>Introduced progressively in .NET 7 and expanded significantly in .NET
+8 and .NET 9, <strong>Native AOT</strong> produces an entirely
+self-contained executable that contains:</p>
+<ul>
+<li>The pre-compiled machine code of your application and its
+dependencies.</li>
+<li>A stripped-down, lightweight runtime that manages garbage collection
+(GC) and thread synchronization without a JIT engine.</li>
+</ul>
+<p>Because the output is a standalone native binary (such as an
+<code>.exe</code> on Windows or an ELF binary on Linux), the target
+machine does not need the .NET runtime installed.</p>
+<h3 id="key-benefits-of-native-aot">Key Benefits of Native AOT</h3>
+<ol type="1">
+<li><strong>Near-Instant Startup:</strong> Because machine code is
+pre-compiled, the application executes instantly without waiting for JIT
+compilation or runtime method verification.</li>
+<li><strong>Reduced Memory Footprint:</strong> The application does not
+need to load the full JIT compiler, IL metadata tables, or dynamic code
+caches, significantly lowering working set memory.</li>
+<li><strong>Smaller Disk Footprint via Trimming:</strong> Native AOT
+enforces aggressive tree-shaking (trimming). The compiler scans the code
+and removes any unused methods, classes, and framework libraries from
+the final binary.</li>
+<li><strong>Simplified Deployment:</strong> Applications compile down to
+a single, standalone binary with no external runtime dependencies.</li>
+</ol>
+<h3 id="limitations-and-trade-offs">Limitations and Trade-offs</h3>
+<p>Native AOT is not a drop-in replacement for every .NET project. It
+requires adhering to stricter runtime constraints:</p>
+<ul>
+<li><strong>No Dynamic Code Generation:</strong> Features like
+<code>System.Reflection.Emit</code> or dynamic runtime code compilation
+cannot work because there is no JIT compiler to translate
+runtime-generated IL into machine code.</li>
+<li><strong>Limited Reflection:</strong> Trimming relies on static
+analysis to determine what code is used. Heavy, unannotated runtime
+reflection often causes the compiler to trim required members
+accidentally, leading to runtime failures. Developers must use source
+generators or trim annotations
+(<code>[DynamicallyAccessedMembers]</code>) to avoid this.</li>
+<li><strong>Platform-Targeted Builds:</strong> Because output binaries
+are native to specific operating systems and CPU architectures,
+cross-platform deployments require building separate binaries for each
+target platform (e.g., compiling on Linux for Linux, or using
+cross-compilation toolchains).</li>
+</ul>
+<h3 id="best-use-cases-for-native-aot">Best Use Cases for Native
+AOT</h3>
+<p>Native AOT is optimized for scenarios where rapid startup and low
+resource consumption are critical:</p>
+<ul>
+<li><strong>Microservices and Containers:</strong> Minimizes container
+image sizes and reduces memory consumption across dense microservice
+deployments.</li>
+<li><strong>Serverless Functions:</strong> Drastically cuts cold-start
+latency in cloud platforms like AWS Lambda or Azure Functions.</li>
+<li><strong>Command-Line Interface (CLI) Tools:</strong> Ensures tools
+respond immediately upon invocation.</li>
+<li><strong>Resource-Constrained Environments:</strong> Fits well on
+embedded devices or memory-restricted virtual machines.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/guide-to-native-aot-compilation-in-modern-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

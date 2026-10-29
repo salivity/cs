@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Chain Lambda Expressions in C# - cs</title>
+    <meta name="description" content="Chaining lambda expressions in C# allows developers to write modular, readable, and highly reusable functional code. This article covers the fundamental approaches to combining lambdas, starting with standard LINQ method chaining, moving to combining Func">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-chain-lambda-expressions-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Chain Lambda Expressions in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-chain-lambda-expressions-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Chaining lambda expressions in C# allows developers to write modular, readable, and highly reusable functional code. This article covers the fundamental approaches to combining lambdas, starting with standard LINQ method chaining, moving to combining Func" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-chain-lambda-expressions-in-c">How to Chain Lambda
+Expressions in C</h1>
+<p>Chaining lambda expressions in C# allows developers to write modular,
+readable, and highly reusable functional code. This article covers the
+fundamental approaches to combining lambdas, starting with standard LINQ
+method chaining, moving to combining <code>Func&lt;T, bool&gt;</code>
+delegates with custom extension methods, and finally composing
+<code>Expression&lt;Func&lt;T, bool&gt;&gt;</code> trees for database
+queries in Entity Framework.</p>
+<hr />
+<h3 id="1-built-in-linq-method-chaining">1. Built-In LINQ Method
+Chaining</h3>
+<p>The most common way to chain lambda expressions is through standard
+LINQ extension methods provided in the <code>System.Linq</code>
+namespace. Each method accepts a lambda and returns an
+<code>IEnumerable&lt;T&gt;</code> or <code>IQueryable&lt;T&gt;</code>,
+allowing successive calls.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Collections</span><span class="op">.</span><span class="fu">Generic</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Linq</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> numbers <span class="op">=</span> Enumerable<span class="op">.</span><span class="fu">Range</span><span class="op">(</span><span class="dv">1</span><span class="op">,</span> <span class="dv">20</span><span class="op">);</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> result <span class="op">=</span> numbers</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Where</span><span class="op">(</span>x <span class="op">=&gt;</span> x <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span><span class="op">)</span>      <span class="co">// First lambda</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Where</span><span class="op">(</span>x <span class="op">=&gt;</span> x <span class="op">&gt;</span> <span class="dv">10</span><span class="op">)</span>          <span class="co">// Second lambda chained</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Select</span><span class="op">(</span>x <span class="op">=&gt;</span> x <span class="op">*</span> x<span class="op">);</span>         <span class="co">// Transformation lambda</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="dt">string</span><span class="op">.</span><span class="fu">Join</span><span class="op">(</span><span class="st">&quot;, &quot;</span><span class="op">,</span> result<span class="op">));</span> <span class="co">// Output: 144, 196, 256, 324, 400</span></span></code></pre></div>
+<hr />
+<h3 id="2-chaining-in-memory-predicates-funct-bool">2. Chaining
+In-Memory Predicates (<code>Func&lt;T, bool&gt;</code>)</h3>
+<p>When you need to dynamically combine multiple filter conditions in
+memory, you can create extension methods that logically combine
+delegates using <code>AND</code> or <code>OR</code> logic.</p>
+<h4 id="the-extension-methods">The Extension Methods</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> PredicateExtensions</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> And<span class="op">&lt;</span>T<span class="op">&gt;(</span><span class="kw">this</span> Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> left<span class="op">,</span> Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> right<span class="op">)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> x <span class="op">=&gt;</span> <span class="fu">left</span><span class="op">(</span>x<span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu">right</span><span class="op">(</span>x<span class="op">);</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> Or<span class="op">&lt;</span>T<span class="op">&gt;(</span><span class="kw">this</span> Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> left<span class="op">,</span> Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> right<span class="op">)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> x <span class="op">=&gt;</span> <span class="fu">left</span><span class="op">(</span>x<span class="op">)</span> <span class="op">||</span> <span class="fu">right</span><span class="op">(</span>x<span class="op">);</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="usage-example">Usage Example</h4>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> isEven <span class="op">=</span> x <span class="op">=&gt;</span> x <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> isGreaterThanTen <span class="op">=</span> x <span class="op">=&gt;</span> x <span class="op">&gt;</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Chain the lambdas into a single delegate</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> isEvenAndGreaterThanTen <span class="op">=</span> isEven<span class="op">.</span><span class="fu">And</span><span class="op">(</span>isGreaterThanTen<span class="op">);</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> numbers <span class="op">=</span> <span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">8</span><span class="op">,</span> <span class="dv">12</span><span class="op">,</span> <span class="dv">15</span><span class="op">,</span> <span class="dv">18</span> <span class="op">};</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> filtered <span class="op">=</span> numbers<span class="op">.</span><span class="fu">Where</span><span class="op">(</span>isEvenAndGreaterThanTen<span class="op">);</span> </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: 12, 18</span></span></code></pre></div>
+<hr />
+<h3 id="3-function-composition-pipelining-transformations">3. Function
+Composition (Pipelining Transformations)</h3>
+<p>To chain transformation functions (<code>Func&lt;T, T&gt;</code>)
+where the output of one lambda serves as the input to the next, define a
+<code>Pipe</code> or <code>Compose</code> extension method.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> FunctionExtensions</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> Func<span class="op">&lt;</span>T<span class="op">,</span> T<span class="op">&gt;</span> Pipe<span class="op">&lt;</span>T<span class="op">&gt;(</span><span class="kw">this</span> Func<span class="op">&lt;</span>T<span class="op">,</span> T<span class="op">&gt;</span> first<span class="op">,</span> Func<span class="op">&lt;</span>T<span class="op">,</span> T<span class="op">&gt;</span> second<span class="op">)</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> x <span class="op">=&gt;</span> <span class="fu">second</span><span class="op">(</span><span class="fu">first</span><span class="op">(</span>x<span class="op">));</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">string</span><span class="op">&gt;</span> trim <span class="op">=</span> s <span class="op">=&gt;</span> s<span class="op">.</span><span class="fu">Trim</span><span class="op">();</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">string</span><span class="op">&gt;</span> toUpper <span class="op">=</span> s <span class="op">=&gt;</span> s<span class="op">.</span><span class="fu">ToUpper</span><span class="op">();</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">string</span><span class="op">&gt;</span> addBrackets <span class="op">=</span> s <span class="op">=&gt;</span> $<span class="st">&quot;[{s}]&quot;</span><span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Chain the operations together</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> formatText <span class="op">=</span> trim<span class="op">.</span><span class="fu">Pipe</span><span class="op">(</span>toUpper<span class="op">).</span><span class="fu">Pipe</span><span class="op">(</span>addBrackets<span class="op">);</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> output <span class="op">=</span> <span class="fu">formatText</span><span class="op">(</span><span class="st">&quot;   hello world   &quot;</span><span class="op">);</span> </span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: &quot;[HELLO WORLD]&quot;</span></span></code></pre></div>
+<hr />
+<h3 id="4-chaining-expression-trees-for-iqueryable-entity-framework">4.
+Chaining Expression Trees for <code>IQueryable</code> (Entity
+Framework)</h3>
+<p>When querying databases with Entity Framework, passing a raw delegate
+will cause queries to evaluate client-side. Instead, you must combine
+<code>Expression&lt;Func&lt;T, bool&gt;&gt;</code> objects by rewriting
+parameter references using an <code>ExpressionVisitor</code>.</p>
+<h4 id="the-parameter-rebinder-visitor">The Parameter Rebinder
+Visitor</h4>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Linq</span><span class="op">.</span><span class="fu">Expressions</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ParameterReplacer <span class="op">:</span> ExpressionVisitor</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> ParameterExpression _oldParam<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> ParameterExpression _newParam<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">ParameterReplacer</span><span class="op">(</span>ParameterExpression oldParam<span class="op">,</span> ParameterExpression newParam<span class="op">)</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        _oldParam <span class="op">=</span> oldParam<span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        _newParam <span class="op">=</span> newParam<span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">override</span> Expression <span class="fu">VisitParameter</span><span class="op">(</span>ParameterExpression node<span class="op">)</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> node <span class="op">==</span> _oldParam <span class="op">?</span> _newParam <span class="op">:</span> <span class="kw">base</span><span class="op">.</span><span class="fu">VisitParameter</span><span class="op">(</span>node<span class="op">);</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> ExpressionExtensions</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> Expression<span class="op">&lt;</span>Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;&gt;</span> AndAlso<span class="op">&lt;</span>T<span class="op">&gt;(</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>        <span class="kw">this</span> Expression<span class="op">&lt;</span>Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;&gt;</span> left<span class="op">,</span> </span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>        Expression<span class="op">&lt;</span>Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;&gt;</span> right<span class="op">)</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> parameter <span class="op">=</span> Expression<span class="op">.</span><span class="fu">Parameter</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span>T<span class="op">),</span> <span class="st">&quot;x&quot;</span><span class="op">);</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> leftVisitor <span class="op">=</span> <span class="kw">new</span> <span class="fu">ParameterReplacer</span><span class="op">(</span>left<span class="op">.</span><span class="fu">Parameters</span><span class="op">[</span><span class="dv">0</span><span class="op">],</span> parameter<span class="op">);</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> leftBody <span class="op">=</span> leftVisitor<span class="op">.</span><span class="fu">Visit</span><span class="op">(</span>left<span class="op">.</span><span class="fu">Body</span><span class="op">);</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> rightVisitor <span class="op">=</span> <span class="kw">new</span> <span class="fu">ParameterReplacer</span><span class="op">(</span>right<span class="op">.</span><span class="fu">Parameters</span><span class="op">[</span><span class="dv">0</span><span class="op">],</span> parameter<span class="op">);</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> rightBody <span class="op">=</span> rightVisitor<span class="op">.</span><span class="fu">Visit</span><span class="op">(</span>right<span class="op">.</span><span class="fu">Body</span><span class="op">);</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> combinedBody <span class="op">=</span> Expression<span class="op">.</span><span class="fu">AndAlso</span><span class="op">(</span>leftBody<span class="op">!,</span> rightBody<span class="op">!);</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> Expression<span class="op">.</span><span class="fu">Lambda</span><span class="op">&lt;</span>Func<span class="op">&lt;</span>T<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;&gt;(</span>combinedBody<span class="op">,</span> parameter<span class="op">);</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="usage-with-ef-core-or-linq-to-sql">Usage with EF Core or LINQ to
+SQL</h4>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Expression<span class="op">&lt;</span>Func<span class="op">&lt;</span>Product<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;&gt;</span> inStock <span class="op">=</span> p <span class="op">=&gt;</span> p<span class="op">.</span><span class="fu">UnitsInStock</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>Expression<span class="op">&lt;</span>Func<span class="op">&lt;</span>Product<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;&gt;</span> affordable <span class="op">=</span> p <span class="op">=&gt;</span> p<span class="op">.</span><span class="fu">Price</span> <span class="op">&lt;</span> <span class="fl">50.0m</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Combine expression trees into a single SQL-translatable expression</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> filter <span class="op">=</span> inStock<span class="op">.</span><span class="fu">AndAlso</span><span class="op">(</span>affordable<span class="op">);</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Database execution:</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">// SELECT * FROM Products WHERE UnitsInStock &gt; 0 AND Price &lt; 50.0</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> query <span class="op">=</span> dbContext<span class="op">.</span><span class="fu">Products</span><span class="op">.</span><span class="fu">Where</span><span class="op">(</span>filter<span class="op">).</span><span class="fu">ToList</span><span class="op">();</span></span></code></pre></div></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-chain-lambda-expressions-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

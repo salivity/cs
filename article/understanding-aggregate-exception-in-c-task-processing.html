@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding AggregateException in C# Task Processing - cs</title>
+    <meta name="description" content="This article provides a clear overview of AggregateException in C#, explaining what it is, why it exists, and the specific scenarios in which it occurs during task and parallel processing. You will also learn how the runtime consolidates concurrent errors">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/understanding-aggregate-exception-in-c-task-processing">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding AggregateException in C# Task Processing - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/understanding-aggregate-exception-in-c-task-processing" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a clear overview of AggregateException in C#, explaining what it is, why it exists, and the specific scenarios in which it occurs during task and parallel processing. You will also learn how the runtime consolidates concurrent errors" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="understanding-aggregateexception-in-c-task-processing">Understanding
+AggregateException in C# Task Processing</h1>
+<p>This article provides a clear overview of
+<code>AggregateException</code> in C#, explaining what it is, why it
+exists, and the specific scenarios in which it occurs during task and
+parallel processing. You will also learn how the runtime consolidates
+concurrent errors and the proper techniques for inspecting, flattening,
+and handling these exceptions in your applications.</p>
+<h2 id="what-is-an-aggregateexception">What Is an
+AggregateException?</h2>
+<p>In C#, <code>AggregateException</code> is a specialized exception
+class defined in the <code>System</code> namespace, primarily used by
+the Task Parallel Library (TPL) and Parallel LINQ (PLINQ). Because
+concurrent operations can execute simultaneously across multiple
+threads, multiple independent operations can fail at the same time.</p>
+<p>A standard C# method execution can only throw a single exception at a
+time. To solve this problem without losing diagnostic details, the .NET
+runtime wraps all individual exceptions thrown by parallel or
+asynchronous tasks into a single <code>AggregateException</code>
+instance. The individual failures are then stored inside its
+<code>InnerExceptions</code> collection.</p>
+<h2 id="when-does-an-aggregateexception-occur">When Does an
+AggregateException Occur?</h2>
+<p>An <code>AggregateException</code> occurs whenever code synchronously
+waits on or aggregates multiple concurrent operations that encounter one
+or more errors. Common scenarios include:</p>
+<h3 id="1-synchronously-blocking-on-tasks">1. Synchronously Blocking on
+Tasks</h3>
+<p>When you access <code>.Result</code> or call <code>.Wait()</code> on
+a faulted <code>Task</code> or <code>Task&lt;T&gt;</code>, the runtime
+wraps the underlying exception in an
+<code>AggregateException</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Task task <span class="op">=</span> Task<span class="op">.</span><span class="fu">Run</span><span class="op">(()</span> <span class="op">=&gt;</span> <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">InvalidOperationException</span><span class="op">(</span><span class="st">&quot;Operation failed.&quot;</span><span class="op">));</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    task<span class="op">.</span><span class="fu">Wait</span><span class="op">();</span> <span class="co">// Blocking call triggers AggregateException</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>AggregateException ex<span class="op">)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ex.InnerExceptions contains InvalidOperationException</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-waiting-on-multiple-tasks">2. Waiting on Multiple Tasks</h3>
+<p>Using <code>Task.WaitAll()</code> to synchronously monitor multiple
+tasks will produce an <code>AggregateException</code> containing every
+exception thrown across all supplied tasks:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Task t1 <span class="op">=</span> Task<span class="op">.</span><span class="fu">Run</span><span class="op">(()</span> <span class="op">=&gt;</span> <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentNullException</span><span class="op">());</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>Task t2 <span class="op">=</span> Task<span class="op">.</span><span class="fu">Run</span><span class="op">(()</span> <span class="op">=&gt;</span> <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">InvalidOperationException</span><span class="op">());</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    Task<span class="op">.</span><span class="fu">WaitAll</span><span class="op">(</span>t1<span class="op">,</span> t2<span class="op">);</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>AggregateException ex<span class="op">)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ex.InnerExceptions contains both ArgumentNullException and InvalidOperationException</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-parallel-loops-and-plinq">3. Parallel Loops and PLINQ</h3>
+<p>Methods such as <code>Parallel.For</code>,
+<code>Parallel.ForEach</code>, and PLINQ queries distribute work across
+multiple worker threads. If multiple iterations throw exceptions, the
+parallel runner catches them, waits for the iteration state to settle,
+and bundles all errors into an <code>AggregateException</code>.</p>
+<h3 id="4-inspecting-completed-tasks">4. Inspecting Completed Tasks</h3>
+<p>When working with <code>Task.WhenAll</code>, if one or more tasks
+fail, the returned task enters the <code>Faulted</code> state. Accessing
+the task's <code>.Exception</code> property directly exposes the
+<code>AggregateException</code> that contains all inner failures.</p>
+<h2 id="asynchronous-await-vs-synchronous-wait">Asynchronous
+<code>await</code> vs. Synchronous <code>.Wait()</code></h2>
+<p>A key distinction in modern C# is the difference between awaiting a
+task and synchronously blocking:</p>
+<ul>
+<li><strong>Using <code>await</code>:</strong> When you
+<code>await task;</code> or <code>await Task.WhenAll(...)</code>, the
+compiler unwraps the <code>AggregateException</code> and rethrows only
+the <strong>first</strong> inner exception encountered. This keeps
+asynchronous exception handling identical to standard sequential
+<code>try/catch</code> logic.</li>
+<li><strong>Using <code>.Wait()</code> or <code>.Result</code>:</strong>
+Synchronous blocking does not unwrap the container. Instead, it rethrows
+the full <code>AggregateException</code>.</li>
+</ul>
+<h2 id="how-to-handle-an-aggregateexception">How to Handle an
+AggregateException</h2>
+<p>Because tasks can be nested inside other tasks, an
+<code>AggregateException</code> can contain other
+<code>AggregateException</code> instances. .NET provides dedicated
+methods to simplify handling:</p>
+<h3 id="flattening-nested-exceptions">Flattening Nested Exceptions</h3>
+<p>The <code>Flatten()</code> method traverses the exception hierarchy
+and creates a new <code>AggregateException</code> containing a single,
+flat list of all inner exceptions:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    task<span class="op">.</span><span class="fu">Wait</span><span class="op">();</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>AggregateException ex<span class="op">)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> flatExceptions <span class="op">=</span> ex<span class="op">.</span><span class="fu">Flatten</span><span class="op">();</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> inner <span class="kw">in</span> flatExceptions<span class="op">.</span><span class="fu">InnerExceptions</span><span class="op">)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>inner<span class="op">.</span><span class="fu">Message</span><span class="op">);</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="filtering-with-the-handle-method">Filtering with the Handle
+Method</h3>
+<p>The <code>Handle(Func&lt;Exception, bool&gt;)</code> method invokes a
+callback for each inner exception. Returning <code>true</code> marks the
+exception as handled; returning <code>false</code> leaves it unhandled,
+causing the runtime to throw a new <code>AggregateException</code>
+containing only the unhandled items:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    Task<span class="op">.</span><span class="fu">WaitAll</span><span class="op">(</span>task1<span class="op">,</span> task2<span class="op">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>AggregateException ex<span class="op">)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    ex<span class="op">.</span><span class="fu">Handle</span><span class="op">(</span>inner <span class="op">=&gt;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>inner <span class="kw">is</span> TimeoutException<span class="op">)</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Handled timeout.&quot;</span><span class="op">);</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">false</span><span class="op">;</span> <span class="co">// Any other exception remains unhandled</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">});</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/understanding-aggregate-exception-in-c-task-processing';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

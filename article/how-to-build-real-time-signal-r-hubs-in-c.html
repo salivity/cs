@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Build Real-Time SignalR Hubs in C# - cs</title>
+    <meta name="description" content="This article provides a comprehensive guide to understanding ASP.NET Core SignalR and implementing real-time, bidirectional communication in modern C# applications. You will learn the core concepts behind SignalR, how the framework abstracts transport pro">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-build-real-time-signal-r-hubs-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Build Real-Time SignalR Hubs in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-build-real-time-signal-r-hubs-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comprehensive guide to understanding ASP.NET Core SignalR and implementing real-time, bidirectional communication in modern C# applications. You will learn the core concepts behind SignalR, how the framework abstracts transport pro" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-build-real-time-signalr-hubs-in-c">How to Build Real-Time
+SignalR Hubs in C</h1>
+<p>This article provides a comprehensive guide to understanding ASP.NET
+Core SignalR and implementing real-time, bidirectional communication in
+modern C# applications. You will learn the core concepts behind SignalR,
+how the framework abstracts transport protocols like WebSockets, and the
+exact steps required to implement, configure, and consume a SignalR Hub
+for instant client-server data exchange.</p>
+<h2 id="what-is-aspnet-core-signalr">What is ASP.NET Core SignalR?</h2>
+<p>ASP.NET Core SignalR is an open-source library that simplifies adding
+real-time web functionality to applications. Real-time functionality
+enables server-side code to push content to connected clients instantly
+as events occur, eliminating the need for clients to constantly poll the
+server for updates.</p>
+<p>SignalR automatically chooses the best available transport method
+based on server and client capabilities:</p>
+<ol type="1">
+<li><strong>WebSockets:</strong> The preferred, high-performance
+transport for full-duplex communication.</li>
+<li><strong>Server-Sent Events (SSE):</strong> A fallback that allows
+the server to push events to the client over standard HTTP.</li>
+<li><strong>Long Polling:</strong> A secondary fallback that holds an
+HTTP request open until data is available.</li>
+</ol>
+<p>The central programming abstraction in SignalR is the
+<strong>Hub</strong>. A Hub is a high-level pipeline that enables
+connected servers and clients to call methods on each other directly,
+passing strongly typed parameters and handling complex serialization
+automatically.</p>
+<hr />
+<h2 id="step-1-create-the-signalr-hub">Step 1: Create the SignalR
+Hub</h2>
+<p>A Hub is created by inheriting from the
+<code>Microsoft.AspNetCore.SignalR.Hub</code> base class. Methods
+defined within this class can be invoked directly by connected clients,
+while the <code>Clients</code> property allows the server to invoke
+methods on one, several, or all connected clients.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">SignalR</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> RealTimeApp<span class="op">.</span><span class="fu">Hubs</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ChatHub <span class="op">:</span> Hub</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Method callable by clients to broadcast a message</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task <span class="fu">SendMessage</span><span class="op">(</span><span class="dt">string</span> user<span class="op">,</span> <span class="dt">string</span> message<span class="op">)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// &quot;ReceiveMessage&quot; is the client-side handler name</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        await Clients<span class="op">.</span><span class="fu">All</span><span class="op">.</span><span class="fu">SendAsync</span><span class="op">(</span><span class="st">&quot;ReceiveMessage&quot;</span><span class="op">,</span> user<span class="op">,</span> message<span class="op">);</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Optional lifecycle hooks</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> async Task <span class="fu">OnConnectedAsync</span><span class="op">()</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        await Clients<span class="op">.</span><span class="fu">Caller</span><span class="op">.</span><span class="fu">SendAsync</span><span class="op">(</span><span class="st">&quot;ReceiveMessage&quot;</span><span class="op">,</span> <span class="st">&quot;System&quot;</span><span class="op">,</span> <span class="st">&quot;Connected successfully.&quot;</span><span class="op">);</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        await <span class="kw">base</span><span class="op">.</span><span class="fu">OnConnectedAsync</span><span class="op">();</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> async Task <span class="fu">OnDisconnectedAsync</span><span class="op">(</span>Exception<span class="op">?</span> exception<span class="op">)</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        await <span class="kw">base</span><span class="op">.</span><span class="fu">OnDisconnectedAsync</span><span class="op">(</span>exception<span class="op">);</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="strongly-typed-hubs-recommended">Strongly Typed Hubs
+(Recommended)</h3>
+<p>To avoid magic strings like <code>"ReceiveMessage"</code>, define a
+client contract interface and inherit from
+<code>Hub&lt;T&gt;</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IChatClient</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    Task <span class="fu">ReceiveMessage</span><span class="op">(</span><span class="dt">string</span> user<span class="op">,</span> <span class="dt">string</span> message<span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> StronglyTypedChatHub <span class="op">:</span> Hub<span class="op">&lt;</span>IChatClient<span class="op">&gt;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task <span class="fu">SendMessage</span><span class="op">(</span><span class="dt">string</span> user<span class="op">,</span> <span class="dt">string</span> message<span class="op">)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        await Clients<span class="op">.</span><span class="fu">All</span><span class="op">.</span><span class="fu">ReceiveMessage</span><span class="op">(</span>user<span class="op">,</span> message<span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<hr />
+<h2 id="step-2-register-and-map-the-hub-in-programcs">Step 2: Register
+and Map the Hub in Program.cs</h2>
+<p>SignalR requires two primary configuration steps in an ASP.NET Core
+application: registering the SignalR services in the dependency
+injection container and mapping the Hub endpoint to an incoming
+route.</p>
+<p>Open <code>Program.cs</code> and add the following
+configurations:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> RealTimeApp<span class="op">.</span><span class="fu">Hubs</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Register SignalR services</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddSignalR</span><span class="op">();</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">UseRouting</span><span class="op">();</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Map the Hub to a public URL endpoint</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapHub</span><span class="op">&lt;</span>ChatHub<span class="op">&gt;(</span><span class="st">&quot;/chatHub&quot;</span><span class="op">);</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">Run</span><span class="op">();</span></span></code></pre></div>
+<hr />
+<h2 id="step-3-connect-and-interact-from-a-client">Step 3: Connect and
+Interact from a Client</h2>
+<p>Clients can be built using various technologies, including
+JavaScript/TypeScript, .NET, Java, and Python. Below are examples
+demonstrating bidirectional communication using both JavaScript and
+C#.</p>
+<h3 id="javascript-client-example">JavaScript Client Example</h3>
+<p>Using the <code>@microsoft/signalr</code> npm package or CDN:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> connection <span class="op">=</span> <span class="kw">new</span> signalR<span class="op">.</span><span class="fu">HubConnectionBuilder</span>()</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">withUrl</span>(<span class="st">&quot;/chatHub&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">withAutomaticReconnect</span>()</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">build</span>()<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Listen for messages pushed from the server</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>connection<span class="op">.</span><span class="fu">on</span>(<span class="st">&quot;ReceiveMessage&quot;</span><span class="op">,</span> (user<span class="op">,</span> message) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`</span><span class="sc">${</span>user<span class="sc">}</span><span class="vs">: </span><span class="sc">${</span>message<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Start the connection and send a message to the server</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">start</span>() {</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span> {</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> connection<span class="op">.</span><span class="fu">start</span>()<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Connected to SignalR Hub&quot;</span>)<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Invoke the server-side SendMessage method</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> connection<span class="op">.</span><span class="fu">invoke</span>(<span class="st">&quot;SendMessage&quot;</span><span class="op">,</span> <span class="st">&quot;Alice&quot;</span><span class="op">,</span> <span class="st">&quot;Hello World!&quot;</span>)<span class="op">;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">catch</span> (err) {</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(err)<span class="op">;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="fu">start</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="c-client-example">C# Client Example</h3>
+<p>Using the <code>Microsoft.AspNetCore.SignalR.Client</code> NuGet
+package:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">SignalR</span><span class="op">.</span><span class="fu">Client</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> connection <span class="op">=</span> <span class="kw">new</span> <span class="fu">HubConnectionBuilder</span><span class="op">()</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">WithUrl</span><span class="op">(</span><span class="st">&quot;https://localhost:5001/chatHub&quot;</span><span class="op">)</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">WithAutomaticReconnect</span><span class="op">()</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Register client-side handler</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>connection<span class="op">.</span><span class="fu">On</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">string</span><span class="op">&gt;(</span><span class="st">&quot;ReceiveMessage&quot;</span><span class="op">,</span> <span class="op">(</span>user<span class="op">,</span> message<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{user}: {message}&quot;</span><span class="op">);</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>await connection<span class="op">.</span><span class="fu">StartAsync</span><span class="op">();</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">// Send message to the Hub</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>await connection<span class="op">.</span><span class="fu">InvokeAsync</span><span class="op">(</span><span class="st">&quot;SendMessage&quot;</span><span class="op">,</span> <span class="st">&quot;DotNetClient&quot;</span><span class="op">,</span> <span class="st">&quot;Hello from C#!&quot;</span><span class="op">);</span></span></code></pre></div>
+<hr />
+<h2 id="step-4-targeting-specific-audiences">Step 4: Targeting Specific
+Audiences</h2>
+<p>SignalR Hubs provide granular control over message distribution
+through the <code>Clients</code> API:</p>
+<ul>
+<li><strong>All clients:</strong>
+<code>Clients.All.SendAsync(...)</code></li>
+<li><strong>Current caller only:</strong>
+<code>Clients.Caller.SendAsync(...)</code></li>
+<li><strong>Specific user:</strong>
+<code>Clients.User(userId).SendAsync(...)</code> (requires
+authentication configured)</li>
+<li><strong>Specific groups:</strong>
+<code>Clients.Group("GroupName").SendAsync(...)</code></li>
+</ul>
+<p>Clients can be dynamically added or removed from arbitrary
+groups:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> async Task <span class="fu">JoinRoom</span><span class="op">(</span><span class="dt">string</span> roomName<span class="op">)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    await Groups<span class="op">.</span><span class="fu">AddToGroupAsync</span><span class="op">(</span>Context<span class="op">.</span><span class="fu">ConnectionId</span><span class="op">,</span> roomName<span class="op">);</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    await Clients<span class="op">.</span><span class="fu">Group</span><span class="op">(</span>roomName<span class="op">).</span><span class="fu">SendAsync</span><span class="op">(</span><span class="st">&quot;ReceiveMessage&quot;</span><span class="op">,</span> <span class="st">&quot;System&quot;</span><span class="op">,</span> $<span class="st">&quot;{Context.ConnectionId} joined {roomName}.&quot;</span><span class="op">);</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="scaling-signalr">Scaling SignalR</h2>
+<p>In multi-server deployments (such as load-balanced web farms),
+clients connected to Server A cannot receive messages broadcast from
+Server B by default. To resolve this, configure a backplane using Redis
+(<code>Microsoft.AspNetCore.SignalR.StackExchangeRedis</code>) or the
+Azure SignalR Service, allowing messages to be coordinated across all
+active server instances seamlessly.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-build-real-time-signal-r-hubs-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

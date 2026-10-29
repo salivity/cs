@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How C# Handles Closures and Captured Variables - cs</title>
+    <meta name="description" content="This article explores how the C# compiler internally manages closures and captured variables during compilation. When a lambda expression or anonymous method references a local variable from an outer scope, the runtime cannot simply use stack-allocated me">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-c-handles-closures-and-captured-variables">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How C# Handles Closures and Captured Variables - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-c-handles-closures-and-captured-variables" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how the C# compiler internally manages closures and captured variables during compilation. When a lambda expression or anonymous method references a local variable from an outer scope, the runtime cannot simply use stack-allocated me" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-c-handles-closures-and-captured-variables">How C# Handles
+Closures and Captured Variables</h1>
+<p>This article explores how the C# compiler internally manages closures
+and captured variables during compilation. When a lambda expression or
+anonymous method references a local variable from an outer scope, the
+runtime cannot simply use stack-allocated memory because the delegate
+may outlive the method that created it. To solve this lifetime mismatch,
+the C# compiler rewrites your code under the hood, hoisting captured
+variables into generated classes on the heap and transforming methods
+into instance members of those classes.</p>
+<h3 id="the-lifetime-problem">The Lifetime Problem</h3>
+<p>In C#, local variables exist on the execution stack and are destroyed
+as soon as the enclosing method finishes executing. However, a delegate
+(such as an <code>Action</code> or <code>Func&lt;T&gt;</code>) can be
+stored in a field, passed around, or executed long after the enclosing
+method has returned. If a delegate refers to a local stack variable that
+no longer exists, memory corruption would occur. The compiler resolves
+this by ensuring that any variable referenced by a closure lives on the
+managed heap rather than the stack.</p>
+<h3 id="compiler-generated-display-classes">Compiler-Generated Display
+Classes</h3>
+<p>When the C# compiler detects a lambda expression or anonymous
+function capturing a local variable, it generates a private, hidden
+class—often named something like
+<code>&lt;&gt;c__DisplayClass0_0</code>.</p>
+<p>This generated class contains:</p>
+<ol type="1">
+<li>Public fields corresponding to each captured local variable or
+parameter.</li>
+<li>An instance method containing the actual code from the lambda
+expression.</li>
+</ol>
+<p>Consider the following C# code:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> Action <span class="fu">CreateCounter</span><span class="op">()</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> count <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="op">()</span> <span class="op">=&gt;</span> </span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        count<span class="op">++;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>count<span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Behind the scenes, the compiler transforms the code into something
+resembling this:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">sealed</span> <span class="kw">class</span> <span class="op">&lt;&gt;</span>c__DisplayClass0_0</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> count<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="op">&lt;</span>CreateCounter<span class="op">&gt;</span><span class="fu">b__0</span><span class="op">()</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        count<span class="op">++;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>count<span class="op">);</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> Action <span class="fu">CreateCounter</span><span class="op">()</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;&gt;</span>c__DisplayClass0_0 locals <span class="op">=</span> <span class="kw">new</span> <span class="op">&lt;&gt;</span><span class="fu">c__DisplayClass0_0</span><span class="op">();</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    locals<span class="op">.</span><span class="fu">count</span> <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="kw">new</span> <span class="fu">Action</span><span class="op">(</span>locals<span class="op">.&lt;</span>CreateCounter<span class="op">&gt;</span>b__0<span class="op">);</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The variable <code>count</code> is no longer a stack-allocated
+integer; it is a field on a heap-allocated instance of the display
+class.</p>
+<h3 id="variable-hoisting-and-scope-rewriting">Variable Hoisting and
+Scope Rewriting</h3>
+<p>The process of moving a variable from the stack into a generated
+class field is known as variable hoisting. Once a variable is hoisted,
+every reference to it inside the original method is rewritten to read
+from and write to the field of the generated class instance.</p>
+<p>Because both the enclosing method and the lambda expression operate
+on the exact same object reference, mutations are visible to both
+scopes. Capturing is by reference, not by value.</p>
+<h3 id="shared-state-across-multiple-lambdas">Shared State Across
+Multiple Lambdas</h3>
+<p>If multiple lambda expressions within the same scope capture the same
+local variable, the compiler generates a single display class containing
+that variable. Both lambdas become instance methods on that shared class
+instance:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> value <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>Action add <span class="op">=</span> <span class="op">()</span> <span class="op">=&gt;</span> value <span class="op">+=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>Action print <span class="op">=</span> <span class="op">()</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>value<span class="op">);</span></span></code></pre></div>
+<p>Both <code>add</code> and <code>print</code> hold a reference to the
+same display class instance, allowing <code>add</code> to modify the
+field and <code>print</code> to observe the updated value.</p>
+<p>Conversely, if closures are defined in different scopes (such as
+inside separate iterations or nested code blocks), the compiler may
+generate multiple display classes or multiple instances of the same
+display class to reflect their distinct lifetimes.</p>
+<h3 id="loop-variable-captures">Loop Variable Captures</h3>
+<p>A well-known consequence of this design occurs inside loops.</p>
+<p>In a standard <code>for</code> loop:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> actions <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span>Action<span class="op">&gt;();</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">3</span><span class="op">;</span> i<span class="op">++)</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    actions<span class="op">.</span><span class="fu">Add</span><span class="op">(()</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>i<span class="op">));</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The loop index variable <code>i</code> is declared once outside the
+loop body. The compiler instantiates a single display class instance
+outside the loop. Every lambda captures that same field, so executing
+all actions prints <code>3, 3, 3</code>.</p>
+<p>In modern C# (C# 5.0 and later), a <code>foreach</code> loop creates
+a distinct logical variable per iteration. The compiler instantiates a
+new display class instance on each loop pass, meaning each lambda
+captures its own independent value.</p>
+<h3 id="non-capturing-optimization">Non-Capturing Optimization</h3>
+<p>If a lambda expression does not capture any local variables or
+instance state (<code>this</code>), the compiler avoids allocating a new
+object on each invocation. Instead, it emits a static method on a cached
+compiler-generated class (often named <code>&lt;&gt;c</code>) and
+assigns the delegate to a static singleton field. Subsequent calls reuse
+this singleton delegate, incurring zero heap allocations per call.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-c-handles-closures-and-captured-variables';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

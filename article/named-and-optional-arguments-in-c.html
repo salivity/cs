@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Named and Optional Arguments in C# - cs</title>
+    <meta name="description" content="Named and optional arguments in C# provide developers with greater flexibility and readability when defining and invoking methods. Introduced in C# 4.0, these features allow you to omit arguments that have predefined default values and pass parameters by">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/named-and-optional-arguments-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Named and Optional Arguments in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/named-and-optional-arguments-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Named and optional arguments in C# provide developers with greater flexibility and readability when defining and invoking methods. Introduced in C# 4.0, these features allow you to omit arguments that have predefined default values and pass parameters by" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="named-and-optional-arguments-in-c">Named and Optional Arguments
+in C</h1>
+<p>Named and optional arguments in C# provide developers with greater
+flexibility and readability when defining and invoking methods.
+Introduced in C# 4.0, these features allow you to omit arguments that
+have predefined default values and pass parameters by name rather than
+relying strictly on their positional order. This article explains how
+optional and named arguments work, how to implement them in code, the
+rules governing their use, and best practices for combining them
+effectively.</p>
+<h2 id="what-are-optional-arguments">What Are Optional Arguments?</h2>
+<p>An optional argument allows you to omit a method parameter when
+calling that method. To make a parameter optional, you assign it a
+default value in the method declaration. If the caller does not supply
+an argument for that parameter, the runtime automatically uses the
+default value.</p>
+<h3 id="syntax-and-example">Syntax and Example</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">SendNotification</span><span class="op">(</span><span class="dt">string</span> message<span class="op">,</span> <span class="dt">bool</span> isUrgent <span class="op">=</span> <span class="kw">false</span><span class="op">,</span> <span class="dt">int</span> retryCount <span class="op">=</span> <span class="dv">3</span><span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Message: {message}, Urgent: {isUrgent}, Retries: {retryCount}&quot;</span><span class="op">);</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>You can invoke this method in several ways:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Uses default values for both isUrgent (false) and retryCount (3)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">SendNotification</span><span class="op">(</span><span class="st">&quot;System update scheduled.&quot;</span><span class="op">);</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Overrides isUrgent, uses default for retryCount (3)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">SendNotification</span><span class="op">(</span><span class="st">&quot;Database connection failed!&quot;</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Overrides all default values</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">SendNotification</span><span class="op">(</span><span class="st">&quot;Security breach!&quot;</span><span class="op">,</span> <span class="kw">true</span><span class="op">,</span> <span class="dv">5</span><span class="op">);</span></span></code></pre></div>
+<h3 id="rules-for-optional-parameters">Rules for Optional
+Parameters</h3>
+<ol type="1">
+<li><strong>Positioning:</strong> Optional parameters must always appear
+after all required parameters in the method signature.</li>
+<li><strong>Compile-time Constants:</strong> Default values must be
+constant expressions, such as literals, <code>const</code> fields,
+<code>default</code> expressions, or parameterless constructor values
+for value types.</li>
+<li><strong>Ref/Out Restrictions:</strong> Parameters marked with
+<code>ref</code> or <code>out</code> cannot be defined as optional.</li>
+</ol>
+<hr />
+<h2 id="what-are-named-arguments">What Are Named Arguments?</h2>
+<p>Named arguments allow you to associate an argument with its
+corresponding parameter by name rather than by its sequential position.
+This is done by writing the parameter name followed by a colon and the
+value (<code>parameterName: value</code>).</p>
+<h3 id="syntax-and-example-1">Syntax and Example</h3>
+<p>Using the same <code>SendNotification</code> method:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Explicitly naming parameters in standard order</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">SendNotification</span><span class="op">(</span>message<span class="op">:</span> <span class="st">&quot;Backup complete.&quot;</span><span class="op">,</span> isUrgent<span class="op">:</span> <span class="kw">false</span><span class="op">,</span> retryCount<span class="op">:</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Naming parameters in a different order</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">SendNotification</span><span class="op">(</span>retryCount<span class="op">:</span> <span class="dv">2</span><span class="op">,</span> message<span class="op">:</span> <span class="st">&quot;Sync warning.&quot;</span><span class="op">,</span> isUrgent<span class="op">:</span> <span class="kw">true</span><span class="op">);</span></span></code></pre></div>
+<h3 id="benefits-of-named-arguments">Benefits of Named Arguments</h3>
+<ul>
+<li><strong>Code Readability:</strong> Passing multiple boolean flags or
+null literals (e.g., <code>DoWork(true, false, null)</code>) makes code
+hard to understand. Named arguments (e.g.,
+<code>DoWork(logOutput: true, throwOnError: false, context: null)</code>)
+make the intent immediately clear.</li>
+<li><strong>Self-Documenting Code:</strong> They eliminate the need to
+inspect the method signature to determine which argument corresponds to
+which parameter.</li>
+</ul>
+<hr />
+<h2 id="combining-named-and-optional-arguments">Combining Named and
+Optional Arguments</h2>
+<p>The real power of these features appears when they are used together.
+With positional arguments, if you want to override the second optional
+parameter, you are forced to supply a value for the first optional
+parameter as well. Named arguments solve this problem by letting you
+skip intermediate optional parameters.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Skips &#39;isUrgent&#39; (uses false) and explicitly sets &#39;retryCount&#39; to 5</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">SendNotification</span><span class="op">(</span><span class="st">&quot;Nightly batch started.&quot;</span><span class="op">,</span> retryCount<span class="op">:</span> <span class="dv">5</span><span class="op">);</span></span></code></pre></div>
+<hr />
+<h2 id="important-considerations">Important Considerations</h2>
+<ul>
+<li><strong>API Versioning:</strong> Default values are evaluated at
+compile time and embedded directly into the caller's assembly. If you
+change a default value in a shared library without recompiling the
+calling application, the caller will continue using the old default
+value.</li>
+<li><strong>Parameter Name Changes:</strong> Changing a parameter name
+in a public API is a breaking change if callers use named arguments to
+invoke that method.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/named-and-optional-arguments-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

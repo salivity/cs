@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Adapter Pattern: Wrapping Legacy Interfaces - cs</title>
+    <meta name="description" content="This article explores the Adapter design pattern and demonstrates how to effectively wrap incompatible legacy interfaces in C#. You will learn the core architecture of the pattern, understand the benefits of decoupling modern business logic from aging sys">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-adapter-pattern-wrapping-legacy-interfaces">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Adapter Pattern: Wrapping Legacy Interfaces - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-adapter-pattern-wrapping-legacy-interfaces" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the Adapter design pattern and demonstrates how to effectively wrap incompatible legacy interfaces in C#. You will learn the core architecture of the pattern, understand the benefits of decoupling modern business logic from aging sys" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-adapter-pattern-wrapping-legacy-interfaces">C# Adapter
+Pattern: Wrapping Legacy Interfaces</h1>
+<p>This article explores the Adapter design pattern and demonstrates how
+to effectively wrap incompatible legacy interfaces in C#. You will learn
+the core architecture of the pattern, understand the benefits of
+decoupling modern business logic from aging systems, and review a
+direct, real-world code implementation that translates modern service
+calls into legacy operations.</p>
+<hr />
+<h3 id="understanding-the-adapter-pattern">Understanding the Adapter
+Pattern</h3>
+<p>The Adapter pattern is a structural design pattern that allows
+objects with incompatible interfaces to collaborate. It functions like a
+physical power adapter: it translates the interface of one service or
+class into another interface that clients expect.</p>
+<p>In enterprise software development, systems frequently undergo
+modernization while relying on stable, battle-tested legacy components.
+Directly altering legacy code introduces risk and often breaks existing
+workflows. The Adapter pattern solves this problem by creating an
+intermediary class—the adapter—that implements the modern interface
+while holding an instance of the legacy object. The adapter receives
+calls from the new system, transforms data structures and parameters as
+necessary, and forwards the transformed request to the legacy class.</p>
+<h3 id="key-components">Key Components</h3>
+<p>The pattern consists of four main elements:</p>
+<ol type="1">
+<li><strong>Target Interface:</strong> The modern interface required by
+the client application.</li>
+<li><strong>Client:</strong> The new application code that interacts
+solely with the Target Interface.</li>
+<li><strong>Adaptee:</strong> The existing legacy component with an
+incompatible API.</li>
+<li><strong>Adapter:</strong> The bridge class that implements the
+Target Interface and wraps the Adaptee.</li>
+</ol>
+<hr />
+<h3 id="implementation-example-in-c">Implementation Example in C</h3>
+<p>Consider a modern payment service interface designed for dependency
+injection and standard data objects:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Modern domain request model</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">PaymentRequest</span><span class="op">(</span><span class="dt">string</span> CustomerId<span class="op">,</span> <span class="dt">decimal</span> Amount<span class="op">,</span> <span class="dt">string</span> Currency<span class="op">);</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Target Interface expected by the modern application</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IPaymentService</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    Task<span class="op">&lt;</span><span class="dt">bool</span><span class="op">&gt;</span> <span class="fu">ProcessPaymentAsync</span><span class="op">(</span>PaymentRequest request<span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Next, consider an existing legacy billing class that cannot be
+modified directly. It uses primitive types, synchronous execution, and
+completely different method signatures:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Adaptee: Incompatible legacy component</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> LegacyBillingSystem</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> <span class="fu">ExecuteTransaction</span><span class="op">(</span><span class="dt">string</span> accountCode<span class="op">,</span> <span class="dt">double</span> totalCharge<span class="op">)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Legacy system logic returns an integer status code (0 for success)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Legacy processing: {accountCode} for ${totalCharge}&quot;</span><span class="op">);</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="dv">0</span><span class="op">;</span> </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To bridge the two systems without altering
+<code>LegacyBillingSystem</code> or polluting modern application logic,
+create the adapter:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Adapter: Implements the modern interface by wrapping the legacy component</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> LegacyBillingAdapter <span class="op">:</span> IPaymentService</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> LegacyBillingSystem _legacySystem<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">LegacyBillingAdapter</span><span class="op">(</span>LegacyBillingSystem legacySystem<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        _legacySystem <span class="op">=</span> legacySystem <span class="op">??</span> <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentNullException</span><span class="op">(</span><span class="fu">nameof</span><span class="op">(</span>legacySystem<span class="op">));</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Task<span class="op">&lt;</span><span class="dt">bool</span><span class="op">&gt;</span> <span class="fu">ProcessPaymentAsync</span><span class="op">(</span>PaymentRequest request<span class="op">)</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Map modern domain structures to legacy parameters</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> accountCode <span class="op">=</span> request<span class="op">.</span><span class="fu">CustomerId</span><span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">double</span> chargeAmount <span class="op">=</span> <span class="op">(</span><span class="dt">double</span><span class="op">)</span>request<span class="op">.</span><span class="fu">Amount</span><span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Delegate execution to the legacy class</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> statusCode <span class="op">=</span> _legacySystem<span class="op">.</span><span class="fu">ExecuteTransaction</span><span class="op">(</span>accountCode<span class="op">,</span> chargeAmount<span class="op">);</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Convert the legacy response to modern expectations</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="dt">bool</span> isSuccess <span class="op">=</span> statusCode <span class="op">==</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> Task<span class="op">.</span><span class="fu">FromResult</span><span class="op">(</span>isSuccess<span class="op">);</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="consuming-the-adapter">Consuming the Adapter</h3>
+<p>The client code depends only on <code>IPaymentService</code>,
+maintaining strict separation of concerns:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OrderProcessor</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IPaymentService _paymentService<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">OrderProcessor</span><span class="op">(</span>IPaymentService paymentService<span class="op">)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        _paymentService <span class="op">=</span> paymentService<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task <span class="fu">CheckoutAsync</span><span class="op">(</span><span class="dt">string</span> customerId<span class="op">,</span> <span class="dt">decimal</span> amount<span class="op">)</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> request <span class="op">=</span> <span class="kw">new</span> <span class="fu">PaymentRequest</span><span class="op">(</span>customerId<span class="op">,</span> amount<span class="op">,</span> <span class="st">&quot;USD&quot;</span><span class="op">);</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">bool</span> result <span class="op">=</span> await _paymentService<span class="op">.</span><span class="fu">ProcessPaymentAsync</span><span class="op">(</span>request<span class="op">);</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>result<span class="op">)</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Order processed successfully.&quot;</span><span class="op">);</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>You can wire this up via standard .NET dependency injection:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Register the legacy system and its adapter</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>services<span class="op">.</span><span class="fu">AddSingleton</span><span class="op">&lt;</span>LegacyBillingSystem<span class="op">&gt;();</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>services<span class="op">.</span><span class="fu">AddTransient</span><span class="op">&lt;</span>IPaymentService<span class="op">,</span> LegacyBillingAdapter<span class="op">&gt;();</span></span></code></pre></div>
+<h3 id="key-benefits">Key Benefits</h3>
+<ul>
+<li><strong>Adherence to Open/Closed Principle:</strong> New interfaces
+can be supported without modifying the underlying legacy code.</li>
+<li><strong>Separation of Concerns:</strong> Data translation, error
+mapping, and impedance mismatches are isolated inside the adapter,
+keeping client logic clean.</li>
+<li><strong>Testability:</strong> Modern code remains testable through
+interface mocking, regardless of how difficult the legacy code is to
+test directly.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-adapter-pattern-wrapping-legacy-interfaces';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

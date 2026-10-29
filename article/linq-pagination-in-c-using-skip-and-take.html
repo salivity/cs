@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINQ Pagination in C#: Using Skip and Take - cs</title>
+    <meta name="description" content="Pagination is a fundamental technique for breaking large datasets into manageable chunks, improving both application performance and user experience. In C# LINQ, pagination is primarily achieved using the Skip and Take partitioning operators. This article">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/linq-pagination-in-c-using-skip-and-take">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="LINQ Pagination in C#: Using Skip and Take - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/linq-pagination-in-c-using-skip-and-take" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Pagination is a fundamental technique for breaking large datasets into manageable chunks, improving both application performance and user experience. In C# LINQ, pagination is primarily achieved using the Skip and Take partitioning operators. This article" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="linq-pagination-in-c-using-skip-and-take">LINQ Pagination in C#:
+Using Skip and Take</h1>
+<p>Pagination is a fundamental technique for breaking large datasets
+into manageable chunks, improving both application performance and user
+experience. In C# LINQ, pagination is primarily achieved using the
+<code>Skip</code> and <code>Take</code> partitioning operators. This
+article explains how these methods function, the standard mathematical
+formula used to calculate pages, the importance of deterministic
+sorting, and how these operators translate into optimized SQL queries
+when interacting with databases via Entity Framework.</p>
+<h3 id="the-mechanics-of-skip-and-take">The Mechanics of Skip and
+Take</h3>
+<p>The <code>Skip</code> and <code>Take</code> operators work
+sequentially to isolate a specific window of elements from a
+collection:</p>
+<ul>
+<li><strong><code>Skip(int count)</code>:</strong> Bypasses a specified
+number of elements from the beginning of a sequence and returns the
+remaining elements. If <code>count</code> is less than or equal to zero,
+no elements are skipped. If <code>count</code> exceeds the total number
+of items, an empty sequence is returned.</li>
+<li><strong><code>Take(int count)</code>:</strong> Returns a specified
+number of contiguous elements from the start of a sequence. If
+<code>count</code> is less than or equal to zero, an empty sequence is
+returned. If the sequence contains fewer items than requested, it
+returns all available items without throwing an exception.</li>
+</ul>
+<h3 id="the-standard-pagination-formula">The Standard Pagination
+Formula</h3>
+<p>To implement page-based navigation, you need two parameters: the page
+number (typically 1-based for users) and the page size (the number of
+items per page).</p>
+<p>The formula to calculate the offset is:
+<code>offset = (pageNumber - 1) * pageSize</code></p>
+<p>Here is a practical C# implementation:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> IEnumerable<span class="op">&lt;</span>T<span class="op">&gt;</span> GetPage<span class="op">&lt;</span>T<span class="op">&gt;(</span>IEnumerable<span class="op">&lt;</span>T<span class="op">&gt;</span> source<span class="op">,</span> <span class="dt">int</span> pageNumber<span class="op">,</span> <span class="dt">int</span> pageSize<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>pageNumber <span class="op">&lt;</span> <span class="dv">1</span><span class="op">)</span> pageNumber <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>pageSize <span class="op">&lt;</span> <span class="dv">1</span><span class="op">)</span> pageSize <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> source</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">Skip</span><span class="op">((</span>pageNumber <span class="op">-</span> <span class="dv">1</span><span class="op">)</span> <span class="op">*</span> pageSize<span class="op">)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">Take</span><span class="op">(</span>pageSize<span class="op">);</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If requesting Page 3 with a Page Size of 10:</p>
+<ul>
+<li><code>Skip((3 - 1) * 10)</code> skips the first 20 records.</li>
+<li><code>Take(10)</code> retrieves records 21 through 30.</li>
+</ul>
+<h3 id="the-necessity-of-ordering">The Necessity of Ordering</h3>
+<p>Pagination must always be paired with an explicit ordering clause,
+such as <code>OrderBy</code> or <code>OrderByDescending</code>. Without
+sorting, collections—especially those retrieved from relational
+databases—do not guarantee a deterministic order. Without an ordered
+query, repeating the same pagination query might return overlapping or
+missing records across pages.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> pagedData <span class="op">=</span> dbContext<span class="op">.</span><span class="fu">Products</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">OrderBy</span><span class="op">(</span>p <span class="op">=&gt;</span> p<span class="op">.</span><span class="fu">Id</span><span class="op">)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Skip</span><span class="op">((</span>pageNumber <span class="op">-</span> <span class="dv">1</span><span class="op">)</span> <span class="op">*</span> pageSize<span class="op">)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Take</span><span class="op">(</span>pageSize<span class="op">)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span></code></pre></div>
+<h3 id="in-memory-vs-database-execution">In-Memory vs. Database
+Execution</h3>
+<p>The behavior of <code>Skip</code> and <code>Take</code> differs
+significantly depending on the underlying LINQ provider:</p>
+<ul>
+<li><strong>LINQ to Objects
+(<code>IEnumerable&lt;T&gt;</code>):</strong> The entire dataset is
+loaded into memory. <code>Skip</code> enumerates through the items one
+by one until it reaches the offset, and <code>Take</code> yields the
+next requested elements.</li>
+<li><strong>LINQ to Entities
+(<code>IQueryable&lt;T&gt;</code>):</strong> Entity Framework translates
+<code>Skip</code> and <code>Take</code> directly into database commands.
+In SQL Server, for example, they translate to
+<code>OFFSET ... ROWS FETCH NEXT ... ROWS ONLY</code>. This ensures only
+the requested slice of data is transferred over the network from the
+database server, keeping memory consumption low.</li>
+</ul>
+<h3 id="performance-considerations">Performance Considerations</h3>
+<p>While <code>Skip</code> and <code>Take</code> (offset-based
+pagination) work well for small to medium-sized datasets, performance
+can degrade on very large databases when the page number becomes
+extremely high. Because the database engine must still scan and discard
+the skipped rows, queries with large offsets (e.g., skipping 500,000
+rows) can become slow. For massive datasets, keyset pagination
+(filtering by <code>WHERE Id &gt; lastSeenId</code> followed by
+<code>Take</code>) is often preferred over offset pagination.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/linq-pagination-in-c-using-skip-and-take';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

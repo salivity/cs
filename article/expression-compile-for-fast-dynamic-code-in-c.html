@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expression.Compile for Fast Dynamic Code in C# - cs</title>
+    <meta name="description" content="In modern C# development, dynamically invoking methods or accessing properties at runtime is a common requirement, yet relying on standard reflection introduces severe performance penalties. Expression.Compile resolves this issue by converting runtime-def">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/expression-compile-for-fast-dynamic-code-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Expression.Compile for Fast Dynamic Code in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/expression-compile-for-fast-dynamic-code-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In modern C# development, dynamically invoking methods or accessing properties at runtime is a common requirement, yet relying on standard reflection introduces severe performance penalties. Expression.Compile resolves this issue by converting runtime-def" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="expressioncompile-for-fast-dynamic-code-in-c">Expression.Compile
+for Fast Dynamic Code in C</h1>
+<p>In modern C# development, dynamically invoking methods or accessing
+properties at runtime is a common requirement, yet relying on standard
+reflection introduces severe performance penalties.
+<code>Expression.Compile</code> resolves this issue by converting
+runtime-defined expression trees into strongly typed delegates compiled
+directly into Intermediate Language (IL). This article explains how
+<code>Expression.Compile</code> works, why it outperforms pure
+reflection, and how to use it to optimize dynamic execution paths in
+high-throughput applications.</p>
+<h3 id="the-overhead-of-pure-reflection">The Overhead of Pure
+Reflection</h3>
+<p>Traditional reflection in .NET relies on types such as
+<code>MethodInfo</code>, <code>PropertyInfo</code>, and
+<code>FieldInfo</code>. When invoking a member dynamically using
+reflection:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>MethodInfo method <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>Calculator<span class="op">).</span><span class="fu">GetMethod</span><span class="op">(</span><span class="st">&quot;Add&quot;</span><span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">object</span> result <span class="op">=</span> method<span class="op">.</span><span class="fu">Invoke</span><span class="op">(</span>calculatorInstance<span class="op">,</span> <span class="kw">new</span> <span class="dt">object</span><span class="op">[]</span> <span class="op">{</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">10</span> <span class="op">});</span></span></code></pre></div>
+<p>Every single invocation through <code>MethodInfo.Invoke</code>
+triggers several costly operations:</p>
+<ol type="1">
+<li><strong>Argument Validation:</strong> The runtime verifies that the
+target instance and arguments match the method's parameter
+signature.</li>
+<li><strong>Boxing and Unboxing:</strong> Value types must be boxed into
+<code>object</code> arrays and subsequently unboxed.</li>
+<li><strong>Security Checks:</strong> Member accessibility and security
+boundaries are re-checked.</li>
+<li><strong>Call Indirection:</strong> The call cannot be optimized or
+inlined by the JIT compiler, leading to pointer indirection overhead on
+every iteration.</li>
+</ol>
+<p>While acceptable for infrequent tasks, reflection becomes a severe
+bottleneck in scenarios like ORMs, dependency injection containers, and
+object mappers that execute millions of calls.</p>
+<h3 id="what-is-expressioncompile">What Is Expression.Compile?</h3>
+<p>An expression tree (<code>Expression&lt;TDelegate&gt;</code>)
+represents executable code as an in-memory Abstract Syntax Tree (AST).
+Instead of executing instructions immediately, the tree models
+parameters, operations, conditions, and method calls as structured data
+objects.</p>
+<p>The <code>Compile</code> method processes this AST using the CLR's
+Lightweight Code Generation (LCG) infrastructure. Under the hood, it
+creates a <code>DynamicMethod</code>, emits raw CIL (Common Intermediate
+Language) opcodes directly representing the operations defined in the
+tree, and bakes them into a callable native-speed delegate (such as
+<code>Func&lt;T&gt;</code> or <code>Action&lt;T&gt;</code>).</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Linq</span><span class="op">.</span><span class="fu">Expressions</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define parameters: (Calculator instance, int a, int b)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> instanceParam <span class="op">=</span> Expression<span class="op">.</span><span class="fu">Parameter</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span>Calculator<span class="op">),</span> <span class="st">&quot;calc&quot;</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> aParam <span class="op">=</span> Expression<span class="op">.</span><span class="fu">Parameter</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span><span class="dt">int</span><span class="op">),</span> <span class="st">&quot;a&quot;</span><span class="op">);</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> bParam <span class="op">=</span> Expression<span class="op">.</span><span class="fu">Parameter</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span><span class="dt">int</span><span class="op">),</span> <span class="st">&quot;b&quot;</span><span class="op">);</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define the method call: calc.Add(a, b)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> methodCall <span class="op">=</span> Expression<span class="op">.</span><span class="fu">Call</span><span class="op">(</span>instanceParam<span class="op">,</span> <span class="kw">typeof</span><span class="op">(</span>Calculator<span class="op">).</span><span class="fu">GetMethod</span><span class="op">(</span><span class="st">&quot;Add&quot;</span><span class="op">),</span> aParam<span class="op">,</span> bParam<span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Build and compile the expression tree into a typed delegate</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> addFunc <span class="op">=</span> Expression<span class="op">.</span><span class="fu">Lambda</span><span class="op">&lt;</span>Func<span class="op">&lt;</span>Calculator<span class="op">,</span> <span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;&gt;(</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    methodCall<span class="op">,</span> instanceParam<span class="op">,</span> aParam<span class="op">,</span> bParam</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="op">).</span><span class="fu">Compile</span><span class="op">();</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Fast execution</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> result <span class="op">=</span> <span class="fu">addFunc</span><span class="op">(</span>calculatorInstance<span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">10</span><span class="op">);</span></span></code></pre></div>
+<h3 id="why-expressioncompile-is-faster">Why Expression.Compile Is
+Faster</h3>
+<p>The primary performance gain of <code>Expression.Compile</code> comes
+from <strong>shifting the overhead from invocation time to compilation
+time</strong>.</p>
+<ul>
+<li><strong>No Boxing or Indirection:</strong> Because the dynamic code
+is compiled into a strongly typed delegate, primitive values are passed
+directly via CPU registers or the stack without memory allocations or
+type casting.</li>
+<li><strong>JIT-Optimized Execution:</strong> Once compiled, the
+generated IL is treated by the runtime almost identically to standard
+compiled C# code. Calling the resulting delegate has the same execution
+speed as invoking a regular delegate or interface call.</li>
+<li><strong>Cached Invocations:</strong> While calling
+<code>Compile()</code> is computationally expensive, compilation only
+needs to happen once. By caching the compiled delegate in a concurrent
+dictionary or static field, subsequent invocations avoid all reflective
+checks and run at near-native speeds.</li>
+</ul>
+<h3 id="performance-summary-and-best-practices">Performance Summary and
+Best Practices</h3>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Mechanism</th>
+<th style="text-align: left;">Setup Cost</th>
+<th style="text-align: left;">Execution Cost</th>
+<th style="text-align: left;">Allocations per Call</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Pure Reflection
+(<code>Invoke</code>)</strong></td>
+<td style="text-align: left;">Very Low</td>
+<td style="text-align: left;">High</td>
+<td style="text-align: left;">High (Argument arrays &amp; boxing)</td>
+</tr>
+<tr>
+<td
+style="text-align: left;"><strong><code>Expression.Compile</code></strong></td>
+<td style="text-align: left;">High</td>
+<td style="text-align: left;">Extremely Low</td>
+<td style="text-align: left;">None (for typed value types)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Direct C# Call</strong></td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Extremely Low</td>
+<td style="text-align: left;">None</td>
+</tr>
+</tbody>
+</table>
+<p>To maximize the benefits of <code>Expression.Compile</code>:</p>
+<ul>
+<li><strong>Always Cache Delegates:</strong> Never call
+<code>.Compile()</code> inside loops or hot paths; cache the generated
+delegate using cache keys (such as <code>Type</code> or
+<code>MemberInfo</code>).</li>
+<li><strong>Prefer Strongly Typed Delegates:</strong> Use precise
+generic signatures (<code>Func&lt;TTarget, TProperty&gt;</code>) rather
+than generalized <code>Func&lt;object, object&gt;</code> variants to
+eliminate unboxing overhead.</li>
+<li><strong>Alternative Approaches:</strong> For extreme performance
+requirements without building expression trees manually, consider
+<code>DynamicMethod</code> with direct IL emission
+(<code>ILGenerator</code>), or compile-time source generators to avoid
+runtime generation entirely.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/expression-compile-for-fast-dynamic-code-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

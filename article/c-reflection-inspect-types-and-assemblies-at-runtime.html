@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Reflection: Inspect Types and Assemblies at Runtime - cs</title>
+    <meta name="description" content="Reflection in C# is a powerful feature provided by the System.Reflection namespace that allows applications to inspect, discover, and invoke metadata about assemblies, modules, and types at runtime. Instead of relying solely on static, compile-time declar">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-reflection-inspect-types-and-assemblies-at-runtime">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Reflection: Inspect Types and Assemblies at Runtime - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-reflection-inspect-types-and-assemblies-at-runtime" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Reflection in C# is a powerful feature provided by the System.Reflection namespace that allows applications to inspect, discover, and invoke metadata about assemblies, modules, and types at runtime. Instead of relying solely on static, compile-time declar" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-reflection-inspect-types-and-assemblies-at-runtime">C#
+Reflection: Inspect Types and Assemblies at Runtime</h1>
+<p>Reflection in C# is a powerful feature provided by the
+<code>System.Reflection</code> namespace that allows applications to
+inspect, discover, and invoke metadata about assemblies, modules, and
+types at runtime. Instead of relying solely on static, compile-time
+declarations, reflection enables programs to interrogate their own
+internal structure or external compiled binaries. This article explains
+how reflection works beneath the surface, how the Common Language
+Runtime (CLR) exposes metadata, and the practical mechanisms developers
+use to dynamically inspect assemblies, types, and their members.</p>
+<h3 id="the-role-of-metadata-in-the-clr">The Role of Metadata in the
+CLR</h3>
+<p>To understand reflection, you must understand how .NET manages
+compiled code. When you compile C# source code, the compiler generates
+Common Intermediate Language (CIL) along with detailed metadata tables.
+These metadata tables contain comprehensive descriptions of every
+component within the binary:</p>
+<ul>
+<li><strong>Assembly and Module Manifests:</strong> Identities,
+versions, culture, and external dependencies.</li>
+<li><strong>Type Tables:</strong> Names, namespaces, base classes,
+implemented interfaces, and visibility scopes.</li>
+<li><strong>Member Tables:</strong> Methods, fields, properties, events,
+parameter lists, return types, and custom attributes.</li>
+</ul>
+<p>This metadata is embedded directly into the compiled Portable
+Executable (PE) file. When an assembly is loaded, the CLR reads this
+metadata. Reflection acts as an API layer that parses these tables and
+translates them into managed objects that developers can query
+programmatically.</p>
+<h3 id="inspecting-assemblies">Inspecting Assemblies</h3>
+<p>The highest level of inspection begins with the <code>Assembly</code>
+class. Reflection allows you to dynamically load an assembly from disk,
+examine the current running assembly, or query the assemblies loaded
+into the current application domain.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Reflection</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Inspect the currently executing assembly</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>Assembly currentAssembly <span class="op">=</span> Assembly<span class="op">.</span><span class="fu">GetExecutingAssembly</span><span class="op">();</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Dynamically load an external assembly</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>Assembly externalAssembly <span class="op">=</span> Assembly<span class="op">.</span><span class="fu">LoadFrom</span><span class="op">(</span><span class="st">&quot;Plugin.dll&quot;</span><span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Retrieve all types defined within the assembly</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>Type<span class="op">[]</span> exportedTypes <span class="op">=</span> externalAssembly<span class="op">.</span><span class="fu">GetExportedTypes</span><span class="op">();</span></span></code></pre></div>
+<p>Through the <code>Assembly</code> object, you can inspect:</p>
+<ul>
+<li>Full identity and version information (<code>FullName</code>,
+<code>GetName()</code>).</li>
+<li>Entry points (<code>EntryPoint</code>).</li>
+<li>Custom assembly-level attributes (such as
+<code>AssemblyVersionAttribute</code> or
+<code>TargetFrameworkAttribute</code>).</li>
+<li>Contained modules and resources.</li>
+</ul>
+<h3 id="inspecting-types">Inspecting Types</h3>
+<p>The fundamental core of runtime inspection is the
+<code>System.Type</code> class. A <code>Type</code> instance represents
+type declarations including classes, interfaces, value types, enums, and
+delegates.</p>
+<p>You obtain a <code>Type</code> object in multiple ways:</p>
+<ol type="1">
+<li><strong>Compile-time token:</strong>
+<code>Type t = typeof(MyClass);</code></li>
+<li><strong>Runtime object instance:</strong>
+<code>Type t = instance.GetType();</code></li>
+<li><strong>String lookup:</strong>
+<code>Type t = Type.GetType("Namespace.MyClass");</code></li>
+</ol>
+<p>Once you possess a <code>Type</code> reference, you can evaluate its
+structural properties:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Type type <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Name: {type.Name}&quot;</span><span class="op">);</span>                   <span class="co">// List`1</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Is Generic: {type.IsGenericType}&quot;</span><span class="op">);</span>     <span class="co">// True</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Base Type: {type.BaseType}&quot;</span><span class="op">);</span>           <span class="co">// System.Object</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Is Class: {type.IsClass}&quot;</span><span class="op">);</span>             <span class="co">// True</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Inspect implemented interfaces</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span>Type iface <span class="kw">in</span> type<span class="op">.</span><span class="fu">GetInterfaces</span><span class="op">())</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Implements: {iface.Name}&quot;</span><span class="op">);</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This structural analysis allows frameworks (like Dependency Injection
+containers or Object-Relational Mappers) to verify whether a given type
+implements an interface or inherits from a base class before attempting
+instantiation.</p>
+<h3 id="inspecting-members">Inspecting Members</h3>
+<p>Once a <code>Type</code> is targeted, reflection allows granular
+inspection of its internal members through classes derived from
+<code>MemberInfo</code>, including:</p>
+<ul>
+<li><code>MethodInfo</code>: Describes methods, their signatures, and
+return types.</li>
+<li><code>PropertyInfo</code>: Exposes property getters, setters, and
+data types.</li>
+<li><code>FieldInfo</code>: Describes internal fields, including backing
+fields.</li>
+<li><code>ConstructorInfo</code>: Details constructors and parameter
+requirements.</li>
+<li><code>EventInfo</code>: Describes event registrations and handler
+delegates.</li>
+</ul>
+<h4 id="using-bindingflags">Using BindingFlags</h4>
+<p>By default, reflection methods like <code>GetMembers()</code> or
+<code>GetMethods()</code> return only public, instance-level members. To
+inspect internal, private, or static members, you pass
+<code>BindingFlags</code> bitmasks:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Type userType <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>User<span class="op">);</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Retrieve all private and public instance fields</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>FieldInfo<span class="op">[]</span> fields <span class="op">=</span> userType<span class="op">.</span><span class="fu">GetFields</span><span class="op">(</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    BindingFlags<span class="op">.</span><span class="fu">Instance</span> <span class="op">|</span> </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    BindingFlags<span class="op">.</span><span class="fu">NonPublic</span> <span class="op">|</span> </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    BindingFlags<span class="op">.</span><span class="fu">Public</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Inspect specific methods and their parameters</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>MethodInfo method <span class="op">=</span> userType<span class="op">.</span><span class="fu">GetMethod</span><span class="op">(</span><span class="st">&quot;CalculateTax&quot;</span><span class="op">,</span> BindingFlags<span class="op">.</span><span class="fu">Instance</span> <span class="op">|</span> BindingFlags<span class="op">.</span><span class="fu">Public</span><span class="op">);</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>method <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">foreach</span> <span class="op">(</span>ParameterInfo param <span class="kw">in</span> method<span class="op">.</span><span class="fu">GetParameters</span><span class="op">())</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Param: {param.Name}, Type: {param.ParameterType}&quot;</span><span class="op">);</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="inspecting-attributes">Inspecting Attributes</h3>
+<p>Custom attributes allow metadata to be attached to declarations.
+Reflection provides mechanisms such as
+<code>GetCustomAttributes()</code> to read these attributes at runtime,
+which forms the basis for validation frameworks, serialization engines
+(like <code>System.Text.Json</code>), and routing attributes in ASP.NET
+Core:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>type<span class="op">.</span><span class="fu">IsDefined</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span>SerializableAttribute<span class="op">),</span> inherit<span class="op">:</span> <span class="kw">true</span><span class="op">))</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Execute logic for serializable types</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="trade-offs-performance-and-aot-considerations">Trade-offs:
+Performance and AOT Considerations</h3>
+<p>While reflection provides immense flexibility for building extensible
+architectures, dynamic plugins, and test runners, it introduces
+trade-offs:</p>
+<ol type="1">
+<li><strong>Performance Overhead:</strong> Navigating metadata tables
+and performing runtime type checks bypasses standard compiler
+optimizations and involves significant overhead compared to direct
+method calls.</li>
+<li><strong>Type Safety:</strong> Member lookups rely on strings, which
+removes compile-time type verification and makes refactoring more prone
+to runtime failures.</li>
+<li><strong>Trimming and Native AOT:</strong> Modern .NET features like
+Native AOT (Ahead-Of-Time compilation) and IL trimming strip unused
+metadata to reduce binary sizes. Heavy use of unannotated reflection can
+break applications under AOT environments unless preserved using
+code-generation or trimming attributes.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-reflection-inspect-types-and-assemblies-at-runtime';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

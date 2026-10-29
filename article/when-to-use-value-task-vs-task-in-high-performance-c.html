@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>When to Use ValueTask vs Task in High-Performance C# - cs</title>
+    <meta name="description" content="This article explores the fundamental differences between ValueTask and Task in C#, examining how memory allocation affects application throughput. You will learn the mechanics behind ValueTask, identify the specific high-performance scenarios where it sh">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/when-to-use-value-task-vs-task-in-high-performance-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="When to Use ValueTask vs Task in High-Performance C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/when-to-use-value-task-vs-task-in-high-performance-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the fundamental differences between ValueTask and Task in C#, examining how memory allocation affects application throughput. You will learn the mechanics behind ValueTask, identify the specific high-performance scenarios where it sh" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="when-to-use-valuetask-vs-task-in-high-performance-c">When to Use
+ValueTask vs Task in High-Performance C</h1>
+<p>This article explores the fundamental differences between
+<code>ValueTask</code> and <code>Task</code> in C#, examining how memory
+allocation affects application throughput. You will learn the mechanics
+behind <code>ValueTask</code>, identify the specific high-performance
+scenarios where it should replace <code>Task</code>, and understand the
+critical usage constraints necessary to prevent runtime bugs.</p>
+<h3 id="understanding-task-vs-valuetask">Understanding Task vs.
+ValueTask</h3>
+<p>In C#, <code>Task</code> and <code>Task&lt;T&gt;</code> are reference
+types (<code>class</code>). Every time an asynchronous method returns a
+<code>Task</code>, an object is allocated on the managed heap. While the
+runtime caches common tasks—such as <code>Task.CompletedTask</code> or
+boolean tasks—returning a generic <code>Task&lt;T&gt;</code> with
+dynamic results repeatedly incurs garbage collection (GC) overhead.</p>
+<p><code>ValueTask</code> and <code>ValueTask&lt;T&gt;</code> are value
+types (<code>struct</code>). A <code>ValueTask&lt;T&gt;</code> can
+represent either a finished synchronous result directly without heap
+allocation, or wrap an underlying reference type
+(<code>Task&lt;T&gt;</code> or an <code>IValueTaskSource&lt;T&gt;</code>
+implementation) if the operation must run asynchronously.</p>
+<h3 id="the-problem-valuetask-solves">The Problem ValueTask Solves</h3>
+<p>In high-throughput systems, many asynchronous methods complete
+synchronously most of the time. Common examples include:</p>
+<ul>
+<li>Reading from an in-memory cache before querying a database.</li>
+<li>Reading data from an already populated internal buffer (e.g.,
+<code>MemoryStream</code> or <code>PipeReader</code>).</li>
+<li>Validating arguments or short-circuiting operations before
+initiating I/O.</li>
+</ul>
+<p>When using <code>Task&lt;T&gt;</code> for an operation that completes
+synchronously, a new <code>Task&lt;T&gt;</code> object is still
+allocated on the heap just to return the already available value. By
+switching to <code>ValueTask&lt;T&gt;</code>, the method returns a
+stack-allocated struct containing the result, completely eliminating
+heap allocation and reducing GC pressure.</p>
+<h3 id="when-to-use-valuetask">When to Use ValueTask</h3>
+<p>Use <code>ValueTask</code> or <code>ValueTask&lt;T&gt;</code> under
+the following circumstances:</p>
+<ol type="1">
+<li><strong>High-Frequency Synchronous Completion</strong>: The method
+is invoked frequently in a hot path, and a high percentage of executions
+(e.g., 90% or more) complete synchronously.</li>
+<li><strong>Buffer and Stream Operations</strong>: You are handling
+low-level I/O operations where data chunks are frequently returned from
+memory buffers, similar to .NET's internal
+<code>Stream.ReadAsync(Memory&lt;byte&gt;, CancellationToken)</code>
+implementation.</li>
+<li><strong>Implementing Specific Interfaces</strong>: The method
+implements framework interfaces that require it, such as
+<code>IAsyncDisposable.DisposeAsync()</code>.</li>
+<li><strong>Custom Pooling with <code>IValueTaskSource</code></strong>:
+You are designing advanced, zero-allocation asynchronous state machines
+using <code>IValueTaskSource</code> to reuse backing objects across
+operations.</li>
+</ol>
+<h3 id="when-to-stick-with-task">When to Stick with Task</h3>
+<p>Default to <code>Task</code> and <code>Task&lt;T&gt;</code> for
+general application code. Prefer <code>Task</code> in these
+scenarios:</p>
+<ol type="1">
+<li><strong>Naturally Asynchronous Workloads</strong>: The operation
+almost always yields and completes asynchronously (such as external HTTP
+requests or network calls). In this case, <code>ValueTask</code> adds
+overhead because it wraps a regular <code>Task</code> inside a struct,
+increasing copying costs without saving allocations.</li>
+<li><strong>Public API Design</strong>: <code>Task</code> is easier and
+safer for consumer consumption because it carries fewer operational
+caveats.</li>
+<li><strong>Combinator Usage</strong>: You need to use combinators like
+<code>Task.WhenAll</code> or <code>Task.WhenAny</code>.
+<code>ValueTask</code> does not natively support these without
+converting to <code>Task</code> first via <code>.AsTask()</code>.</li>
+</ol>
+<h3 id="critical-rules-for-consuming-valuetask">Critical Rules for
+Consuming ValueTask</h3>
+<p>Because <code>ValueTask</code> is a struct that may wrap a pooled
+<code>IValueTaskSource</code>, misusing it can lead to undefined
+behavior, race conditions, or memory corruption. Always adhere to these
+rules:</p>
+<ul>
+<li><strong>Await only once</strong>: Never await a
+<code>ValueTask</code> multiple times. Once awaited, its underlying
+source may be reset and returned to an object pool.</li>
+<li><strong>Do not await concurrently</strong>: A single
+<code>ValueTask</code> instance must not be awaited by multiple
+execution paths simultaneously.</li>
+<li><strong>Do not call <code>.Result</code> or
+<code>.GetAwaiter().GetResult()</code> before completion</strong>:
+Blocking on an incomplete <code>ValueTask</code> is not supported across
+all backing implementations.</li>
+<li><strong>Convert when necessary</strong>: If you must store the
+operation, use combinators, or await it multiple times, immediately call
+<code>.AsTask()</code> to convert it to a standard
+<code>Task</code>.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/when-to-use-value-task-vs-task-in-high-performance-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

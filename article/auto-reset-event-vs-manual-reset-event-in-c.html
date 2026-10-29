@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoResetEvent vs ManualResetEvent in C# - cs</title>
+    <meta name="description" content="In multi-threaded C# programming, thread signaling is a synchronization mechanism that allows one thread to notify one or more other threads that a specific operation has completed or an event has occurred. The .NET runtime provides AutoResetEvent and Man">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/auto-reset-event-vs-manual-reset-event-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="AutoResetEvent vs ManualResetEvent in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/auto-reset-event-vs-manual-reset-event-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In multi-threaded C# programming, thread signaling is a synchronization mechanism that allows one thread to notify one or more other threads that a specific operation has completed or an event has occurred. The .NET runtime provides AutoResetEvent and Man" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="autoresetevent-vs-manualresetevent-in-c">AutoResetEvent vs
+ManualResetEvent in C</h1>
+<p>In multi-threaded C# programming, thread signaling is a
+synchronization mechanism that allows one thread to notify one or more
+other threads that a specific operation has completed or an event has
+occurred. The .NET runtime provides <code>AutoResetEvent</code> and
+<code>ManualResetEvent</code> as two core synchronization primitives
+derived from <code>EventWaitHandle</code> to coordinate these
+interactions. While both classes use boolean states—signaled (true) and
+non-signaled (false)—to control thread execution via methods like
+<code>WaitOne()</code>, <code>Set()</code>, and <code>Reset()</code>,
+they differ fundamentally in how they transition between these states
+and how many waiting threads they release.</p>
+<h3 id="understanding-thread-signaling-basics">Understanding Thread
+Signaling Basics</h3>
+<p>Thread signaling works like a traffic light or a gate for threads.
+When a thread calls <code>WaitOne()</code>, it pauses execution and
+enters a wait state until the handle is placed in a signaled state.
+Another thread signals the waiting thread by calling <code>Set()</code>.
+Calling <code>Reset()</code> manually returns the handle to an
+unsignaled state, causing subsequent threads that call
+<code>WaitOne()</code> to block.</p>
+<h3 id="autoresetevent-automatic-state-reset">AutoResetEvent: Automatic
+State Reset</h3>
+<p>An <code>AutoResetEvent</code> functions like a turnstile. When
+<code>Set()</code> is called, it transitions to a signaled state, allows
+exactly <strong>one</strong> waiting thread to pass through, and then
+immediately and automatically resets to the unsignaled state.</p>
+<ul>
+<li><strong>Behavior:</strong> Only a single thread is released per
+<code>Set()</code> call, even if multiple threads are currently blocked
+on <code>WaitOne()</code>.</li>
+<li><strong>State Management:</strong> You do not need to call
+<code>Reset()</code> manually because the system resets the state
+automatically as soon as a waiting thread is released.</li>
+<li><strong>No Waiters:</strong> If <code>Set()</code> is called when no
+threads are waiting, the handle remains signaled until the next thread
+calls <code>WaitOne()</code>. That thread will proceed immediately
+without blocking, and the event will automatically reset to
+unsignaled.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>AutoResetEvent autoEvent <span class="op">=</span> <span class="kw">new</span> <span class="fu">AutoResetEvent</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Worker thread</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">Worker</span><span class="op">()</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    autoEvent<span class="op">.</span><span class="fu">WaitOne</span><span class="op">();</span> <span class="co">// Blocks until Set() is called</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Executes work; event automatically resets to unsignaled</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Main thread</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>autoEvent<span class="op">.</span><span class="fu">Set</span><span class="op">();</span> <span class="co">// Releases exactly one waiting worker thread</span></span></code></pre></div>
+<h3 id="manualresetevent-manual-state-reset">ManualResetEvent: Manual
+State Reset</h3>
+<p>A <code>ManualResetEvent</code> behaves like an open gate. When
+<code>Set()</code> is called, the event enters the signaled state and
+remains signaled until it is explicitly reset by calling
+<code>Reset()</code>.</p>
+<ul>
+<li><strong>Behavior:</strong> Once signaled, <strong>all</strong>
+waiting threads are released simultaneously. Any subsequent threads that
+call <code>WaitOne()</code> will pass through without blocking as long
+as the event remains in the signaled state.</li>
+<li><strong>State Management:</strong> You must explicitly call
+<code>Reset()</code> to close the gate and force future threads calling
+<code>WaitOne()</code> to wait again.</li>
+<li><strong>Broadcast Capability:</strong> It is primarily used for
+broadcast signaling, where multiple consumer threads need to wait for a
+shared prerequisite, such as application initialization or cache
+loading, to complete.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>ManualResetEvent manualEvent <span class="op">=</span> <span class="kw">new</span> <span class="fu">ManualResetEvent</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Worker threads</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">Worker</span><span class="op">()</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    manualEvent<span class="op">.</span><span class="fu">WaitOne</span><span class="op">();</span> <span class="co">// All waiting threads are released when Set() is called</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Executes work</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Main thread</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>manualEvent<span class="op">.</span><span class="fu">Set</span><span class="op">();</span>   <span class="co">// Releases ALL currently waiting worker threads</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">// State remains signaled until Reset() is called</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>manualEvent<span class="op">.</span><span class="fu">Reset</span><span class="op">();</span> <span class="co">// Blocks any new threads calling WaitOne()</span></span></code></pre></div>
+<h3 id="key-differences-summary">Key Differences Summary</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">AutoResetEvent</th>
+<th style="text-align: left;">ManualResetEvent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Reset Behavior</strong></td>
+<td style="text-align: left;">Automatically resets to unsignaled after
+releasing one thread.</td>
+<td style="text-align: left;">Remains signaled until
+<code>Reset()</code> is explicitly invoked.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Threads Released</strong></td>
+<td style="text-align: left;">Releases only one thread per
+<code>Set()</code> invocation.</td>
+<td style="text-align: left;">Releases all waiting threads when
+<code>Set()</code> is invoked.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Ideal Use Case</strong></td>
+<td style="text-align: left;">Exclusive handoffs, rate-limiting, and
+producer-consumer workflows.</td>
+<td style="text-align: left;">Broadcast signaling, system readiness, and
+batch processing triggers.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="when-to-use-which">When to Use Which</h3>
+<p>Use <strong><code>AutoResetEvent</code></strong> when implementing
+exclusive task handoffs or resource-sharing scenarios where only one
+thread should proceed at a time (e.g., a producer signaling a consumer
+that a single item is ready for processing).</p>
+<p>Use <strong><code>ManualResetEvent</code></strong> (or its modern,
+lightweight alternative, <code>ManualResetEventSlim</code>) when an
+event must notify multiple threads at once to start execution
+simultaneously, or when a component must signal that a one-time setup
+process has finished.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/auto-reset-event-vs-manual-reset-event-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

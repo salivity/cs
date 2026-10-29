@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boxing and Unboxing in C# Explained for Performance - cs</title>
+    <meta name="description" content="In C#, boxing and unboxing are runtime processes that bridge the gap between value types and reference types by allowing value types to be treated as objects. While these operations provide flexibility and enable unified type handling, they introduce sign">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/boxing-and-unboxing-in-c-explained-for-performance">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Boxing and Unboxing in C# Explained for Performance - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/boxing-and-unboxing-in-c-explained-for-performance" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, boxing and unboxing are runtime processes that bridge the gap between value types and reference types by allowing value types to be treated as objects. While these operations provide flexibility and enable unified type handling, they introduce sign" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="boxing-and-unboxing-in-c-explained-for-performance">Boxing and
+Unboxing in C# Explained for Performance</h1>
+<p>In C#, boxing and unboxing are runtime processes that bridge the gap
+between value types and reference types by allowing value types to be
+treated as objects. While these operations provide flexibility and
+enable unified type handling, they introduce significant memory and
+processing overhead. This article explains how boxing and unboxing work
+internally, why they degrade performance in hot code paths, and how to
+prevent them in performance-critical applications.</p>
+<h2 id="what-is-boxing">What Is Boxing?</h2>
+<p>Boxing is the implicit conversion of a value type (such as
+<code>int</code>, <code>double</code>, <code>bool</code>, or a custom
+<code>struct</code>) to the type <code>object</code> or any interface
+implemented by that value type.</p>
+<p>Because value types live on the execution stack or inline within
+containing types, converting them to a reference type requires the
+Common Language Runtime (CLR) to perform several steps:</p>
+<ol type="1">
+<li>Allocate memory on the managed heap to hold the value and standard
+object overhead (such as the method table pointer and sync block
+index).</li>
+<li>Copy the value from the stack into the newly allocated heap
+memory.</li>
+<li>Return the reference (memory address) to this new heap-allocated
+object.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> number <span class="op">=</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">object</span> boxedNumber <span class="op">=</span> number<span class="op">;</span> <span class="co">// Boxing occurs here</span></span></code></pre></div>
+<h2 id="what-is-unboxing">What Is Unboxing?</h2>
+<p>Unboxing is the explicit conversion of an <code>object</code> back
+into its original value type. This operation reverses boxing and
+consists of two primary steps:</p>
+<ol type="1">
+<li>Checking the object instance to ensure it is not <code>null</code>
+and that it represents a boxed value of the exact requested value type
+(otherwise throwing an <code>InvalidCastException</code>).</li>
+<li>Copying the data from the heap-allocated object back onto the
+stack.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">object</span> boxedNumber <span class="op">=</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> number <span class="op">=</span> <span class="op">(</span><span class="dt">int</span><span class="op">)</span>boxedNumber<span class="op">;</span> <span class="co">// Unboxing occurs here</span></span></code></pre></div>
+<h2 id="why-avoid-boxing-and-unboxing-in-performance-critical-code">Why
+Avoid Boxing and Unboxing in Performance-Critical Code?</h2>
+<p>In low-latency or high-throughput scenarios, boxing and unboxing
+cause severe performance degradation for three main reasons:</p>
+<h3 id="1-heap-allocations-and-garbage-collection-pressure">1. Heap
+Allocations and Garbage Collection Pressure</h3>
+<p>Every boxing operation allocates a new object on the managed heap. If
+boxing occurs inside tight loops, high-frequency event handlers, or
+per-frame game updates, millions of short-lived objects are created
+rapidly. This floods Generation 0 of the Garbage Collector (GC), forcing
+frequent GC collections that pause execution threads and cause latency
+spikes.</p>
+<h3 id="2-cpu-and-memory-bandwidth-overhead">2. CPU and Memory Bandwidth
+Overhead</h3>
+<p>Both operations require memory copying. Boxing copies data from the
+stack to the heap, while unboxing copies data back from the heap to the
+stack. Additionally, unboxing requires a runtime type check to guarantee
+type safety. These steps consume unnecessary CPU cycles compared to
+direct stack or register operations.</p>
+<h3 id="3-loss-of-cache-locality">3. Loss of Cache Locality</h3>
+<p>Value types allocated on the stack or packed sequentially into arrays
+benefit from CPU cache locality. Boxing moves data to scattered
+locations on the heap, increasing pointer chasing and resulting in CPU
+cache misses.</p>
+<h2 id="common-boxing-scenarios-and-how-to-avoid-them">Common Boxing
+Scenarios and How to Avoid Them</h2>
+<h3 id="non-generic-collections">Non-Generic Collections</h3>
+<p>Legacy collections like <code>ArrayList</code> or
+<code>Hashtable</code> store items as <code>object</code>, causing
+automatic boxing on insertion and unboxing on retrieval.</p>
+<ul>
+<li><strong>Solution:</strong> Always use generic collections such as
+<code>List&lt;T&gt;</code>, <code>Dictionary&lt;TKey, TValue&gt;</code>,
+or modern memory structures like <code>Span&lt;T&gt;</code>.</li>
+</ul>
+<h3 id="string-formatting-and-concatenation">String Formatting and
+Concatenation</h3>
+<p>Passing value types to APIs that accept <code>params object[]</code>
+(such as legacy <code>string.Format</code> or
+<code>Console.WriteLine</code>) triggers boxing.</p>
+<ul>
+<li><strong>Solution:</strong> Call <code>.ToString()</code> directly on
+the value type before passing it, or use modern interpolated strings
+with compile-time handlers:</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Causes boxing:</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span><span class="op">.</span><span class="fu">Format</span><span class="op">(</span><span class="st">&quot;Value: {0}&quot;</span><span class="op">,</span> <span class="dv">100</span><span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Avoids boxing:</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>$<span class="st">&quot;Value: {100}&quot;</span><span class="op">;</span></span></code></pre></div>
+<h3 id="calling-interface-methods-on-structs">Calling Interface Methods
+on Structs</h3>
+<p>Casting a <code>struct</code> to an interface immediately boxes the
+struct onto the heap.</p>
+<ul>
+<li><strong>Solution:</strong> Use generic methods with interface
+constraints instead of accepting the interface type directly:</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Causes boxing:</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">Process</span><span class="op">(</span>IComparable item<span class="op">)</span> <span class="op">=&gt;</span> item<span class="op">.</span><span class="fu">CompareTo</span><span class="op">(</span><span class="kw">null</span><span class="op">);</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Avoids boxing:</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> Process<span class="op">&lt;</span>T<span class="op">&gt;(</span>T item<span class="op">)</span> where T <span class="op">:</span> IComparable<span class="op">&lt;</span>T<span class="op">&gt;</span> <span class="op">=&gt;</span> item<span class="op">.</span><span class="fu">CompareTo</span><span class="op">(</span><span class="kw">default</span><span class="op">);</span></span></code></pre></div></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/boxing-and-unboxing-in-c-explained-for-performance';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

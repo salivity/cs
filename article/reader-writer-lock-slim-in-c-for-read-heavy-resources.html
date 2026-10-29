@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReaderWriterLockSlim in C# for Read-Heavy Resources - cs</title>
+    <meta name="description" content="This article provides an overview of the ReaderWriterLockSlim class in C#, explaining its purpose, internal locking modes, and practical implementation. You will learn the specific conditions under which this synchronization primitive outperforms a standa">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/reader-writer-lock-slim-in-c-for-read-heavy-resources">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ReaderWriterLockSlim in C# for Read-Heavy Resources - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/reader-writer-lock-slim-in-c-for-read-heavy-resources" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of the ReaderWriterLockSlim class in C#, explaining its purpose, internal locking modes, and practical implementation. You will learn the specific conditions under which this synchronization primitive outperforms a standa" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="readerwriterlockslim-in-c-for-read-heavy-resources">ReaderWriterLockSlim
+in C# for Read-Heavy Resources</h1>
+<p>This article provides an overview of the
+<code>ReaderWriterLockSlim</code> class in C#, explaining its purpose,
+internal locking modes, and practical implementation. You will learn the
+specific conditions under which this synchronization primitive
+outperforms a standard <code>lock</code> statement, when to avoid it,
+and how to properly manage shared state in read-heavy multithreaded
+applications.</p>
+<h2 id="what-is-readerwriterlockslim">What is ReaderWriterLockSlim?</h2>
+<p><code>ReaderWriterLockSlim</code> is a thread-synchronization
+primitive located in the <code>System.Threading</code> namespace. It
+coordinates access to a shared resource by distinguishing between read
+operations and write operations.</p>
+<p>In standard C# thread synchronization, the <code>lock</code> keyword
+(which uses <code>Monitor</code>) is exclusive: only one thread can
+access the protected resource at a time, regardless of whether it is
+reading or modifying data. <code>ReaderWriterLockSlim</code> changes
+this dynamic by permitting multiple threads to read concurrently while
+enforcing strict, single-thread exclusivity whenever a write occurs.</p>
+<p>It was introduced in .NET Framework 3.5 as a lightweight, faster, and
+less error-prone replacement for the legacy
+<code>ReaderWriterLock</code> class.</p>
+<h2 id="the-three-access-modes">The Three Access Modes</h2>
+<p><code>ReaderWriterLockSlim</code> supports three distinct locking
+states:</p>
+<ol type="1">
+<li><strong>Read Mode (<code>EnterReadLock</code> /
+<code>ExitReadLock</code>)</strong>: Multiple threads can enter read
+mode simultaneously, provided no thread holds or is waiting for a write
+lock.</li>
+<li><strong>Write Mode (<code>EnterWriteLock</code> /
+<code>ExitWriteLock</code>)</strong>: Grants exclusive access to a
+single thread. All other reading and writing threads are blocked until
+the lock is released.</li>
+<li><strong>Upgradeable Read Mode (<code>EnterUpgradeableReadLock</code>
+/ <code>ExitUpgradeableReadLock</code>)</strong>: A specialized state
+where only one thread is allowed to read with the option to escalate to
+a write lock without risking a deadlock. Other normal read threads can
+still execute concurrently.</li>
+</ol>
+<h2 id="when-to-use-readerwriterlockslim">When to Use
+ReaderWriterLockSlim</h2>
+<p><code>ReaderWriterLockSlim</code> is not a default replacement for
+<code>lock</code>. It introduces higher computational overhead to
+acquire and manage than a standard <code>Monitor</code>.</p>
+<p>Use it only when your application meets the following criteria:</p>
+<ul>
+<li><strong>High Read-to-Write Ratio</strong>: The resource is read
+significantly more often than it is written (typically 80–90% reads or
+higher).</li>
+<li><strong>Extended Read Duration</strong>: The read operation takes
+enough time that concurrent readers would otherwise experience
+noticeable delays waiting in line for an exclusive lock.</li>
+<li><strong>High Contention Among Readers</strong>: Many concurrent
+threads frequently request the resource at the same time.</li>
+</ul>
+<p>Common examples include in-memory application caches, configuration
+stores updated infrequently at runtime, and routing tables.</p>
+<h2 id="when-to-avoid-it">When to Avoid It</h2>
+<ul>
+<li><strong>Write-Heavy Workloads</strong>: If writes are frequent,
+threads will constantly block each other, eliminating the benefits while
+incurring the lock's overhead.</li>
+<li><strong>Extremely Fast Operations</strong>: If a read takes only a
+few CPU cycles (such as reading a single variable), the overhead of
+managing <code>ReaderWriterLockSlim</code> will be slower than a basic
+<code>lock</code>.</li>
+<li><strong>Simple Key-Value Lookups</strong>: Built-in thread-safe
+collections like <code>ConcurrentDictionary&lt;TKey, TValue&gt;</code>
+often provide better performance without manual synchronization.</li>
+</ul>
+<h2 id="implementation-example">Implementation Example</h2>
+<p>Because failing to release a lock can cause deadlocks, always manage
+enter and exit calls within <code>try...finally</code> blocks.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Collections</span><span class="op">.</span><span class="fu">Generic</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> CacheService <span class="op">:</span> IDisposable</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> ReaderWriterLockSlim _lock <span class="op">=</span> <span class="kw">new</span> <span class="fu">ReaderWriterLockSlim</span><span class="op">();</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> Dictionary<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">string</span><span class="op">&gt;</span> _cache <span class="op">=</span> <span class="kw">new</span> Dictionary<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">string</span><span class="op">&gt;();</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> <span class="fu">Get</span><span class="op">(</span><span class="dt">string</span> key<span class="op">)</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        _lock<span class="op">.</span><span class="fu">EnterReadLock</span><span class="op">();</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> _cache<span class="op">.</span><span class="fu">TryGetValue</span><span class="op">(</span>key<span class="op">,</span> <span class="kw">out</span> <span class="dt">var</span> value<span class="op">)</span> <span class="op">?</span> value <span class="op">:</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">finally</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>            _lock<span class="op">.</span><span class="fu">ExitReadLock</span><span class="op">();</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Set</span><span class="op">(</span><span class="dt">string</span> key<span class="op">,</span> <span class="dt">string</span> value<span class="op">)</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        _lock<span class="op">.</span><span class="fu">EnterWriteLock</span><span class="op">();</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>            _cache<span class="op">[</span>key<span class="op">]</span> <span class="op">=</span> value<span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>        <span class="kw">finally</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>            _lock<span class="op">.</span><span class="fu">ExitWriteLock</span><span class="op">();</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">AddIfNotExists</span><span class="op">(</span><span class="dt">string</span> key<span class="op">,</span> <span class="dt">string</span> value<span class="op">)</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        _lock<span class="op">.</span><span class="fu">EnterUpgradeableReadLock</span><span class="op">();</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(!</span>_cache<span class="op">.</span><span class="fu">ContainsKey</span><span class="op">(</span>key<span class="op">))</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>                _lock<span class="op">.</span><span class="fu">EnterWriteLock</span><span class="op">();</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>                <span class="kw">try</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>                    _cache<span class="op">[</span>key<span class="op">]</span> <span class="op">=</span> value<span class="op">;</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>                <span class="kw">finally</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>                    _lock<span class="op">.</span><span class="fu">ExitWriteLock</span><span class="op">();</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>        <span class="kw">finally</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>            _lock<span class="op">.</span><span class="fu">ExitUpgradeableReadLock</span><span class="op">();</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Dispose</span><span class="op">()</span></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>        _lock<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="summary-checklist">Summary Checklist</h2>
+<ul>
+<li>Use <code>ReaderWriterLockSlim</code> when reads vastly outnumber
+writes and reading causes measurable contention.</li>
+<li>Stick to the standard <code>lock</code> keyword for short, fast
+operations or balanced read/write profiles.</li>
+<li>Always release acquired locks inside <code>finally</code>
+blocks.</li>
+<li>Call <code>Dispose()</code> on the <code>ReaderWriterLockSlim</code>
+instance when it is no longer required.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/reader-writer-lock-slim-in-c-for-read-heavy-resources';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

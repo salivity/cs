@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Virtual, Override, and New Keywords Explained - cs</title>
+    <meta name="description" content="In C#, method inheritance and polymorphism rely heavily on three fundamental keywords: virtual, override, and new. Understanding how these keywords interact is essential for managing method execution when working with base classes and derived types. This">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-virtual-override-and-new-keywords-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Virtual, Override, and New Keywords Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-virtual-override-and-new-keywords-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, method inheritance and polymorphism rely heavily on three fundamental keywords: virtual, override, and new. Understanding how these keywords interact is essential for managing method execution when working with base classes and derived types. This" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-virtual-override-and-new-keywords-explained">C# Virtual,
+Override, and New Keywords Explained</h1>
+<p>In C#, method inheritance and polymorphism rely heavily on three
+fundamental keywords: <code>virtual</code>, <code>override</code>, and
+<code>new</code>. Understanding how these keywords interact is essential
+for managing method execution when working with base classes and derived
+types. This article breaks down the purpose of each keyword, explains
+the crucial distinction between runtime polymorphism and method hiding,
+and provides clear code examples to show how they behave in
+practice.</p>
+<h2 id="the-virtual-keyword">The <code>virtual</code> Keyword</h2>
+<p>The <code>virtual</code> keyword is applied to a method, property, or
+event in a base class to declare that its implementation can be altered
+by a derived class.</p>
+<ul>
+<li><strong>Default Implementation:</strong> Unlike
+<code>abstract</code> methods, a <code>virtual</code> method must
+provide a default implementation in the base class.</li>
+<li><strong>Opt-in Polymorphism:</strong> It acts as an open invitation
+to subclasses to customize the behavior using late binding.</li>
+<li><strong>Rule:</strong> A <code>virtual</code> method cannot be
+marked as <code>static</code>, <code>abstract</code>, or
+<code>private</code>.</li>
+</ul>
+<h2 id="the-override-keyword">The <code>override</code> Keyword</h2>
+<p>The <code>override</code> keyword is used in a derived class to
+replace an inherited member that was declared as <code>virtual</code> or
+<code>abstract</code>.</p>
+<ul>
+<li><strong>Runtime Polymorphism:</strong> When a method is overridden,
+the runtime determines which version of the method to execute based on
+the actual type of the object in memory, not the type of the reference
+variable pointing to it.</li>
+<li><strong>Preserving Signatures:</strong> The signature, return type,
+and access modifiers of the <code>override</code> method must match the
+original base member.</li>
+</ul>
+<h2 id="the-new-keyword">The <code>new</code> Keyword</h2>
+<p>When used as a method modifier, the <code>new</code> keyword
+explicitly hides an inherited member from a base class. This concept is
+often referred to as <strong>method shadowing</strong> or <strong>method
+hiding</strong>.</p>
+<ul>
+<li><strong>No Polymorphism:</strong> The <code>new</code> keyword
+breaks the polymorphic chain. It does not replace the base method;
+instead, it introduces an entirely separate method that happens to share
+the same name and signature.</li>
+<li><strong>Compile-Time Binding:</strong> The method called is
+determined by the compile-time type of the reference, not the actual
+object type at runtime.</li>
+<li><strong>Suppression of Warnings:</strong> If you define a method in
+a derived class with the same name as a base method without using
+<code>override</code> or <code>new</code>, the C# compiler generates a
+warning. Adding the <code>new</code> keyword suppresses this warning,
+confirming the hiding is intentional.</li>
+</ul>
+<h2 id="summary-of-differences">Summary of Differences</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>virtual</code></th>
+<th style="text-align: left;"><code>override</code></th>
+<th style="text-align: left;"><code>new</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Location</strong></td>
+<td style="text-align: left;">Base class</td>
+<td style="text-align: left;">Derived class</td>
+<td style="text-align: left;">Derived class</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Purpose</strong></td>
+<td style="text-align: left;">Enables overriding</td>
+<td style="text-align: left;">Extends/replaces base logic</td>
+<td style="text-align: left;">Hides base logic</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Binding Type</strong></td>
+<td style="text-align: left;">Dynamic (Late)</td>
+<td style="text-align: left;">Dynamic (Late)</td>
+<td style="text-align: left;">Static (Early)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Polymorphic</strong></td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">No</td>
+</tr>
+</tbody>
+</table>
+<h2 id="code-example">Code Example</h2>
+<p>The distinction between <code>override</code> and <code>new</code>
+becomes immediately apparent when an instance of a derived class is held
+in a base class reference variable:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> BaseClass</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">virtual</span> <span class="dt">void</span> <span class="fu">ShowMessage</span><span class="op">()</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;BaseClass implementation&quot;</span><span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OverrideClass <span class="op">:</span> BaseClass</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> <span class="dt">void</span> <span class="fu">ShowMessage</span><span class="op">()</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;OverrideClass implementation&quot;</span><span class="op">);</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> NewClass <span class="op">:</span> BaseClass</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">new</span> <span class="dt">void</span> <span class="fu">ShowMessage</span><span class="op">()</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;NewClass implementation&quot;</span><span class="op">);</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 1. Calling via BaseClass reference</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>        BaseClass obj1 <span class="op">=</span> <span class="kw">new</span> <span class="fu">OverrideClass</span><span class="op">();</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        BaseClass obj2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">NewClass</span><span class="op">();</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>        obj1<span class="op">.</span><span class="fu">ShowMessage</span><span class="op">();</span> <span class="co">// Output: OverrideClass implementation</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>        obj2<span class="op">.</span><span class="fu">ShowMessage</span><span class="op">();</span> <span class="co">// Output: BaseClass implementation</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 2. Calling via Derived type reference</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        NewClass obj3 <span class="op">=</span> <span class="kw">new</span> <span class="fu">NewClass</span><span class="op">();</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>        obj3<span class="op">.</span><span class="fu">ShowMessage</span><span class="op">();</span> <span class="co">// Output: NewClass implementation</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>In this example, calling <code>ShowMessage()</code> on
+<code>obj1</code> invokes the method from <code>OverrideClass</code>
+because the method was overridden using dynamic dispatch. In contrast,
+calling <code>ShowMessage()</code> on <code>obj2</code> invokes the
+method from <code>BaseClass</code> because <code>NewClass</code> merely
+hid the method, causing the call to resolve to the base implementation
+based on the variable's declared type.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-virtual-override-and-new-keywords-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

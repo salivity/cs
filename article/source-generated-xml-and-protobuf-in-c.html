@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Source-Generated XML and Protobuf in C# - cs</title>
+    <meta name="description" content="Source-generated XML and Protobuf serialization in modern C# replaces traditional runtime reflection with compile-time code generation to transform objects into serialized formats. This approach drastically improves application startup times, eliminates m">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/source-generated-xml-and-protobuf-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Source-Generated XML and Protobuf in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/source-generated-xml-and-protobuf-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Source-generated XML and Protobuf serialization in modern C# replaces traditional runtime reflection with compile-time code generation to transform objects into serialized formats. This approach drastically improves application startup times, eliminates m" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="source-generated-xml-and-protobuf-in-c">Source-Generated XML and
+Protobuf in C</h1>
+<p>Source-generated XML and Protobuf serialization in modern C# replaces
+traditional runtime reflection with compile-time code generation to
+transform objects into serialized formats. This approach drastically
+improves application startup times, eliminates memory overhead
+associated with reflection, and ensures full compatibility with Native
+Ahead-Of-Time (AOT) compilation in modern .NET runtimes. This article
+covers how source generators handle XML and Protocol Buffers (Protobuf),
+why they outperform traditional serialization mechanisms, and their
+primary benefits in modern, high-performance systems.</p>
+<h2 id="the-problem-with-traditional-serialization">The Problem with
+Traditional Serialization</h2>
+<p>Historically, serializers such as
+<code>System.Xml.Serialization.XmlSerializer</code> and early versions
+of <code>protobuf-net</code> relied heavily on runtime reflection and
+runtime code emission via Reflection.Emit. At startup, these libraries
+inspect an object's properties, types, and custom attributes to
+dynamically construct serialization logic.</p>
+<p>While flexible, this approach introduces distinct drawbacks:</p>
+<ul>
+<li><strong>Startup Latency:</strong> Dynamically generating
+serialization logic at startup increases cold-start times.</li>
+<li><strong>High Memory Usage:</strong> Caching metadata and generated
+dynamic assemblies consumes non-trivial amounts of memory.</li>
+<li><strong>Incompatibility with Native AOT:</strong> Modern .NET
+platforms targeting Native AOT cannot use dynamic code generation or
+heavy reflection because unused code is stripped during linking, causing
+runtime failures.</li>
+</ul>
+<h2 id="how-source-generated-serialization-works">How Source-Generated
+Serialization Works</h2>
+<p>Introduced in .NET 5 and expanded in subsequent releases, Roslyn
+Source Generators allow developers to inspect C# code during compilation
+and generate additional C# source files directly into the build
+pipeline.</p>
+<p>When applied to serialization:</p>
+<ol type="1">
+<li><strong>Inspection:</strong> The source generator scans data
+contract classes decorated with specific attributes (such as XML
+attributes or Protobuf tags).</li>
+<li><strong>Code Generation:</strong> Instead of deferring logic to
+runtime, the generator produces concrete, strongly typed C# methods that
+read directly from or write directly to format-specific streams and
+buffers.</li>
+<li><strong>Compilation:</strong> The emitted serialization code
+compiles alongside your application logic into the final binary.</li>
+</ol>
+<h3 id="source-generated-protobuf">Source-Generated Protobuf</h3>
+<p>In the Protobuf ecosystem, tools like <code>protobuf-net</code>
+provide source generators, and Google's official <code>protoc</code>
+compiler generates standard C# contracts. Modern C# protobuf source
+generators inspect POCOs decorated with <code>[ProtoContract]</code> and
+<code>[ProtoMember]</code> attributes to emit direct binary encoding and
+decoding routines. This translates to direct writes into
+<code>IBufferWriter&lt;byte&gt;</code> or <code>Span&lt;byte&gt;</code>,
+avoiding boxing and runtime type inspection.</p>
+<h3 id="source-generated-xml">Source-Generated XML</h3>
+<p>While .NET introduced the built-in <code>System.Text.Json</code>
+source generator in .NET 6, XML serialization in modern high-throughput
+architectures has historically relied on external tooling or
+ahead-of-time tools like <code>sgen.exe</code>. Modern source generators
+for XML analyze types marked with <code>[XmlRoot]</code> and
+<code>[XmlElement]</code>, generating custom <code>XmlReader</code> and
+<code>XmlWriter</code> implementations directly. The generated code
+explicitly advances tokens and writes nodes without checking metadata at
+runtime.</p>
+<h2 id="key-benefits-in-modern-c-systems">Key Benefits in Modern C#
+Systems</h2>
+<h3 id="1-native-aot-compatibility">1. Native AOT Compatibility</h3>
+<p>Native AOT requires all executable code to exist before compilation
+finishes. Source-generated serializers produce standard, static C# code,
+enabling applications to run under Native AOT without missing member
+exceptions or requiring complex trimming configuration files.</p>
+<h3 id="2-reduced-latency-and-allocation">2. Reduced Latency and
+Allocation</h3>
+<p>Generated serializers call strongly typed properties directly. This
+eliminates boxing of value types, bypasses dynamic dispatch, and
+utilizes low-allocation APIs such as <code>ReadOnlySpan&lt;T&gt;</code>
+and <code>Memory&lt;T&gt;</code>.</p>
+<h3 id="3-compile-time-diagnostics">3. Compile-Time Diagnostics</h3>
+<p>Because logic is evaluated during compilation, invalid contract
+designs—such as duplicate Protobuf tags, non-serializable property
+types, or missing parameterless constructors—are surfaced as compiler
+errors or warnings instead of failing silently until a request is
+handled in production.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Source-generated XML and Protobuf serialization modernize C# data
+handling by moving serialization work from runtime to compile time. By
+shifting to source-generated serialization, modern .NET services achieve
+faster cold starts, lower allocations, and full readiness for Native AOT
+deployment.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/source-generated-xml-and-protobuf-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

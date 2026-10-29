@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# SemaphoreSlim: Limit Async Concurrency - cs</title>
+    <meta name="description" content="This article explains how SemaphoreSlim controls concurrency limits for asynchronous methods in C#. It covers the underlying mechanism of the semaphore&#39;s counter, the non-blocking nature of WaitAsync, the standard try...finally implementation pattern, and">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-semaphore-slim-limit-async-concurrency">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# SemaphoreSlim: Limit Async Concurrency - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-semaphore-slim-limit-async-concurrency" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how SemaphoreSlim controls concurrency limits for asynchronous methods in C#. It covers the underlying mechanism of the semaphore&#39;s counter, the non-blocking nature of WaitAsync, the standard try...finally implementation pattern, and" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-semaphoreslim-limit-async-concurrency">C# SemaphoreSlim: Limit
+Async Concurrency</h1>
+<p>This article explains how <code>SemaphoreSlim</code> controls
+concurrency limits for asynchronous methods in C#. It covers the
+underlying mechanism of the semaphore's counter, the non-blocking nature
+of <code>WaitAsync</code>, the standard <code>try...finally</code>
+implementation pattern, and practical scenarios where throttling
+asynchronous workloads is essential to maintain application
+stability.</p>
+<h2 id="understanding-semaphoreslim">Understanding SemaphoreSlim</h2>
+<p><code>SemaphoreSlim</code> is a lightweight synchronization primitive
+designed for throttling access to a limited pool of resources within a
+single process. Unlike the legacy <code>Semaphore</code> class,
+<code>SemaphoreSlim</code> supports modern asynchronous programming
+models via its <code>WaitAsync</code> method, making it the standard
+choice for controlling concurrent <code>async</code>/<code>await</code>
+operations in .NET.</p>
+<h2 id="the-internal-counter-mechanism">The Internal Counter
+Mechanism</h2>
+<p><code>SemaphoreSlim</code> controls concurrency using an internal
+counter initialized by the developer:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>SemaphoreSlim semaphore <span class="op">=</span> <span class="kw">new</span> <span class="fu">SemaphoreSlim</span><span class="op">(</span>initialCount<span class="op">,</span> maxCount<span class="op">);</span></span></code></pre></div>
+<ul>
+<li><strong>initialCount</strong>: The number of concurrent requests
+that can be granted immediately.</li>
+<li><strong>maxCount</strong>: The maximum number of concurrent requests
+the semaphore can grant.</li>
+</ul>
+<p>Each time a task successfully enters the semaphore, the internal
+count decreases by one. When the count drops to zero, any subsequent
+task attempting to enter must wait until an active task exits and
+increments the counter.</p>
+<h2 id="non-blocking-execution-with-waitasync">Non-Blocking Execution
+with WaitAsync</h2>
+<p>In asynchronous programming, using standard thread-blocking locks
+like <code>lock</code> or <code>Monitor.Enter</code> leads to
+thread-pool starvation and exceptions when combined with
+<code>await</code>. <code>SemaphoreSlim</code> solves this by providing
+<code>WaitAsync()</code>.</p>
+<p>Instead of holding a thread captive while waiting for a slot:</p>
+<ol type="1">
+<li><code>WaitAsync()</code> checks if the current count is greater than
+zero.</li>
+<li>If a slot is available, it decrements the counter and execution
+continues immediately.</li>
+<li>If no slot is available, it returns an incomplete task and yields
+the thread back to the .NET thread pool.</li>
+<li>When another operation releases its slot, the waiting task is
+resumed on an available thread-pool thread.</li>
+</ol>
+<h2 id="the-standard-implementation-pattern">The Standard Implementation
+Pattern</h2>
+<p>To prevent deadlocks and ensure that slots are always returned to the
+pool—even when operations fail or are canceled—always call
+<code>Release()</code> within a <code>finally</code> block.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Collections</span><span class="op">.</span><span class="fu">Generic</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Linq</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">.</span><span class="fu">Tasks</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ConcurrencyLimiter</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Limit concurrency to a maximum of 3 concurrent tasks</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="kw">readonly</span> SemaphoreSlim Semaphore <span class="op">=</span> <span class="kw">new</span> <span class="fu">SemaphoreSlim</span><span class="op">(</span><span class="dv">3</span><span class="op">,</span> <span class="dv">3</span><span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task <span class="fu">ProcessItemsAsync</span><span class="op">(</span>IEnumerable<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> items<span class="op">)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> tasks <span class="op">=</span> items<span class="op">.</span><span class="fu">Select</span><span class="op">(</span>async item <span class="op">=&gt;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Asynchronously wait to enter the semaphore</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>            await Semaphore<span class="op">.</span><span class="fu">WaitAsync</span><span class="op">();</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>            <span class="kw">try</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>                await <span class="fu">PerformWorkAsync</span><span class="op">(</span>item<span class="op">);</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>            <span class="kw">finally</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>                <span class="co">// Always release the semaphore slot in a finally block</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>                Semaphore<span class="op">.</span><span class="fu">Release</span><span class="op">();</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        <span class="op">});</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        await Task<span class="op">.</span><span class="fu">WhenAll</span><span class="op">(</span>tasks<span class="op">);</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> async Task <span class="fu">PerformWorkAsync</span><span class="op">(</span><span class="dt">int</span> item<span class="op">)</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Starting task {item}&quot;</span><span class="op">);</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>        await Task<span class="op">.</span><span class="fu">Delay</span><span class="op">(</span><span class="dv">1000</span><span class="op">);</span> <span class="co">// Simulate work</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Completed task {item}&quot;</span><span class="op">);</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="practical-use-cases">Practical Use Cases</h2>
+<p>Controlling asynchronous concurrency is critical in several common
+architectural scenarios:</p>
+<ul>
+<li><strong>Throttling Outbound API Calls:</strong> External APIs often
+enforce rate limits. <code>SemaphoreSlim</code> prevents HTTP 429 (Too
+Many Requests) errors by capping simultaneous connections.</li>
+<li><strong>Database Connection Protection:</strong> Preventing hundreds
+of simultaneous async queries from exhausting the database connection
+pool.</li>
+<li><strong>Disk and File I/O Management:</strong> Avoiding disk
+thrashing caused by simultaneous read/write operations on storage
+devices.</li>
+<li><strong>Memory Consumption Safeguards:</strong> Processing large
+payloads in batches or with fixed parallelism to keep the application's
+memory footprint stable.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-semaphore-slim-limit-async-concurrency';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

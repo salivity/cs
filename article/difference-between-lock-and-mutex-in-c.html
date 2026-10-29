@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Difference Between Lock and Mutex in C# - cs</title>
+    <meta name="description" content="In C#, both the lock statement and the Mutex class are synchronization primitives used to prevent race conditions by enforcing mutual exclusion on shared resources. The fundamental difference between them lies in their scope and performance: lock is a fas">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/difference-between-lock-and-mutex-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Difference Between Lock and Mutex in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/difference-between-lock-and-mutex-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, both the lock statement and the Mutex class are synchronization primitives used to prevent race conditions by enforcing mutual exclusion on shared resources. The fundamental difference between them lies in their scope and performance: lock is a fas" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="difference-between-lock-and-mutex-in-c">Difference Between Lock
+and Mutex in C</h1>
+<p>In C#, both the <code>lock</code> statement and the
+<code>Mutex</code> class are synchronization primitives used to prevent
+race conditions by enforcing mutual exclusion on shared resources. The
+fundamental difference between them lies in their scope and performance:
+<code>lock</code> is a fast, lightweight mechanism restricted to
+synchronizing threads within a single process, whereas
+<code>Mutex</code> is an operating-system-level primitive capable of
+synchronizing threads across multiple processes at the expense of higher
+performance overhead.</p>
+<h3 id="underlying-mechanism">Underlying Mechanism</h3>
+<p>The <code>lock</code> statement is C# syntactic sugar for the
+<code>System.Threading.Monitor</code> class. When the compiler
+encounters a <code>lock</code> block, it wraps the code in a
+<code>Monitor.Enter</code> and <code>Monitor.Exit</code> sequence inside
+a <code>try...finally</code> construct. This ensures that the locked
+resource is safely released even if an unhandled exception occurs within
+the critical section.</p>
+<p>A <code>Mutex</code> (short for mutual exclusion) is a wrapper around
+an underlying operating system kernel object. Because it relies on the
+operating system's native synchronization handles, using a
+<code>Mutex</code> requires transitions between user mode and kernel
+mode.</p>
+<h3 id="scope-in-process-vs-cross-process">Scope: In-Process vs.
+Cross-Process</h3>
+<ul>
+<li><strong><code>lock</code>:</strong> Can only synchronize threads
+running inside the same <code>AppDomain</code> and process. It relies on
+a reference object within the managed heap, making it impossible to
+share across separate application boundaries.</li>
+<li><strong><code>Mutex</code>:</strong> Can be either unnamed (local)
+or named (system-wide). A named <code>Mutex</code> is visible across the
+entire operating system, making it the standard tool for cross-process
+synchronization—such as preventing multiple instances of an application
+from running simultaneously.</li>
+</ul>
+<h3 id="performance-and-overhead">Performance and Overhead</h3>
+<p>Because <code>lock</code> operates primarily in user space using
+managed code, it is orders of magnitude faster than a
+<code>Mutex</code>. It avoids context switches to the operating system
+kernel unless high contention forces the thread to sleep.</p>
+<p>Conversely, acquiring and releasing a <code>Mutex</code> always
+incurs the overhead of communicating with the Windows or Linux kernel.
+This system call overhead and the associated CPU context switches make
+<code>Mutex</code> significantly slower than <code>lock</code>.</p>
+<h3 id="features-and-syntax">Features and Syntax</h3>
+<p>The <code>lock</code> statement provides a clean, concise syntax, but
+it lacks advanced synchronization options:</p>
+<ul>
+<li><strong>Timeouts:</strong> <code>lock</code> will block indefinitely
+until the lock is acquired. (To use timeouts within a process,
+developers must use <code>Monitor.TryEnter</code> directly instead of
+the <code>lock</code> keyword.)</li>
+<li><strong>Abandonment detection:</strong> If a thread holding a
+<code>lock</code> crashes, the lock remains unreleased, leading to
+deadlocks.</li>
+</ul>
+<p>The <code>Mutex</code> class provides advanced control:</p>
+<ul>
+<li><strong>Timeouts:</strong> Methods like
+<code>WaitOne(TimeSpan)</code> allow a thread to give up waiting after a
+specified duration.</li>
+<li><strong>Abandoned Mutex Handling:</strong> If a thread holding a
+<code>Mutex</code> terminates unexpectedly, the operating system detects
+this and releases the lock, throwing an
+<code>AbandonedMutexException</code> on the next acquiring thread to
+warn it of potentially corrupted state.</li>
+</ul>
+<h3 id="summary-of-use-cases">Summary of Use Cases</h3>
+<p>Use the <code>lock</code> statement by default for internal thread
+synchronization within a single application, such as protecting
+collections, counters, or in-memory caches. Reserve <code>Mutex</code>
+strictly for scenarios where synchronization is required across
+different processes or multiple instances of an application.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/difference-between-lock-and-mutex-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

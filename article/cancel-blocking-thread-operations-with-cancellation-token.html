@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancel Blocking Thread Operations with CancellationToken - cs</title>
+    <meta name="description" content="Canceling synchronous, blocking thread operations in C# requires bridging cooperative cancellation mechanisms with blocking APIs, as traditional blocking calls do not natively listen to CancellationToken. While asynchronous code handles cancellation nativ">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/cancel-blocking-thread-operations-with-cancellation-token">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Cancel Blocking Thread Operations with CancellationToken - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/cancel-blocking-thread-operations-with-cancellation-token" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Canceling synchronous, blocking thread operations in C# requires bridging cooperative cancellation mechanisms with blocking APIs, as traditional blocking calls do not natively listen to CancellationToken. While asynchronous code handles cancellation nativ" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="cancel-blocking-thread-operations-with-cancellationtoken">Cancel
+Blocking Thread Operations with CancellationToken</h1>
+<p>Canceling synchronous, blocking thread operations in C# requires
+bridging cooperative cancellation mechanisms with blocking APIs, as
+traditional blocking calls do not natively listen to
+<code>CancellationToken</code>. While asynchronous code handles
+cancellation natively, synchronous blocking calls—such as waiting on
+locks, handles, or blocking streams—require specific patterns to
+terminate safely without resorting to dangerous methods like
+<code>Thread.Abort()</code>. This article outlines the standard, safe
+patterns for interrupting blocking thread operations using
+<code>CancellationToken</code>.</p>
+<h3 id="1-using-waithandlewaitany-for-synchronization-primitives">1.
+Using <code>WaitHandle.WaitAny</code> for Synchronization
+Primitives</h3>
+<p>When a thread blocks on a synchronization primitive (such as
+<code>AutoResetEvent</code>, <code>ManualResetEvent</code>, or
+<code>Semaphore</code>), you can combine the primitive's handle with the
+cancellation token's underlying <code>WaitHandle</code>.</p>
+<p><code>CancellationToken.WaitHandle</code> exposes a
+<code>WaitHandle</code> that becomes signaled when cancellation is
+requested.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">WaitForSignal</span><span class="op">(</span>WaitHandle operationHandle<span class="op">,</span> CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Combine the blocking handle and the token&#39;s handle</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    WaitHandle<span class="op">[]</span> handles <span class="op">=</span> <span class="kw">new</span> WaitHandle<span class="op">[]</span> <span class="op">{</span> operationHandle<span class="op">,</span> cancellationToken<span class="op">.</span><span class="fu">WaitHandle</span> <span class="op">};</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Wait for either the operation to complete or cancellation to trigger</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> index <span class="op">=</span> WaitHandle<span class="op">.</span><span class="fu">WaitAny</span><span class="op">(</span>handles<span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>index <span class="op">==</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Cancelled</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        cancellationToken<span class="op">.</span><span class="fu">ThrowIfCancellationRequested</span><span class="op">();</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Index 0 means the operation handle was signaled</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ProcessOperation</span><span class="op">();</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-using-cancellationtokenregister-to-unblock-resources">2. Using
+<code>CancellationToken.Register</code> to Unblock Resources</h3>
+<p>Some blocking calls—such as synchronous network streams or
+third-party APIs—block indefinitely until the underlying resource is
+closed, disposed, or explicitly canceled via a native method. You can
+register a callback on the <code>CancellationToken</code> to release or
+close the resource when cancellation occurs.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ReadFromBlockingStream</span><span class="op">(</span>Stream networkStream<span class="op">,</span> <span class="dt">byte</span><span class="op">[]</span> buffer<span class="op">,</span> CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Register a callback to close the stream on cancellation</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> <span class="op">(</span>cancellationToken<span class="op">.</span><span class="fu">Register</span><span class="op">(()</span> <span class="op">=&gt;</span> networkStream<span class="op">.</span><span class="fu">Close</span><span class="op">()))</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Blocking read</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>            <span class="dt">int</span> bytesRead <span class="op">=</span> networkStream<span class="op">.</span><span class="fu">Read</span><span class="op">(</span>buffer<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> buffer<span class="op">.</span><span class="fu">Length</span><span class="op">);</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="fu">ProcessBuffer</span><span class="op">(</span>buffer<span class="op">,</span> bytesRead<span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">catch</span> <span class="op">(</span>IOException<span class="op">)</span> <span class="fu">when</span> <span class="op">(</span>cancellationToken<span class="op">.</span><span class="fu">IsCancellationRequested</span><span class="op">)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            <span class="co">// The read was interrupted safely due to cancellation</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">OperationCanceledException</span><span class="op">(</span>cancellationToken<span class="op">);</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Using the <code>using</code> statement ensures the registration is
+unregistered as soon as the blocking scope exits, preventing memory
+leaks and unintended triggers.</p>
+<h3 id="3-cooperative-polling-with-throwifcancellationrequested">3.
+Cooperative Polling with <code>ThrowIfCancellationRequested</code></h3>
+<p>If a blocking operation consists of repetitive processing cycles,
+polling, or bounded wait intervals, you can replace a single infinite
+block with shorter, timed intervals and check the token between
+iterations.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessQueueWithIntervals</span><span class="op">(</span>BlockingQueue queue<span class="op">,</span> CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">while</span> <span class="op">(!</span>cancellationToken<span class="op">.</span><span class="fu">IsCancellationRequested</span><span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Try to dequeue with a short timeout instead of blocking indefinitely</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>queue<span class="op">.</span><span class="fu">TryDequeue</span><span class="op">(</span>timeout<span class="op">:</span> TimeSpan<span class="op">.</span><span class="fu">FromMilliseconds</span><span class="op">(</span><span class="dv">100</span><span class="op">),</span> <span class="kw">out</span> <span class="dt">var</span> item<span class="op">))</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>            <span class="fu">ProcessItem</span><span class="op">(</span>item<span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Periodically verify and throw if cancellation was triggered</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        cancellationToken<span class="op">.</span><span class="fu">ThrowIfCancellationRequested</span><span class="op">();</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3
+id="4-modernizing-blocking-collections-with-getconsumingenumerable">4.
+Modernizing Blocking Collections with
+<code>GetConsumingEnumerable</code></h3>
+<p>If thread blocking occurs while waiting for producer-consumer queues,
+use .NET’s built-in <code>BlockingCollection&lt;T&gt;</code>. It
+natively integrates with <code>CancellationToken</code> without manual
+handle management.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ConsumeItems</span><span class="op">(</span>BlockingCollection<span class="op">&lt;</span>WorkItem<span class="op">&gt;</span> collection<span class="op">,</span> CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">try</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Blocks automatically until an item is available or cancellation is requested</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> item <span class="kw">in</span> collection<span class="op">.</span><span class="fu">GetConsumingEnumerable</span><span class="op">(</span>cancellationToken<span class="op">))</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>            <span class="fu">ProcessItem</span><span class="op">(</span>item<span class="op">);</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">catch</span> <span class="op">(</span>OperationCanceledException<span class="op">)</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Clean exit when cancellation is requested</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="key-considerations-for-safe-cancellation">Key Considerations for
+Safe Cancellation</h3>
+<ul>
+<li><strong>Avoid <code>Thread.Abort()</code></strong>:
+<code>Thread.Abort()</code> is obsolete, unsupported on modern .NET
+runtimes, and causes state corruption.</li>
+<li><strong>Always Dispose Registrations</strong>: Callbacks attached
+via <code>cancellationToken.Register()</code> must be disposed to avoid
+keeping objects in memory longer than necessary.</li>
+<li><strong>Propagate <code>OperationCanceledException</code></strong>:
+Maintain standard .NET cancellation conventions by catching specific
+interruption exceptions (like <code>SocketException</code> or
+<code>IOException</code>) and rethrowing them as
+<code>OperationCanceledException</code> when
+<code>cancellationToken.IsCancellationRequested</code> is true.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/cancel-blocking-thread-operations-with-cancellation-token';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

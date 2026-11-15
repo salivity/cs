@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weak Events in C#: How to Prevent Memory Leaks - cs</title>
+    <meta name="description" content="This article explores the concept of weak events in C#, explaining why standard .NET events often lead to unintentional memory leaks and how the weak event pattern resolves this problem. You will learn about the mechanics of publisher-subscriber reference">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/weak-events-in-c-how-to-prevent-memory-leaks">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Weak Events in C#: How to Prevent Memory Leaks - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/weak-events-in-c-how-to-prevent-memory-leaks" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the concept of weak events in C#, explaining why standard .NET events often lead to unintentional memory leaks and how the weak event pattern resolves this problem. You will learn about the mechanics of publisher-subscriber reference" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="weak-events-in-c-how-to-prevent-memory-leaks">Weak Events in C#:
+How to Prevent Memory Leaks</h1>
+<p>This article explores the concept of weak events in C#, explaining
+why standard .NET events often lead to unintentional memory leaks and
+how the weak event pattern resolves this problem. You will learn about
+the mechanics of publisher-subscriber references, the underlying cause
+of the "lapsed listener" problem, and how utilizing weak references
+allows the Garbage Collector (GC) to reclaim unused memory without
+requiring explicit unsubscription.</p>
+<h3 id="the-problem-with-standard-c-events">The Problem with Standard C#
+Events</h3>
+<p>In standard C# event architecture, subscribing to an event creates a
+strong reference between the event publisher and the event
+subscriber:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>publisher<span class="op">.</span><span class="fu">SomeEvent</span> <span class="op">+=</span> subscriber<span class="op">.</span><span class="fu">OnSomeEvent</span><span class="op">;</span></span></code></pre></div>
+<p>Under the hood, the delegate maintains a reference to both the method
+to invoke and the object instance target (<code>subscriber</code>).
+Because the publisher holds this reference in its invocation list, the
+Garbage Collector considers the subscriber reachable as long as the
+publisher is alive.</p>
+<p>This dynamic creates the <strong>lapsed listener problem</strong>. If
+an application creates short-lived subscriber objects that listen to
+long-lived publisher objects (such as static classes, application-wide
+singletons, or long-running services), the subscriber cannot be garbage
+collected when it falls out of scope unless it explicitly unregisters
+using <code>-=</code>. Failing to unsubscribe results in a memory leak,
+keeping not only the subscriber alive but also any other objects it
+references.</p>
+<h3 id="what-is-a-weak-event">What Is a Weak Event?</h3>
+<p>A weak event is an event pattern that connects a publisher to a
+subscriber using a weak reference instead of a standard strong
+reference.</p>
+<p>In .NET, a <code>WeakReference</code> or
+<code>WeakReference&lt;T&gt;</code> references an object while still
+allowing the Garbage Collector to finalize and collect that object if no
+strong references to it exist. When applied to events, the publisher
+holds a weak reference to the subscriber's handling method or target. If
+the subscriber is no longer needed elsewhere in the application, the GC
+reclaims it, and the event publisher automatically discards the stale
+reference during the next invocation.</p>
+<h3 id="how-weak-events-prevent-memory-leaks">How Weak Events Prevent
+Memory Leaks</h3>
+<p>Weak events decouple the lifecycle of the subscriber from the
+lifecycle of the publisher:</p>
+<ol type="1">
+<li><strong>Independent Lifetimes:</strong> A short-lived subscriber can
+register for events on a long-lived publisher without having its
+lifetime extended to match the publisher.</li>
+<li><strong>Automatic Cleanup:</strong> When all strong references to
+the subscriber are dropped, the subscriber is eligible for collection
+during the next GC cycle.</li>
+<li><strong>Fail-Safe Operation:</strong> It eliminates the strict
+requirement for developers to manually implement and call cleanup
+routines (such as <code>IDisposable.Dispose()</code>) solely to detach
+event handlers.</li>
+</ol>
+<h3 id="approaches-to-implementing-weak-events-in-c">Approaches to
+Implementing Weak Events in C</h3>
+<p>There are several ways to implement the weak event pattern in C#:</p>
+<h4 id="1-wpf-weakeventmanager">1. WPF WeakEventManager</h4>
+<p>For applications using WPF or Windows Base, .NET provides the
+built-in <code>WeakEventManager</code> class. You can subscribe to an
+event using the generic implementation:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>WeakEventManager<span class="op">&lt;</span>EventSource<span class="op">,</span> EventArgs<span class="op">&gt;.</span><span class="fu">AddHandler</span><span class="op">(</span>sourceInstance<span class="op">,</span> <span class="fu">nameof</span><span class="op">(</span>sourceInstance<span class="op">.</span><span class="fu">SomeEvent</span><span class="op">),</span> TargetHandler<span class="op">);</span></span></code></pre></div>
+<p>This registers the handler weakly, allowing the subscriber to be
+collected even if <code>RemoveHandler</code> is never explicitly
+called.</p>
+<h4 id="2-event-aggregators-and-messaging-frameworks">2. Event
+Aggregators and Messaging Frameworks</h4>
+<p>Many UI frameworks and architecture libraries (such as Prism,
+CommunityToolkit.Mvvm, or MediatR) provide an Event Aggregator or
+Messenger pattern. These implementations typically default to using weak
+references for message handlers, ensuring that view models or components
+listening to application-wide messages do not leak memory.</p>
+<h4 id="3-custom-weakreference-implementation">3. Custom WeakReference
+Implementation</h4>
+<p>You can manually implement a weak event wrapper using
+<code>WeakReference&lt;T&gt;</code>. A simplified structure involves
+wrapping the handler:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> WeakEventHandler<span class="op">&lt;</span>TEventArgs<span class="op">&gt;</span> where TEventArgs <span class="op">:</span> EventArgs</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> WeakReference _targetRef<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> MethodInfo _method<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">WeakEventHandler</span><span class="op">(</span>EventHandler<span class="op">&lt;</span>TEventArgs<span class="op">&gt;</span> handler<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        _targetRef <span class="op">=</span> <span class="kw">new</span> <span class="fu">WeakReference</span><span class="op">(</span>handler<span class="op">.</span><span class="fu">Target</span><span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        _method <span class="op">=</span> handler<span class="op">.</span><span class="fu">Method</span><span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Invoke</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> TEventArgs e<span class="op">)</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">object</span> target <span class="op">=</span> _targetRef<span class="op">.</span><span class="fu">Target</span><span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>target <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            _method<span class="op">.</span><span class="fu">Invoke</span><span class="op">(</span>target<span class="op">,</span> <span class="kw">new</span> <span class="dt">object</span><span class="op">[]</span> <span class="op">{</span> sender<span class="op">,</span> e <span class="op">});</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="when-to-use-weak-events">When to Use Weak Events</h3>
+<p>While weak events prevent leaks, they introduce slight performance
+overhead due to reflection, delegate recreation, and the dereferencing
+of weak targets. Therefore, standard events should remain the default
+choice when:</p>
+<ul>
+<li>The subscriber and publisher share the same lifecycle.</li>
+<li>The subscriber outlives the publisher.</li>
+<li>Manual unsubscription can be reliably managed via
+<code>IDisposable</code>.</li>
+</ul>
+<p>Weak events should be reserved for scenarios where short-lived
+objects must listen to long-lived publishers and managing the
+unsubscription lifecycle manually is impractical or error-prone.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/weak-events-in-c-how-to-prevent-memory-leaks';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

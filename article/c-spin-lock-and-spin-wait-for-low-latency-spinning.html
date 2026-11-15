@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# SpinLock and SpinWait for Low-Latency Spinning - cs</title>
+    <meta name="description" content="In high-performance and low-latency C# applications, traditional thread synchronization primitives like Monitor (the lock keyword), Mutex, or AutoResetEvent introduce costly kernel transitions and thread context switches. The System.Threading.SpinLock and">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-spin-lock-and-spin-wait-for-low-latency-spinning">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# SpinLock and SpinWait for Low-Latency Spinning - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-spin-lock-and-spin-wait-for-low-latency-spinning" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In high-performance and low-latency C# applications, traditional thread synchronization primitives like Monitor (the lock keyword), Mutex, or AutoResetEvent introduce costly kernel transitions and thread context switches. The System.Threading.SpinLock and" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-spinlock-and-spinwait-for-low-latency-spinning">C# SpinLock
+and SpinWait for Low-Latency Spinning</h1>
+<p>In high-performance and low-latency C# applications, traditional
+thread synchronization primitives like <code>Monitor</code> (the
+<code>lock</code> keyword), <code>Mutex</code>, or
+<code>AutoResetEvent</code> introduce costly kernel transitions and
+thread context switches. The <code>System.Threading.SpinLock</code> and
+<code>System.Threading.SpinWait</code> value types solve this problem by
+keeping waiting threads active on the CPU in user mode—a process called
+"busy-waiting" or "spinning." This article explores the purpose,
+internal mechanics, and appropriate use cases of both structures when
+optimizing for ultra-short wait times.</p>
+<h3 id="the-cost-of-standard-thread-synchronization">The Cost of
+Standard Thread Synchronization</h3>
+<p>Standard synchronization mechanisms put a waiting thread into a
+blocked state when a resource is contended. When the resource becomes
+available, the operating system wakes the blocked thread and switches
+its execution context back onto a core.</p>
+<p>While blocking frees the CPU to perform other work, the context
+switch itself typically costs thousands of CPU cycles (microseconds). If
+a shared critical section only requires a few dozen CPU cycles to
+complete, the overhead of putting a thread to sleep and waking it up is
+disproportionately expensive. In low-latency scenarios, it is
+significantly faster to keep the CPU core actively executing a loop
+until the lock frees up.</p>
+<h3 id="understanding-spinwait">Understanding <code>SpinWait</code></h3>
+<p><code>SpinWait</code> is a lightweight struct designed to orchestrate
+low-level spinning without completely starving the CPU. Instead of
+executing an unyielding infinite loop, it implements a stepped back-off
+strategy.</p>
+<p>Key characteristics of <code>SpinWait</code> include:</p>
+<ul>
+<li><strong>Two-Phase Back-Off:</strong> During initial iterations,
+<code>SpinWait</code> executes brief CPU-level pauses using instructions
+like <code>PAUSE</code> on x86/x64 processors via
+<code>Thread.SpinWait</code>. This prevents CPU pipeline stalls and
+reduces power consumption.</li>
+<li><strong>Progressive Yielding:</strong> If the wait duration extends
+beyond a threshold, <code>SpinWait</code> automatically escalates to
+yielding execution to other threads via <code>Thread.Yield()</code> and
+<code>Thread.Sleep(0)</code>. On single-core machines, it skips pure
+spinning entirely to avoid deadlocking the thread that holds the
+expected state.</li>
+<li><strong>Implementation Pattern:</strong> It is generally used in
+lock-free algorithms (such as CAS operations via
+<code>Interlocked</code>) to retry state modifications.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> spinWait <span class="op">=</span> <span class="kw">new</span> <span class="fu">SpinWait</span><span class="op">();</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">while</span> <span class="op">(!</span><span class="fu">IsResourceAvailable</span><span class="op">())</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    spinWait<span class="op">.</span><span class="fu">SpinOnce</span><span class="op">();</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="understanding-spinlock">Understanding <code>SpinLock</code></h3>
+<p><code>SpinLock</code> is a low-level, exclusive mutual-exclusion
+synchronization primitive built specifically for ultra-short critical
+sections. Like <code>SpinWait</code>, it avoids operating system context
+switching by spinning until the lock is acquired.</p>
+<p>Key characteristics of <code>SpinLock</code> include:</p>
+<ul>
+<li><strong>Struct Semantics:</strong> <code>SpinLock</code> is a value
+type. To avoid accidental copying (which results in separate, broken
+locks), it must be passed by reference using the <code>ref</code>
+keyword.</li>
+<li><strong>Thread Tracking:</strong> It optionally tracks the owning
+thread ID. While this aids in debugging and detects recursive locks
+(which causes self-deadlocks with spinning locks), tracking introduces
+slight overhead and can be disabled via the constructor
+(<code>new SpinLock(enableThreadOwnerTracking: false)</code>).</li>
+<li><strong>Deterministic Acquisition:</strong> Acquisition requires
+passing a boolean flag by reference, ensuring robust exception handling
+even if an exception occurs mid-entry.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> SpinLock _spinLock <span class="op">=</span> <span class="kw">new</span> <span class="fu">SpinLock</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ExecuteCriticalWork</span><span class="op">()</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bool</span> lockTaken <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">try</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        _spinLock<span class="op">.</span><span class="fu">Enter</span><span class="op">(</span><span class="kw">ref</span> lockTaken<span class="op">);</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Critical section: Must execute in nanoseconds</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">finally</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>lockTaken<span class="op">)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            _spinLock<span class="op">.</span><span class="fu">Exit</span><span class="op">();</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="when-to-use-spinlock-and-spinwait">When to Use
+<code>SpinLock</code> and <code>SpinWait</code></h3>
+<p>Both structures are specialized tools that must be used strictly
+under the right conditions:</p>
+<ul>
+<li><strong>Critical Section Duration:</strong> The protected section or
+wait condition must complete almost instantaneously (ideally under a few
+microseconds or tens of CPU cycles).</li>
+<li><strong>Contention Levels:</strong> Contention must be low to
+moderate. High contention leads to multiple threads pinning CPU cores at
+100% capacity without doing useful work.</li>
+<li><strong>Multi-Core Environments:</strong> Pure spinning is only
+effective on multi-core architectures where the holding thread and the
+spinning thread can execute simultaneously on separate cores.</li>
+<li><strong>No Blocking Operations:</strong> Code inside a
+<code>SpinLock</code> or within a <code>SpinWait</code> loop must never
+perform I/O, allocate large memory blocks, or call blocking
+methods.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-spin-lock-and-spin-wait-for-low-latency-spinning';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

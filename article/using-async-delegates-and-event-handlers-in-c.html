@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using Async Delegates and Event Handlers in C# - cs</title>
+    <meta name="description" content="In modern C# development, asynchronous programming with delegates and event handlers allows applications to perform resource-intensive operations without blocking the main execution thread. While the standard async/await pattern is straightforward with me">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/using-async-delegates-and-event-handlers-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using Async Delegates and Event Handlers in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/using-async-delegates-and-event-handlers-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In modern C# development, asynchronous programming with delegates and event handlers allows applications to perform resource-intensive operations without blocking the main execution thread. While the standard async/await pattern is straightforward with me" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-async-delegates-and-event-handlers-in-c">Using Async
+Delegates and Event Handlers in C</h1>
+<p>In modern C# development, asynchronous programming with delegates and
+event handlers allows applications to perform resource-intensive
+operations without blocking the main execution thread. While the
+standard <code>async</code>/<code>await</code> pattern is
+straightforward with methods, applying it to delegates and events
+requires understanding the difference between returning
+<code>Task</code> and returning <code>void</code>, managing exceptions,
+and avoiding common concurrency pitfalls.</p>
+<h2
+id="asynchronous-delegates-use-functask-instead-of-action">Asynchronous
+Delegates: Use <code>Func&lt;Task&gt;</code> Instead of
+<code>Action</code></h2>
+<p>When working with delegates that represent asynchronous operations,
+avoid using <code>Action</code>. An <code>Action</code> delegate returns
+<code>void</code>, which prevents the caller from awaiting the
+completion of the asynchronous task. Instead, use
+<code>Func&lt;Task&gt;</code> for operations without a return value, or
+<code>Func&lt;Task&lt;T&gt;&gt;</code> for operations that return a
+value.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Defining an async delegate</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> Task<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;&gt;</span> processDataAsync <span class="op">=</span> <span class="fu">async</span> <span class="op">(</span>data<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    await Task<span class="op">.</span><span class="fu">Delay</span><span class="op">(</span><span class="dv">500</span><span class="op">);</span> <span class="co">// Simulate asynchronous I/O</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> data<span class="op">.</span><span class="fu">Length</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Invoking and awaiting the delegate</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> result <span class="op">=</span> await <span class="fu">processDataAsync</span><span class="op">(</span><span class="st">&quot;Hello World&quot;</span><span class="op">);</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Processed length: {result}&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>Using <code>Func&lt;Task&gt;</code> guarantees that the calling code
+can properly <code>await</code> the delegate, observe any exceptions
+thrown, and control the flow of execution.</p>
+<h2 id="standard-async-event-handlers">Standard Async Event
+Handlers</h2>
+<p>The standard .NET event pattern relies on delegates returning
+<code>void</code> (such as <code>EventHandler</code> or
+<code>EventHandler&lt;TEventArgs&gt;</code>). Because the signature
+requires a <code>void</code> return type, event handlers are the only
+acceptable use case for <code>async void</code> in C#.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Button</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">event</span> EventHandler Clicked<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">OnClick</span><span class="op">()</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        Clicked<span class="op">?.</span><span class="fu">Invoke</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> EventArgs<span class="op">.</span><span class="fu">Empty</span><span class="op">);</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Consumer</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Subscribe</span><span class="op">(</span>Button button<span class="op">)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Subscribing with an async void handler</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        button<span class="op">.</span><span class="fu">Clicked</span> <span class="op">+=</span> OnButtonClickedAsync<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> async <span class="dt">void</span> <span class="fu">OnButtonClickedAsync</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> EventArgs e<span class="op">)</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>            await Task<span class="op">.</span><span class="fu">Delay</span><span class="op">(</span><span class="dv">1000</span><span class="op">);</span> <span class="co">// Async work</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Button processing complete.&quot;</span><span class="op">);</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        <span class="kw">catch</span> <span class="op">(</span>Exception ex<span class="op">)</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Always catch exceptions inside async void handlers</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Error occurred: {ex.Message}&quot;</span><span class="op">);</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="exception-handling-in-async-void-handlers">Exception Handling in
+<code>async void</code> Handlers</h3>
+<p>Because callers cannot await an <code>async void</code> method, any
+unhandled exception cannot be caught by the code that raised the event.
+Instead, an unhandled exception will be raised directly on the ambient
+<code>SynchronizationContext</code>, which typically crashes the
+process.</p>
+<p>Always wrap the implementation inside an <code>async void</code>
+event handler in a <code>try-catch</code> block to handle errors
+safely.</p>
+<h2 id="custom-asynchronous-events-using-functask">Custom Asynchronous
+Events Using <code>Func&lt;Task&gt;</code></h2>
+<p>When designing custom classes and you need the event publisher to
+await the completion of all subscribers, do not use the standard
+<code>EventHandler</code>. Instead, define an event that returns a
+<code>Task</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> AsyncDataProcessor</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Define an async event delegate</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">event</span> Func<span class="op">&lt;</span><span class="dt">object</span><span class="op">,</span> EventArgs<span class="op">,</span> Task<span class="op">&gt;</span> ProcessingStarted<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task <span class="fu">ProcessAsync</span><span class="op">()</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>ProcessingStarted <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Sequential invocation</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            <span class="kw">foreach</span> <span class="op">(</span>Func<span class="op">&lt;</span><span class="dt">object</span><span class="op">,</span> EventArgs<span class="op">,</span> Task<span class="op">&gt;</span> handler <span class="kw">in</span> ProcessingStarted<span class="op">.</span><span class="fu">GetInvocationList</span><span class="op">())</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>                await <span class="fu">handler</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> EventArgs<span class="op">.</span><span class="fu">Empty</span><span class="op">);</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Alternatively, for parallel invocation:</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            <span class="co">// var tasks = ProcessingStarted.GetInvocationList()</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>            <span class="co">//     .Cast&lt;Func&lt;object, EventArgs, Task&gt;&gt;()</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>            <span class="co">//     .Select(h =&gt; h(this, EventArgs.Empty));</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>            <span class="co">// await Task.WhenAll(tasks);</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Core processing finished.&quot;</span><span class="op">);</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>By retrieving the invocation list using
+<code>GetInvocationList()</code>, the publisher can await each
+subscriber individually or collect the returned tasks and execute them
+concurrently using <code>Task.WhenAll</code>. This ensures the publisher
+does not proceed until all subscriber tasks have finished
+successfully.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/using-async-delegates-and-event-handlers-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

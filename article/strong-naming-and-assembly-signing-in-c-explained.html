@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strong Naming and Assembly Signing in C# Explained - cs</title>
+    <meta name="description" content="Strong naming in C# is a mechanism that gives a .NET assembly a globally unique identity and verifiable integrity using cryptographic key pairs. This article covers what strong naming and assembly signing entail, the technical components that make up a st">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/strong-naming-and-assembly-signing-in-c-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Strong Naming and Assembly Signing in C# Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/strong-naming-and-assembly-signing-in-c-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Strong naming in C# is a mechanism that gives a .NET assembly a globally unique identity and verifiable integrity using cryptographic key pairs. This article covers what strong naming and assembly signing entail, the technical components that make up a st" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="strong-naming-and-assembly-signing-in-c-explained">Strong Naming
+and Assembly Signing in C# Explained</h1>
+<p>Strong naming in C# is a mechanism that gives a .NET assembly a
+globally unique identity and verifiable integrity using cryptographic
+key pairs. This article covers what strong naming and assembly signing
+entail, the technical components that make up a strong name, the
+distinction between identity and security, and modern best practices for
+implementing signing in .NET applications and libraries.</p>
+<h2 id="what-is-a-strong-name">What is a Strong Name?</h2>
+<p>A strong name consists of four core components that uniquely identify
+an assembly:</p>
+<ol type="1">
+<li><strong>Simple text name:</strong> The basic file or assembly name
+(e.g., <code>MyLibrary</code>).</li>
+<li><strong>Version number:</strong> The major, minor, build, and
+revision numbers (e.g., <code>1.0.0.0</code>).</li>
+<li><strong>Culture info:</strong> The specified language/locale, if
+applicable (e.g., <code>neutral</code> or <code>en-US</code>).</li>
+<li><strong>Public key and digital signature:</strong> A cryptographic
+signature generated using the developer's private key, accompanied by
+the corresponding public key token.</li>
+</ol>
+<p>When an assembly is signed, the runtime uses these elements to ensure
+that references resolve to the exact, expected binary.</p>
+<h2 id="how-assembly-signing-works">How Assembly Signing Works</h2>
+<p>Assembly signing utilizes public-key cryptography (typically
+RSA):</p>
+<ol type="1">
+<li><strong>Key Generation:</strong> A key pair containing a public key
+and a private key is generated (typically stored in a <code>.snk</code>
+file).</li>
+<li><strong>Hashing:</strong> During compilation, the compiler generates
+a cryptographic hash of the assembly's contents.</li>
+<li><strong>Signing:</strong> The compiler encrypts this hash with the
+private key to create a digital signature.</li>
+<li><strong>Embedding:</strong> The signature and the public key are
+embedded directly into the compiled assembly's manifest (metadata).</li>
+<li><strong>Verification:</strong> When another assembly loads the
+signed binary, the .NET runtime decrypts the signature using the
+embedded public key and compares the resulting hash against a newly
+generated hash of the file contents. If they match, the assembly's
+identity is verified.</li>
+</ol>
+<h2 id="primary-uses-of-strong-naming">Primary Uses of Strong
+Naming</h2>
+<ul>
+<li><strong>Guaranteed Unique Identity:</strong> Two assemblies with the
+same filename cannot conflict if they have distinct strong names.</li>
+<li><strong>Strict Dependency Resolution:</strong> An assembly with a
+strong name can only reference other strong-named assemblies. This
+prevents a signed binary from depending on an untrusted or easily
+swappable unsigned assembly.</li>
+<li><strong>Global Assembly Cache (GAC):</strong> In legacy .NET
+Framework applications, an assembly had to be strong-named to be
+installed into the GAC for system-wide sharing.</li>
+</ul>
+<h2 id="strong-naming-vs-authenticode-signing">Strong Naming vs.
+Authenticode Signing</h2>
+<p>A common misconception is that strong naming provides security or
+authenticates the publisher. It does not:</p>
+<ul>
+<li><strong>Strong Naming</strong> only ensures identity and integrity.
+It confirms that the assembly has not been modified since it was built
+and that it came from the owner of the private key. It does not prove
+<em>who</em> that owner is.</li>
+<li><strong>Authenticode (Code Signing)</strong> uses certificates
+issued by a trusted Certificate Authority (CA) to prove publisher
+identity and establish legal trust.</li>
+</ul>
+<p>For actual security and publisher verification, Authenticode signing
+must be used instead of, or in addition to, strong naming.</p>
+<h2 id="how-to-sign-an-assembly-in-modern-net">How to Sign an Assembly
+in Modern .NET</h2>
+<p>In modern .NET projects, signing can be configured directly inside
+the <code>.csproj</code> file.</p>
+<p>First, generate a key file using the .NET CLI or the Developer
+Command Prompt:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sn</span> <span class="at">-k</span> MyKey.snk</span></code></pre></div>
+<p>Then, add the following configuration to your project file:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">PropertyGroup</span>&gt;</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">SignAssembly</span>&gt;true&lt;/<span class="kw">SignAssembly</span>&gt;</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">AssemblyOriginatorKeyFile</span>&gt;MyKey.snk&lt;/<span class="kw">AssemblyOriginatorKeyFile</span>&gt;</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">PropertyGroup</span>&gt;</span></code></pre></div>
+<p>Alternatively, open-source projects often use <strong>Public
+Signing</strong> (or OSS signing), which embeds the public key at build
+time without requiring access to the private key:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">PropertyGroup</span>&gt;</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">SignAssembly</span>&gt;true&lt;/<span class="kw">SignAssembly</span>&gt;</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">AssemblyOriginatorKeyFile</span>&gt;MyPublicKey.snk&lt;/<span class="kw">AssemblyOriginatorKeyFile</span>&gt;</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">PublicSign</span>&gt;true&lt;/<span class="kw">PublicSign</span>&gt;</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">PropertyGroup</span>&gt;</span></code></pre></div>
+<h2 id="current-best-practices">Current Best Practices</h2>
+<ul>
+<li><strong>For NuGet Library Authors:</strong> The .NET team recommends
+strong-naming publicly distributed NuGet packages. Because strong-named
+assemblies can only reference other strong-named assemblies, failing to
+sign a public library prevents developers who build strong-named
+applications from consuming it.</li>
+<li><strong>For Private Applications:</strong> If you are building
+standalone applications, microservices, or internal tools, strong naming
+is generally unnecessary unless specific enterprise architectural
+requirements dictate its use.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/strong-naming-and-assembly-signing-in-c-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

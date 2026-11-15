@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exception Filtering in C# Using the When Keyword - cs</title>
+    <meta name="description" content="Exception filtering in C# allows developers to catch exceptions conditionally by pairing the when keyword with a boolean expression directly in the catch clause. Introduced in C# 6.0, this feature determines whether a specific catch block should execute w">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/exception-filtering-in-c-using-the-when-keyword">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Exception Filtering in C# Using the When Keyword - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/exception-filtering-in-c-using-the-when-keyword" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Exception filtering in C# allows developers to catch exceptions conditionally by pairing the when keyword with a boolean expression directly in the catch clause. Introduced in C# 6.0, this feature determines whether a specific catch block should execute w" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="exception-filtering-in-c-using-the-when-keyword">Exception
+Filtering in C# Using the When Keyword</h1>
+<p>Exception filtering in C# allows developers to catch exceptions
+conditionally by pairing the <code>when</code> keyword with a boolean
+expression directly in the <code>catch</code> clause. Introduced in C#
+6.0, this feature determines whether a specific <code>catch</code> block
+should execute without unwinding the call stack unless the condition
+evaluates to <code>true</code>. This article explains how exception
+filters work, their core benefits over traditional conditional logic
+within catch blocks, and practical examples of their implementation.</p>
+<h3 id="syntax-and-basic-usage">Syntax and Basic Usage</h3>
+<p>An exception filter appends the <code>when</code> keyword followed by
+a boolean condition to a standard <code>catch</code> statement. The
+runtime evaluates this expression before entering the catch block.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Code that may throw an exception</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    await httpClient<span class="op">.</span><span class="fu">GetStringAsync</span><span class="op">(</span><span class="st">&quot;https://api.example.com/data&quot;</span><span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>HttpRequestException ex<span class="op">)</span> <span class="fu">when</span> <span class="op">(</span>ex<span class="op">.</span><span class="fu">StatusCode</span> <span class="op">==</span> System<span class="op">.</span><span class="fu">Net</span><span class="op">.</span><span class="fu">HttpStatusCode</span><span class="op">.</span><span class="fu">NotFound</span><span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;The requested resource was not found.&quot;</span><span class="op">);</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>HttpRequestException ex<span class="op">)</span> <span class="fu">when</span> <span class="op">(</span>ex<span class="op">.</span><span class="fu">StatusCode</span> <span class="op">==</span> System<span class="op">.</span><span class="fu">Net</span><span class="op">.</span><span class="fu">HttpStatusCode</span><span class="op">.</span><span class="fu">Unauthorized</span><span class="op">)</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Access is unauthorized.&quot;</span><span class="op">);</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If the condition inside the <code>when</code> clause evaluates to
+<code>true</code>, the corresponding catch block executes. If it
+evaluates to <code>false</code>, the runtime ignores that block and
+continues searching down the chain for another matching handler or lets
+the exception propagate up the call stack.</p>
+<h3 id="stack-trace-preservation">Stack Trace Preservation</h3>
+<p>Before exception filters, conditional handling required catching the
+exception and evaluating an <code>if</code> condition inside the block.
+If the condition was not met, developers had to rethrow the exception
+using <code>throw;</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// The old approach (can obscure debugging)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>SqlException ex<span class="op">)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>ex<span class="op">.</span><span class="fu">Number</span> <span class="op">==</span> <span class="dv">1205</span><span class="op">)</span> <span class="co">// Deadlock</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">HandleDeadlock</span><span class="op">(</span>ex<span class="op">);</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">else</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">throw</span><span class="op">;</span> <span class="co">// Unwinds and modifies stack state during traversal</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Using <code>throw;</code> unwinds the call stack to the point of the
+catch block before propagating. In contrast, exception filters evaluate
+the condition before the stack unwinds. If the filter condition returns
+<code>false</code>, the stack remains completely intact, preserving the
+original state of local variables and frame history for crash dumps and
+diagnostic tools.</p>
+<h3 id="cleaner-multi-condition-handling">Cleaner Multi-Condition
+Handling</h3>
+<p>Exception filters eliminate the need for nested conditional logic and
+duplicate catch structures. You can define distinct recovery strategies
+for different states of the same exception type.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>Win32Exception ex<span class="op">)</span> <span class="fu">when</span> <span class="op">(</span>ex<span class="op">.</span><span class="fu">NativeErrorCode</span> <span class="op">==</span> <span class="bn">0x00000005</span><span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Specific handling for Access Denied</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>Win32Exception ex<span class="op">)</span> <span class="fu">when</span> <span class="op">(</span>ex<span class="op">.</span><span class="fu">NativeErrorCode</span> <span class="op">==</span> <span class="bn">0x00000020</span><span class="op">)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Specific handling for Sharing Violation</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>Win32Exception ex<span class="op">)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// General fallback for all other Win32 errors</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The runtime evaluates handlers in sequential order from top to
+bottom. It executes the first handler whose exception type matches and
+whose filter evaluates to <code>true</code>.</p>
+<h3 id="non-intrusive-logging">Non-Intrusive Logging</h3>
+<p>Because a filter expression can execute any method returning a
+boolean, you can use it to log exceptions without actually handling
+them. By returning <code>false</code> from a logging method, the
+exception is recorded while still allowing it to bubble up to
+higher-level handlers.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>Exception ex<span class="op">)</span> <span class="fu">when</span> <span class="op">(</span><span class="fu">LogException</span><span class="op">(</span>ex<span class="op">))</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// This block is never entered if LogException returns false.</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="kw">static</span> <span class="dt">bool</span> <span class="fu">LogException</span><span class="op">(</span>Exception ex<span class="op">)</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    Logger<span class="op">.</span><span class="fu">LogError</span><span class="op">(</span>ex<span class="op">,</span> <span class="st">&quot;An unhandled exception occurred.&quot;</span><span class="op">);</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="kw">false</span><span class="op">;</span> <span class="co">// Tells the runtime to keep looking for other handlers</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="best-practices">Best Practices</h3>
+<ul>
+<li><strong>Avoid Side Effects:</strong> Filter conditions should
+execute quickly and avoid mutating application state, as they run during
+the exception search phase.</li>
+<li><strong>Avoid Throwing from Filters:</strong> If an exception is
+thrown inside a <code>when</code> clause, the runtime ignores the
+secondary exception and treats the filter result as
+<code>false</code>.</li>
+<li><strong>Order Specifically:</strong> Always place more specific
+filter conditions above general ones to prevent broader clauses from
+intercepting the exception first.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/exception-filtering-in-c-using-the-when-keyword';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

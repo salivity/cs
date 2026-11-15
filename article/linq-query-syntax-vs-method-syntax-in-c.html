@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINQ Query Syntax vs Method Syntax in C# - cs</title>
+    <meta name="description" content="Language Integrated Query (LINQ) in C# provides two distinct ways to write queries: query syntax and method syntax. While query syntax offers a declarative, SQL-like structure, method syntax relies on extension methods and lambda expressions. Under the ho">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/linq-query-syntax-vs-method-syntax-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="LINQ Query Syntax vs Method Syntax in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/linq-query-syntax-vs-method-syntax-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Language Integrated Query (LINQ) in C# provides two distinct ways to write queries: query syntax and method syntax. While query syntax offers a declarative, SQL-like structure, method syntax relies on extension methods and lambda expressions. Under the ho" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="linq-query-syntax-vs-method-syntax-in-c">LINQ Query Syntax vs
+Method Syntax in C</h1>
+<p>Language Integrated Query (LINQ) in C# provides two distinct ways to
+write queries: query syntax and method syntax. While query syntax offers
+a declarative, SQL-like structure, method syntax relies on extension
+methods and lambda expressions. Under the hood, the C# compiler
+translates query syntax directly into method syntax, meaning both
+approaches yield identical runtime performance. Understanding the
+differences between these two styles allows developers to write cleaner,
+more expressive, and more maintainable code depending on the complexity
+of the data operations.</p>
+<h3 id="query-syntax-overview">Query Syntax Overview</h3>
+<p>Query syntax resembles SQL statements and is built directly into the
+C# language via specific query keywords such as <code>from</code>,
+<code>where</code>, <code>select</code>, <code>join</code>, and
+<code>group</code>. It provides a clean, declarative way to express
+operations, particularly when dealing with complex joins or multiple
+data projections.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example using Query Syntax</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> numbers <span class="op">=</span> <span class="kw">new</span><span class="op">()</span> <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">6</span> <span class="op">};</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> evenNumbers <span class="op">=</span> from num <span class="kw">in</span> numbers</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                  where num <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>                  select num<span class="op">;</span></span></code></pre></div>
+<h3 id="method-syntax-overview">Method Syntax Overview</h3>
+<p>Method syntax (also known as fluent syntax) uses standard C# method
+chaining with LINQ extension methods defined in the
+<code>System.Linq.Enumerable</code> or
+<code>System.Linq.Queryable</code> classes. It makes heavy use of lambda
+expressions to define predicates and transformations.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example using Method Syntax</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> numbers <span class="op">=</span> <span class="kw">new</span><span class="op">()</span> <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">6</span> <span class="op">};</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> evenNumbers <span class="op">=</span> numbers<span class="op">.</span><span class="fu">Where</span><span class="op">(</span>num <span class="op">=&gt;</span> num <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span><span class="op">);</span></span></code></pre></div>
+<h3 id="key-differences">Key Differences</h3>
+<h4 id="1-language-feature-completeness">1. Language Feature
+Completeness</h4>
+<p>Method syntax is more comprehensive than query syntax. Several
+standard LINQ operators have no direct keyword equivalents in query
+syntax. These include:</p>
+<ul>
+<li>Aggregation methods: <code>Count()</code>, <code>Sum()</code>,
+<code>Average()</code>, <code>Min()</code>, <code>Max()</code></li>
+<li>Element retrieval: <code>First()</code>,
+<code>FirstOrDefault()</code>, <code>Single()</code>,
+<code>ElementAt()</code></li>
+<li>Set operations: <code>Distinct()</code>, <code>Union()</code>,
+<code>Intersect()</code>, <code>Except()</code></li>
+<li>Partitioning: <code>Take()</code>, <code>Skip()</code>,
+<code>TakeWhile()</code>, <code>SkipWhile()</code></li>
+</ul>
+<p>To use these operations with query syntax, developers must wrap the
+query expression in parentheses and append the method call, resulting in
+a hybrid syntax:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> totalEvens <span class="op">=</span> <span class="op">(</span>from num <span class="kw">in</span> numbers</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>                  where num <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                  select num<span class="op">).</span><span class="fu">Count</span><span class="op">();</span></span></code></pre></div>
+<h4 id="2-compilation-and-performance">2. Compilation and
+Performance</h4>
+<p>There is zero performance difference between query syntax and method
+syntax. The C# compiler transforms all query syntax expressions into
+their corresponding method calls before emitting Common Intermediate
+Language (CIL). For example,
+<code>from x in list where x &gt; 5 select x</code> compiles to
+<code>list.Where(x =&gt; x &gt; 5)</code>.</p>
+<h4 id="3-readability-and-complex-queries">3. Readability and Complex
+Queries</h4>
+<p>Readability depends largely on the operation being performed:</p>
+<ul>
+<li><strong>Query Syntax</strong> often excels in readability when
+performing complex joins, grouping operations, or when introducing
+intermediate variables using the <code>let</code> keyword.</li>
+<li><strong>Method Syntax</strong> is typically more concise for simple
+filtering, mapping, single-item lookups, and chaining multiple distinct
+transformations.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Complex query with a join is often clearer in Query Syntax</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> queryJoin <span class="op">=</span> from customer <span class="kw">in</span> customers</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                join order <span class="kw">in</span> orders on customer<span class="op">.</span><span class="fu">Id</span> equals order<span class="op">.</span><span class="fu">CustomerId</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                select <span class="kw">new</span> <span class="op">{</span> customer<span class="op">.</span><span class="fu">Name</span><span class="op">,</span> order<span class="op">.</span><span class="fu">OrderId</span> <span class="op">};</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// The same operation in Method Syntax requires verbose Join arguments</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> methodJoin <span class="op">=</span> customers<span class="op">.</span><span class="fu">Join</span><span class="op">(</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>                    orders<span class="op">,</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>                    customer <span class="op">=&gt;</span> customer<span class="op">.</span><span class="fu">Id</span><span class="op">,</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>                    order <span class="op">=&gt;</span> order<span class="op">.</span><span class="fu">CustomerId</span><span class="op">,</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>                    <span class="op">(</span>customer<span class="op">,</span> order<span class="op">)</span> <span class="op">=&gt;</span> <span class="kw">new</span> <span class="op">{</span> customer<span class="op">.</span><span class="fu">Name</span><span class="op">,</span> order<span class="op">.</span><span class="fu">OrderId</span> <span class="op">});</span></span></code></pre></div>
+<h3 id="choosing-the-right-syntax">Choosing the Right Syntax</h3>
+<p>Method syntax is the industry standard for most modern C#
+applications due to its flexibility, direct support for all LINQ
+methods, and natural integration with other C# functional patterns.
+However, query syntax remains a powerful alternative when writing
+multi-step queries involving cross joins, grouping, and subqueries where
+standard method chains become difficult to read. Developers can also
+freely combine both syntaxes within the same codebase as needed.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/linq-query-syntax-vs-method-syntax-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

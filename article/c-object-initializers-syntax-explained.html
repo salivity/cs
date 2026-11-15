@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Object Initializers Syntax Explained - cs</title>
+    <meta name="description" content="This article provides a comprehensive overview of object initializer syntax in C#, explaining what it is, how it works, and why it is used. You will learn the core syntax rules, see practical code comparisons between traditional assignment and object init">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-object-initializers-syntax-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Object Initializers Syntax Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-object-initializers-syntax-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comprehensive overview of object initializer syntax in C#, explaining what it is, how it works, and why it is used. You will learn the core syntax rules, see practical code comparisons between traditional assignment and object init" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-object-initializers-syntax-explained">C# Object Initializers
+Syntax Explained</h1>
+<p>This article provides a comprehensive overview of object initializer
+syntax in C#, explaining what it is, how it works, and why it is used.
+You will learn the core syntax rules, see practical code comparisons
+between traditional assignment and object initializers, and discover how
+this feature integrates with modern C# features like anonymous types and
+init-only setters.</p>
+<h2 id="what-are-object-initializers">What Are Object Initializers?</h2>
+<p>Object initializers in C# allow you to assign values to any
+accessible fields or properties of an object upon creation without
+explicitly invoking a multi-parameter constructor. Introduced in C# 3.0,
+this syntax simplifies object creation, improves code readability, and
+eliminates the need to write multiple overloaded constructors purely for
+field assignment.</p>
+<h2 id="basic-syntax">Basic Syntax</h2>
+<p>To use an object initializer, append an opening and closing brace
+containing comma-separated property assignments to your <code>new</code>
+expression:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Person</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> FirstName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> LastName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Age <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Using an object initializer</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>Person person <span class="op">=</span> <span class="kw">new</span> Person</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    FirstName <span class="op">=</span> <span class="st">&quot;Jane&quot;</span><span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    LastName <span class="op">=</span> <span class="st">&quot;Doe&quot;</span><span class="op">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    Age <span class="op">=</span> <span class="dv">28</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<p>When using an object initializer with a parameterless constructor,
+the parentheses after the type name are optional:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Person person <span class="op">=</span> <span class="kw">new</span> Person <span class="op">{</span> FirstName <span class="op">=</span> <span class="st">&quot;Jane&quot;</span><span class="op">,</span> LastName <span class="op">=</span> <span class="st">&quot;Doe&quot;</span><span class="op">,</span> Age <span class="op">=</span> <span class="dv">28</span> <span class="op">};</span></span></code></pre></div>
+<h2 id="traditional-instantiation-vs-object-initializers">Traditional
+Instantiation vs. Object Initializers</h2>
+<p>Before object initializers, initializing properties required either
+verbose parameter-heavy constructors or multiple sequential assignment
+statements:</p>
+<p><strong>Traditional Approach:</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Person person <span class="op">=</span> <span class="kw">new</span> <span class="fu">Person</span><span class="op">();</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>person<span class="op">.</span><span class="fu">FirstName</span> <span class="op">=</span> <span class="st">&quot;Jane&quot;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>person<span class="op">.</span><span class="fu">LastName</span> <span class="op">=</span> <span class="st">&quot;Doe&quot;</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>person<span class="op">.</span><span class="fu">Age</span> <span class="op">=</span> <span class="dv">28</span><span class="op">;</span></span></code></pre></div>
+<p><strong>Object Initializer Approach:</strong></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Person person <span class="op">=</span> <span class="kw">new</span> Person</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    FirstName <span class="op">=</span> <span class="st">&quot;Jane&quot;</span><span class="op">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    LastName <span class="op">=</span> <span class="st">&quot;Doe&quot;</span><span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    Age <span class="op">=</span> <span class="dv">28</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<p>Under the hood, the compiler creates a temporary variable, invokes
+the parameterless constructor, sets the specified properties, and then
+assigns the result to your variable.</p>
+<h2 id="combining-with-constructors">Combining with Constructors</h2>
+<p>Object initializers can be combined with constructors that accept
+parameters. The constructor executes first, followed by the property
+assignments inside the braces:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Employee</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Id <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Department <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Employee</span><span class="op">(</span><span class="dt">int</span> id<span class="op">)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        Id <span class="op">=</span> id<span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Constructor arguments in parentheses, followed by the initializer</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>Employee emp <span class="op">=</span> <span class="kw">new</span> <span class="fu">Employee</span><span class="op">(</span><span class="dv">101</span><span class="op">)</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    Department <span class="op">=</span> <span class="st">&quot;Engineering&quot;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<h2 id="anonymous-types-and-init-only-setters">Anonymous Types and
+Init-Only Setters</h2>
+<p>Object initializers are essential when working with anonymous types,
+as they define the properties and values simultaneously:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> product <span class="op">=</span> <span class="kw">new</span> <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Laptop&quot;</span><span class="op">,</span> Price <span class="op">=</span> <span class="fl">999.99</span> <span class="op">};</span></span></code></pre></div>
+<p>With C# 9 and later, object initializers also support
+<code>init</code> accessors, allowing properties to be immutable after
+creation:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Book</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Title <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> init<span class="op">;</span> <span class="op">}</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Author <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> init<span class="op">;</span> <span class="op">}</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Valid at instantiation:</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>Book book <span class="op">=</span> <span class="kw">new</span> Book <span class="op">{</span> Title <span class="op">=</span> <span class="st">&quot;1984&quot;</span><span class="op">,</span> Author <span class="op">=</span> <span class="st">&quot;George Orwell&quot;</span> <span class="op">};</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Compile error: Cannot modify init-only property outside of construction</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">// book.Title = &quot;Animal Farm&quot;;</span></span></code></pre></div>
+<h2 id="key-benefits">Key Benefits</h2>
+<ul>
+<li><strong>Readability:</strong> All initial property values are
+grouped cleanly within the creation statement.</li>
+<li><strong>Flexibility:</strong> You can assign any combination of
+accessible properties without defining multiple constructor
+overloads.</li>
+<li><strong>Immutability:</strong> Works seamlessly with
+<code>init</code>-only properties to create immutable objects
+cleanly.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-object-initializers-syntax-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

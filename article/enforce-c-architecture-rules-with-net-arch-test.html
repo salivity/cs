@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enforce C# Architecture Rules with NetArchTest - cs</title>
+    <meta name="description" content="This article explains how to implement automated architecture tests in .NET using the NetArchTest library to enforce architectural boundaries and dependency rules. You will learn how to set up an architecture testing project, define rules that prevent unw">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/enforce-c-architecture-rules-with-net-arch-test">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Enforce C# Architecture Rules with NetArchTest - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/enforce-c-architecture-rules-with-net-arch-test" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to implement automated architecture tests in .NET using the NetArchTest library to enforce architectural boundaries and dependency rules. You will learn how to set up an architecture testing project, define rules that prevent unw" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="enforce-c-architecture-rules-with-netarchtest">Enforce C#
+Architecture Rules with NetArchTest</h1>
+<p>This article explains how to implement automated architecture tests
+in .NET using the NetArchTest library to enforce architectural
+boundaries and dependency rules. You will learn how to set up an
+architecture testing project, define rules that prevent unwanted
+dependencies between layers—such as Domain, Application, and
+Infrastructure—and seamlessly integrate these assertions into standard
+unit testing frameworks like xUnit or NUnit.</p>
+<h2 id="why-use-architecture-testing">Why Use Architecture Testing?</h2>
+<p>In layered or Clean Architecture solutions, dependency rules dictate
+that high-level modules should not depend on low-level modules. Over
+time, developers may inadvertently introduce illegal project references
+or cross-namespace dependencies. NetArchTest solves this problem by
+analyzing compiled assemblies using reflection and Mono.Cecil, allowing
+you to write automated tests that fail during the build process if a
+dependency boundary is violated.</p>
+<h2 id="installation-and-setup">Installation and Setup</h2>
+<p>To get started, create a standard unit test project (xUnit, NUnit, or
+MSTest) within your solution and install the
+<code>NetArchTest.Rules</code> NuGet package.</p>
+<p>Using the .NET CLI:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> add package NetArchTest.Rules</span></code></pre></div>
+<p>Ensure your test project references the projects or assemblies you
+intend to test.</p>
+<h2 id="defining-core-architectural-rules">Defining Core Architectural
+Rules</h2>
+<p>NetArchTest operates through a fluent API centered around the
+<code>Types</code> class. You select types from an assembly, filter them
+based on conditions, and assert dependency expectations.</p>
+<h3
+id="example-enforcing-clean-architecture-layer-dependencies">Example:
+Enforcing Clean Architecture Layer Dependencies</h3>
+<p>In a typical Clean Architecture solution, the <strong>Domain</strong>
+layer must have no dependencies on the <strong>Application</strong>,
+<strong>Infrastructure</strong>, or <strong>Web</strong> layers. The
+<strong>Application</strong> layer can depend on the Domain, but not on
+the Infrastructure layer.</p>
+<p>Here is how to enforce these rules using xUnit:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> NetArchTest<span class="op">.</span><span class="fu">Rules</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Xunit<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ArchitectureTests</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">const</span> <span class="dt">string</span> DomainNamespace <span class="op">=</span> <span class="st">&quot;MyApp.Domain&quot;</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">const</span> <span class="dt">string</span> ApplicationNamespace <span class="op">=</span> <span class="st">&quot;MyApp.Application&quot;</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">const</span> <span class="dt">string</span> InfrastructureNamespace <span class="op">=</span> <span class="st">&quot;MyApp.Infrastructure&quot;</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">const</span> <span class="dt">string</span> WebApiNamespace <span class="op">=</span> <span class="st">&quot;MyApp.WebApi&quot;</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">DomainLayer_ShouldNotHaveDependencyOnOtherProjects</span><span class="op">()</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Arrange</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> assembly <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>MyApp<span class="op">.</span><span class="fu">Domain</span><span class="op">.</span><span class="fu">AssemblyReference</span><span class="op">).</span><span class="fu">Assembly</span><span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> otherProjects <span class="op">=</span> <span class="kw">new</span><span class="op">[]</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>            ApplicationNamespace<span class="op">,</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>            InfrastructureNamespace<span class="op">,</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>            WebApiNamespace</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Act</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> result <span class="op">=</span> Types<span class="op">.</span><span class="fu">InAssembly</span><span class="op">(</span>assembly<span class="op">)</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">ShouldNot</span><span class="op">()</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">HaveDependencyOnAny</span><span class="op">(</span>otherProjects<span class="op">)</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">GetResult</span><span class="op">();</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Assert</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>        Assert<span class="op">.</span><span class="fu">True</span><span class="op">(</span>result<span class="op">.</span><span class="fu">IsSuccessful</span><span class="op">,</span> <span class="st">&quot;Domain layer cannot depend on external layers.&quot;</span><span class="op">);</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ApplicationLayer_ShouldNotDependOnInfrastructureOrWeb</span><span class="op">()</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Arrange</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> assembly <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>MyApp<span class="op">.</span><span class="fu">Application</span><span class="op">.</span><span class="fu">AssemblyReference</span><span class="op">).</span><span class="fu">Assembly</span><span class="op">;</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> forbiddenProjects <span class="op">=</span> <span class="kw">new</span><span class="op">[]</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>            InfrastructureNamespace<span class="op">,</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>            WebApiNamespace</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Act</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> result <span class="op">=</span> Types<span class="op">.</span><span class="fu">InAssembly</span><span class="op">(</span>assembly<span class="op">)</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">ShouldNot</span><span class="op">()</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">HaveDependencyOnAny</span><span class="op">(</span>forbiddenProjects<span class="op">)</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">GetResult</span><span class="op">();</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Assert</span></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>        Assert<span class="op">.</span><span class="fu">True</span><span class="op">(</span>result<span class="op">.</span><span class="fu">IsSuccessful</span><span class="op">,</span> <span class="st">&quot;Application layer cannot depend on Infrastructure or Web layers.&quot;</span><span class="op">);</span></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="enforcing-design-patterns-and-class-conventions">Enforcing
+Design Patterns and Class Conventions</h2>
+<p>NetArchTest can also enforce design patterns, naming conventions, and
+inheritance rules across your solution.</p>
+<h3 id="enforcing-repository-implementation-location">Enforcing
+Repository Implementation Location</h3>
+<p>You can ensure that interfaces ending in <code>Repository</code> are
+implemented exclusively within the Infrastructure project:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">Repositories_ShouldResideInInfrastructureLayer</span><span class="op">()</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> assembly <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>MyApp<span class="op">.</span><span class="fu">Infrastructure</span><span class="op">.</span><span class="fu">AssemblyReference</span><span class="op">).</span><span class="fu">Assembly</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> result <span class="op">=</span> Types<span class="op">.</span><span class="fu">InAssembly</span><span class="op">(</span>assembly<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">That</span><span class="op">()</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">HaveNameEndingWith</span><span class="op">(</span><span class="st">&quot;Repository&quot;</span><span class="op">)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">And</span><span class="op">()</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">AreClasses</span><span class="op">()</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">Should</span><span class="op">()</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">ResideInNamespace</span><span class="op">(</span><span class="st">&quot;MyApp.Infrastructure.Repositories&quot;</span><span class="op">)</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">GetResult</span><span class="op">();</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    Assert<span class="op">.</span><span class="fu">True</span><span class="op">(</span>result<span class="op">.</span><span class="fu">IsSuccessful</span><span class="op">);</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="enforcing-controller-dependencies">Enforcing Controller
+Dependencies</h3>
+<p>You can prevent API controllers from directly depending on database
+contexts or repositories, forcing them to communicate through command
+handlers or services:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">Controllers_ShouldNotDirectlyReferenceDatabase</span><span class="op">()</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> assembly <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>MyApp<span class="op">.</span><span class="fu">WebApi</span><span class="op">.</span><span class="fu">AssemblyReference</span><span class="op">).</span><span class="fu">Assembly</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> result <span class="op">=</span> Types<span class="op">.</span><span class="fu">InAssembly</span><span class="op">(</span>assembly<span class="op">)</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">That</span><span class="op">()</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">HaveNameEndingWith</span><span class="op">(</span><span class="st">&quot;Controller&quot;</span><span class="op">)</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">ShouldNot</span><span class="op">()</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">HaveDependencyOn</span><span class="op">(</span><span class="st">&quot;MyApp.Infrastructure.Data&quot;</span><span class="op">)</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">GetResult</span><span class="op">();</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    Assert<span class="op">.</span><span class="fu">True</span><span class="op">(</span>result<span class="op">.</span><span class="fu">IsSuccessful</span><span class="op">,</span> <span class="st">&quot;Controllers should not reference the database directly.&quot;</span><span class="op">);</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="handling-violations-and-debugging">Handling Violations and
+Debugging</h2>
+<p>When <code>result.IsSuccessful</code> is <code>false</code>, the
+<code>TestResult</code> object provides the names of the offending types
+through the <code>FailingTypeNames</code> property. To make debugging
+easier when a test fails, format your assertions to display these
+types:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">Handlers_ShouldHaveNameEndingWithHandler</span><span class="op">()</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> assembly <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>MyApp<span class="op">.</span><span class="fu">Application</span><span class="op">.</span><span class="fu">AssemblyReference</span><span class="op">).</span><span class="fu">Assembly</span><span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> result <span class="op">=</span> Types<span class="op">.</span><span class="fu">InAssembly</span><span class="op">(</span>assembly<span class="op">)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">That</span><span class="op">()</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">ImplementInterface</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span>IRequestHandler<span class="op">&lt;,&gt;))</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">Should</span><span class="op">()</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">HaveNameEndingWith</span><span class="op">(</span><span class="st">&quot;Handler&quot;</span><span class="op">)</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">GetResult</span><span class="op">();</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    Assert<span class="op">.</span><span class="fu">True</span><span class="op">(</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        result<span class="op">.</span><span class="fu">IsSuccessful</span><span class="op">,</span> </span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        $<span class="st">&quot;Violating types: {string.Join(&quot;</span><span class="op">,</span> <span class="st">&quot;, result.FailingTypeNames ?? Enumerable.Empty&lt;string&gt;())}&quot;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="integration-into-the-ci-pipeline">Integration into the CI
+Pipeline</h2>
+<p>Because these architecture rules are written as standard unit tests,
+they run automatically via the <code>dotnet test</code> command. Adding
+them to your continuous integration (CI) pipeline ensures that no pull
+request containing architectural drift or circular dependencies can be
+merged into your main branch.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/enforce-c-architecture-rules-with-net-arch-test';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

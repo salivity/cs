@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How ASP.NET Core Dependency Injection Works - cs</title>
+    <meta name="description" content="ASP.NET Core includes a native, lightweight Inversion of Control (IoC) container that provides Dependency Injection (DI) out of the box. This article explains how the built-in DI system operates, focusing on service registration, the three fundamental ser">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-asp-net-core-dependency-injection-works">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How ASP.NET Core Dependency Injection Works - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-asp-net-core-dependency-injection-works" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="ASP.NET Core includes a native, lightweight Inversion of Control (IoC) container that provides Dependency Injection (DI) out of the box. This article explains how the built-in DI system operates, focusing on service registration, the three fundamental ser" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-aspnet-core-dependency-injection-works">How ASP.NET Core
+Dependency Injection Works</h1>
+<p>ASP.NET Core includes a native, lightweight Inversion of Control
+(IoC) container that provides Dependency Injection (DI) out of the box.
+This article explains how the built-in DI system operates, focusing on
+service registration, the three fundamental service lifetimes,
+constructor injection, and how the runtime automatically manages object
+disposal without requiring third-party libraries.</p>
+<h3 id="the-built-in-ioc-container">The Built-in IoC Container</h3>
+<p>At the core of ASP.NET Core's dependency injection are two primary
+components: <code>IServiceCollection</code> and
+<code>IServiceProvider</code>.</p>
+<p>During application startup—typically in <code>Program.cs</code>—you
+register your application's dependencies into the
+<code>builder.Services</code> collection, which implements
+<code>IServiceCollection</code>. When the application builds, this
+collection compiles into an <code>IServiceProvider</code>, which acts as
+the runtime container responsible for instantiating types and resolving
+their dependencies whenever they are requested.</p>
+<h3 id="service-lifetimes">Service Lifetimes</h3>
+<p>When registering a dependency, you must specify its lifetime. The
+built-in container supports three lifetimes:</p>
+<ol type="1">
+<li><p><strong>Transient (<code>AddTransient</code>)</strong><br />
+Services are created each time they are requested from the service
+container. This lifetime works best for lightweight, stateless
+services.</p></li>
+<li><p><strong>Scoped (<code>AddScoped</code>)</strong><br />
+Services are created once per client request (connection). In a web
+application, a scoped service is shared across all components processing
+the same HTTP request, and it is disposed of when the request
+finishes.</p></li>
+<li><p><strong>Singleton (<code>AddSingleton</code>)</strong><br />
+Services are created the first time they are requested (or when provided
+as an instance at startup) and remain alive for the lifetime of the
+application. Every subsequent request receives the exact same
+instance.</p></li>
+</ol>
+<h3 id="registering-services">Registering Services</h3>
+<p>To register services, map an abstraction (an interface) to a concrete
+implementation in <code>Program.cs</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Register services with their respective lifetimes</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddTransient</span><span class="op">&lt;</span>IEmailSender<span class="op">,</span> EmailSender<span class="op">&gt;();</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddScoped</span><span class="op">&lt;</span>IOrderRepository<span class="op">,</span> OrderRepository<span class="op">&gt;();</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddSingleton</span><span class="op">&lt;</span>ICacheService<span class="op">,</span> MemoryCacheService<span class="op">&gt;();</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span></code></pre></div>
+<h3 id="constructor-injection">Constructor Injection</h3>
+<p>ASP.NET Core primarily uses <strong>constructor injection</strong> to
+supply dependencies to classes, such as controllers, minimal API
+endpoints, or other services.</p>
+<p>When a class requires a dependency, you declare it as a parameter in
+its constructor. The runtime inspects the constructor parameters via
+reflection, queries the <code>IServiceProvider</code> for matching
+types, creates the necessary instances, and passes them in.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OrderService</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IOrderRepository _repository<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IEmailSender _emailSender<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">OrderService</span><span class="op">(</span>IOrderRepository repository<span class="op">,</span> IEmailSender emailSender<span class="op">)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        _repository <span class="op">=</span> repository<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        _emailSender <span class="op">=</span> emailSender<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">CompleteOrder</span><span class="op">(</span><span class="dt">int</span> orderId<span class="op">)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        _repository<span class="op">.</span><span class="fu">MarkAsComplete</span><span class="op">(</span>orderId<span class="op">);</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        _emailSender<span class="op">.</span><span class="fu">Send</span><span class="op">(</span><span class="st">&quot;Order completed.&quot;</span><span class="op">);</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If <code>OrderService</code> itself is registered in the DI
+container, requesting it will cause the container to recursively resolve
+both <code>IOrderRepository</code> and <code>IEmailSender</code>
+first.</p>
+<h3 id="automatic-disposal-and-cleanup">Automatic Disposal and
+Cleanup</h3>
+<p>The container automatically manages the lifecycle of the objects it
+creates. If a service implements <code>IDisposable</code> or
+<code>IAsyncDisposable</code>, the container will call
+<code>Dispose</code> or <code>DisposeAsync</code> when the service's
+lifetime ends:</p>
+<ul>
+<li><strong>Transient</strong> and <strong>Scoped</strong> instances are
+disposed of at the end of the HTTP request scope.</li>
+<li><strong>Singleton</strong> instances are disposed of when the
+application shuts down.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-asp-net-core-dependency-injection-works';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

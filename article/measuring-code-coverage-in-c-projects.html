@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Measuring Code Coverage in C# Projects - cs</title>
+    <meta name="description" content="Code coverage measurement determines the percentage of your software&#39;s source code executed while running automated test suites, serving as a primary metric for identifying untested paths and assessing overall test thoroughness. In modern C# and .NET deve">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/measuring-code-coverage-in-c-projects">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Measuring Code Coverage in C# Projects - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/measuring-code-coverage-in-c-projects" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Code coverage measurement determines the percentage of your software&#39;s source code executed while running automated test suites, serving as a primary metric for identifying untested paths and assessing overall test thoroughness. In modern C# and .NET deve" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="measuring-code-coverage-in-c-projects">Measuring Code Coverage
+in C# Projects</h1>
+<p>Code coverage measurement determines the percentage of your
+software's source code executed while running automated test suites,
+serving as a primary metric for identifying untested paths and assessing
+overall test thoroughness. In modern C# and .NET development, measuring
+coverage involves tracking statement, method, and branch execution using
+tools like Coverlet, Visual Studio's native analysis engine, and
+ReportGenerator. This article covers the fundamental metrics of code
+coverage, how to collect and analyze this data in C# using command-line
+and IDE tools, and how to effectively track test thoroughness within
+automated continuous integration pipelines.</p>
+<h2 id="what-is-code-coverage-measurement">What is Code Coverage
+Measurement?</h2>
+<p>Code coverage is a quantitative software metric that analyzes source
+code execution during the running of automated test suites (such as
+unit, integration, and functional tests). It identifies the degree to
+which an application’s code base has been exercised by the tests.</p>
+<p>The primary metrics tracked include:</p>
+<ul>
+<li><strong>Line / Statement Coverage:</strong> Measures whether each
+executable line of code was hit by a test.</li>
+<li><strong>Branch Coverage:</strong> Measures whether each branch of
+control structures (such as <code>if</code>, <code>else</code>,
+<code>switch</code>, or pattern matching in C#) was executed in both
+true and false evaluations.</li>
+<li><strong>Method Coverage:</strong> Tracks the percentage of defined
+methods invoked during the test execution.</li>
+</ul>
+<p>While high code coverage does not guarantee bug-free software, low
+code coverage explicitly highlights areas containing blind spots and
+untested business logic.</p>
+<h2 id="core-tools-for-c-code-coverage">Core Tools for C# Code
+Coverage</h2>
+<p>The .NET ecosystem provides multiple mature tools to collect and
+visualize coverage data:</p>
+<ol type="1">
+<li><strong>Coverlet:</strong> A cross-platform code coverage framework
+for .NET that supports .NET Framework, .NET Core, and modern .NET
+(5/6/7/8+). It integrates directly with the .NET test runner as an
+MSBuild task or a data collector.</li>
+<li><strong>Visual Studio Code Coverage:</strong> Built into Visual
+Studio Enterprise, offering visual indicators directly in the code
+editor, identifying covered lines (green), partially covered lines
+(yellow), and uncovered lines (red).</li>
+<li><strong>ReportGenerator:</strong> A utility that converts raw
+coverage output files (XML formats like Cobertura or lcov) into
+human-readable HTML reports or summary formats for continuous
+integration (CI) systems.</li>
+</ol>
+<h2 id="collecting-code-coverage-in-c-with-the-net-cli">Collecting Code
+Coverage in C# with the .NET CLI</h2>
+<p>The standardized way to gather code coverage across cross-platform
+.NET environments is via the <code>dotnet test</code> CLI using
+Coverlet.</p>
+<h3 id="step-1-add-the-data-collector">Step 1: Add the Data
+Collector</h3>
+<p>Add the <code>coverlet.collector</code> NuGet package to your test
+project:</p>
+<pre class="shell"><code>dotnet add package coverlet.collector</code></pre>
+<h3 id="step-2-execute-tests-and-collect-metrics">Step 2: Execute Tests
+and Collect Metrics</h3>
+<p>Run your test project and specify the coverage data collector
+flag:</p>
+<pre class="shell"><code>dotnet test --collect:&quot;XPlat Code Coverage&quot;</code></pre>
+<p>This command executes your test suite (using xUnit, NUnit, or MSTest)
+and outputs a raw coverage file, typically named
+<code>coverage.cobertura.xml</code>, inside a generated
+<code>TestResults</code> directory.</p>
+<h3 id="step-3-generate-readable-reports">Step 3: Generate Readable
+Reports</h3>
+<p>To transform the raw XML into a navigable HTML report, use the
+ReportGenerator global tool:</p>
+<pre class="shell"><code>dotnet tool install -g dotnet-reportgenerator-globaltool
+reportgenerator -reports:&quot;**/coverage.cobertura.xml&quot; -targetdir:&quot;coveragereport&quot; -reporttypes:Html</code></pre>
+<p>Opening <code>coveragereport/index.html</code> displays coverage
+percentages broken down by assembly, class, and method, along with
+line-by-line source visualizers.</p>
+<h2 id="tracking-test-thoroughness-effectively">Tracking Test
+Thoroughness Effectively</h2>
+<p>Measuring coverage alone does not ensure test quality. To track
+thoroughness accurately, apply the following practices:</p>
+<h3 id="prioritize-branch-coverage-over-line-coverage">Prioritize Branch
+Coverage Over Line Coverage</h3>
+<p>In C#, constructs such as null-coalescing operators
+(<code>??</code>), ternary expressions, and complex LINQ queries
+compress significant logic into single lines. Line coverage can report a
+line as 100% covered even if only one condition was tested. Tracking
+<strong>branch coverage</strong> reveals whether every logical decision
+path has been exercised.</p>
+<h3 id="exclude-non-domain-code">Exclude Non-Domain Code</h3>
+<p>Raw coverage numbers can be skewed by boilerplate code. Use the
+<code>[ExcludeFromCodeCoverage]</code> attribute or configuration
+settings in <code>runsettings</code> files to omit:</p>
+<ul>
+<li>Auto-generated files (e.g., entity framework migrations, gRPC
+stubs).</li>
+<li>Pure configuration setup and dependency injection registries.</li>
+<li>Data transfer objects (DTOs) without business logic.</li>
+</ul>
+<h3 id="enforce-coverage-thresholds-in-cicd">Enforce Coverage Thresholds
+in CI/CD</h3>
+<p>To prevent untested regressions, automate coverage checks in your
+continuous integration pipelines (GitHub Actions, Azure DevOps, GitLab
+CI). You can configure Coverlet to fail a build if coverage falls below
+a target percentage:</p>
+<pre class="shell"><code>dotnet test /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=branch</code></pre>
+<p>If the test suite executes with branch coverage below 80%, the build
+pipeline halts, ensuring that new features adhere to quality standards
+before merging.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/measuring-code-coverage-in-c-projects';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

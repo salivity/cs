@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Readonly Structs and Defensive Copying in C# - cs</title>
+    <meta name="description" content="In C#, readonly struct declarations enforce immutability on value types to help developers write safer, high-performance code. When standard structs are passed by reference using modifiers like in, the C# compiler often creates hidden &quot;defensive copies&quot; o">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/readonly-structs-and-defensive-copying-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Readonly Structs and Defensive Copying in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/readonly-structs-and-defensive-copying-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, readonly struct declarations enforce immutability on value types to help developers write safer, high-performance code. When standard structs are passed by reference using modifiers like in, the C# compiler often creates hidden &quot;defensive copies&quot; o" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="readonly-structs-and-defensive-copying-in-c">Readonly Structs
+and Defensive Copying in C</h1>
+<p>In C#, <code>readonly struct</code> declarations enforce immutability
+on value types to help developers write safer, high-performance code.
+When standard structs are passed by reference using modifiers like
+<code>in</code>, the C# compiler often creates hidden "defensive copies"
+of the struct to ensure its state is not modified unexpectedly. By
+explicitly marking a struct as <code>readonly</code>, you guarantee to
+the compiler that the data cannot mutate, completely eliminating the
+need for defensive copies and significantly reducing memory overhead and
+CPU cycles.</p>
+<h2 id="the-problem-defensive-copies-with-standard-structs">The Problem:
+Defensive Copies with Standard Structs</h2>
+<p>In high-performance C# applications, structs are often passed using
+the <code>in</code> parameter modifier (or returned via
+<code>ref readonly</code>) to avoid copying large value types across
+method boundaries. Passing by reference avoids the overhead of copying
+the entire struct onto the stack.</p>
+<p>However, standard structs are mutable by default. If you invoke a
+method, property, or field on a struct passed via <code>in</code>, the
+compiler cannot determine with absolute certainty whether that member
+will mutate the struct's internal state. To prevent accidental mutation
+while upholding the read-only contract of <code>in</code>, the compiler
+automatically creates a temporary copy of the struct in memory and calls
+the member on that copy instead. This process is known as a
+<strong>defensive copy</strong>.</p>
+<p>For example, consider a standard mutable struct:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> Point</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> X <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> Y <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> <span class="fu">GetDistance</span><span class="op">()</span> <span class="op">=&gt;</span> Math<span class="op">.</span><span class="fu">Sqrt</span><span class="op">(</span>X <span class="op">*</span> X <span class="op">+</span> Y <span class="op">*</span> Y<span class="op">);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> GeometryService</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessPoint</span><span class="op">(</span><span class="kw">in</span> Point p<span class="op">)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// The compiler creates a defensive copy of &#39;p&#39; before calling GetDistance()</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">double</span> distance <span class="op">=</span> p<span class="op">.</span><span class="fu">GetDistance</span><span class="op">();</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>In the example above, calling <code>p.GetDistance()</code> forces the
+compiler to copy <code>p</code> to a local temporary variable, negating
+the performance benefits of passing the struct by <code>in</code>
+reference.</p>
+<h2 id="what-are-readonly-structs">What Are Readonly Structs?</h2>
+<p>Introduced in C# 7.2, the <code>readonly struct</code> keyword
+enforces compile-time immutability on a value type. When a struct is
+declared with the <code>readonly</code> modifier, every field within it
+must also be marked <code>readonly</code>, and properties can only have
+getters.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">readonly</span> <span class="kw">struct</span> ReadonlyPoint</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> X <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> Y <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">ReadonlyPoint</span><span class="op">(</span><span class="dt">double</span> x<span class="op">,</span> <span class="dt">double</span> y<span class="op">)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        X <span class="op">=</span> x<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        Y <span class="op">=</span> y<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> <span class="fu">GetDistance</span><span class="op">()</span> <span class="op">=&gt;</span> Math<span class="op">.</span><span class="fu">Sqrt</span><span class="op">(</span>X <span class="op">*</span> X <span class="op">+</span> Y <span class="op">*</span> Y<span class="op">);</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If you attempt to modify a field or declare a mutable property within
+a <code>readonly struct</code>, the compiler produces a compilation
+error.</p>
+<h2 id="how-readonly-structs-eliminate-defensive-copying">How Readonly
+Structs Eliminate Defensive Copying</h2>
+<p>When a struct is declared as <code>readonly struct</code>, the
+compiler knows that none of its members can alter its state.
+Consequently, when a <code>readonly struct</code> is accessed via an
+<code>in</code> parameter, a <code>ref readonly</code> local, or a
+<code>readonly</code> field, the compiler skips creating defensive
+copies.</p>
+<p>Instead of duplicating the struct in memory, calls to methods and
+properties are executed directly against the original memory address via
+reference.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> GeometryService</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessPoint</span><span class="op">(</span><span class="kw">in</span> ReadonlyPoint p<span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// No defensive copy is created. </span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="co">// The call executes directly on the referenced instance.</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">double</span> distance <span class="op">=</span> p<span class="op">.</span><span class="fu">GetDistance</span><span class="op">();</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="readonly-members-on-mutable-structs">Readonly Members on Mutable
+Structs</h2>
+<p>If a struct cannot be entirely immutable, C# 8.0 introduced the
+ability to apply the <code>readonly</code> modifier to individual
+members (such as methods or properties) within a standard struct:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> HybridPoint</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> X <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> Y <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Marking this method readonly prevents defensive copying when called</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">readonly</span> <span class="dt">double</span> <span class="fu">GetDistance</span><span class="op">()</span> <span class="op">=&gt;</span> Math<span class="op">.</span><span class="fu">Sqrt</span><span class="op">(</span>X <span class="op">*</span> X <span class="op">+</span> Y <span class="op">*</span> Y<span class="op">);</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Marking a specific method as <code>readonly</code> assures the
+compiler that invoking that specific operation will not mutate state,
+avoiding defensive copying for that call even if the parent struct
+remains mutable.</p>
+<h2 id="summary-of-benefits">Summary of Benefits</h2>
+<ol type="1">
+<li><strong>Zero Allocation Overhead:</strong> Prevents hidden stack
+copies when passing large structs by reference.</li>
+<li><strong>Compile-Time Safety:</strong> Enforces strict immutability
+rules across the entire type.</li>
+<li><strong>Predictable Performance:</strong> Ensures critical loops and
+high-throughput pipelines do not suffer from performance regressions
+caused by implicit compiler-generated temporary variables.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/readonly-structs-and-defensive-copying-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

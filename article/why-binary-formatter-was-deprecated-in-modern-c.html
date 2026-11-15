@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why BinaryFormatter Was Deprecated in Modern C# - cs</title>
+    <meta name="description" content="Binary serialization converts complex in-memory object graphs into a compact stream of bytes for storage or network transport. For years, BinaryFormatter was the standard implementation in the .NET ecosystem, prized for its ability to serialize entire obj">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/why-binary-formatter-was-deprecated-in-modern-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Why BinaryFormatter Was Deprecated in Modern C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/why-binary-formatter-was-deprecated-in-modern-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Binary serialization converts complex in-memory object graphs into a compact stream of bytes for storage or network transport. For years, BinaryFormatter was the standard implementation in the .NET ecosystem, prized for its ability to serialize entire obj" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="why-binaryformatter-was-deprecated-in-modern-c">Why
+BinaryFormatter Was Deprecated in Modern C</h1>
+<p>Binary serialization converts complex in-memory object graphs into a
+compact stream of bytes for storage or network transport. For years,
+<code>BinaryFormatter</code> was the standard implementation in the .NET
+ecosystem, prized for its ability to serialize entire object graphs,
+including private fields and cyclical references, with minimal
+configuration. However, Microsoft has completely deprecated and disabled
+<code>BinaryFormatter</code> in modern .NET (.NET 7, 8, and 9) because
+it possesses critical, unfixable security vulnerabilities that allow
+remote code execution, alongside tight runtime coupling that limits
+cross-platform interoperability.</p>
+<h2 id="what-is-binary-serialization">What Is Binary Serialization?</h2>
+<p>Binary serialization is the process of mapping an application's
+in-memory object state directly into a compact binary format. Unlike
+text-based formats like JSON or XML, binary representations omit
+human-readable formatting, whitespace, and structural delimiters.</p>
+<p>In early .NET implementations, binary serialization captured not only
+an object's public properties but also its exact runtime type
+definitions, assembly versions, private fields, and complex reference
+graphs. This made it effortless to save and restore complex object
+structures without writing custom mapping logic or defining strict data
+contracts.</p>
+<h2 id="why-binaryformatter-was-deprecated">Why BinaryFormatter Was
+Deprecated</h2>
+<p>Despite its convenience, <code>BinaryFormatter</code> contains
+foundational architectural choices that make it hazardous in modern
+distributed environments.</p>
+<h3 id="inherent-remote-code-execution-rce-vulnerabilities">Inherent
+Remote Code Execution (RCE) Vulnerabilities</h3>
+<p>The primary reason for the deprecation of
+<code>BinaryFormatter</code> is security. <code>BinaryFormatter</code>
+deserializes payloads by reading type metadata directly embedded inside
+the incoming byte stream. When it instantiates these types, it
+automatically invokes constructors, finalizers, or specialized
+deserialization callbacks before the consuming application can validate
+the data.</p>
+<p>Attackers exploit this mechanism by injecting carefully crafted
+"gadget chains"—sequences of standard .NET framework classes present in
+the application's runtime. When instantiated or finalized during
+deserialization, these gadget chains can execute arbitrary system
+commands, bypass security controls, and compromise the host machine.</p>
+<h3 id="impossibility-of-remediation">Impossibility of Remediation</h3>
+<p>Microsoft determined that <code>BinaryFormatter</code> cannot be
+secured against deserialization attacks. Traditional mitigation
+techniques, such as using custom <code>SerializationBinder</code>
+implementations to whitelist safe types, routinely fail because:</p>
+<ul>
+<li>Gadget chains continuously evolve as new framework libraries and
+dependencies are discovered.</li>
+<li>The deserializer needs access to generic framework types that can be
+leveraged to circumvent validation logic.</li>
+<li>Vulnerabilities exist at the architectural level rather than as
+isolated implementation bugs.</li>
+</ul>
+<p>Because the component was designed to trust the incoming stream
+implicitly, the official guidance states that
+<code>BinaryFormatter</code> should never be used with untrusted data,
+and no patch can make it safe.</p>
+<h3 id="versioning-and-cross-platform-incompatibilities">Versioning and
+Cross-Platform Incompatibilities</h3>
+<p><code>BinaryFormatter</code> deeply ties serialized payloads to
+specific .NET internal types, assembly versions, and namespaces. A
+change to a private field name or an update to a framework assembly
+version often invalidates previously serialized data. Furthermore,
+because it relies on .NET-specific runtime characteristics, it offers
+virtually no interoperability with applications written in other
+programming languages.</p>
+<h2 id="phased-removal-in-modern-net">Phased Removal in Modern .NET</h2>
+<p>Due to these architectural risks, Microsoft progressively phased out
+<code>BinaryFormatter</code>:</p>
+<ul>
+<li><strong>.NET 5 and .NET 6:</strong> Marked the API as obsolete with
+compilation warnings and introduced runtime switches to disable it.</li>
+<li><strong>.NET 7 and .NET 8:</strong> Deprecated the component by
+default in most project templates and disabled it in ASP.NET Core
+applications.</li>
+<li><strong>.NET 9:</strong> Completely removed the implementation from
+the shared framework runtime, causing <code>BinaryFormatter</code>
+methods to throw a <code>PlatformNotSupportedException</code> unless
+legacy compatibility packages are explicitly forced.</li>
+</ul>
+<h2 id="modern-secure-alternatives">Modern, Secure Alternatives</h2>
+<p>Applications relying on <code>BinaryFormatter</code> must migrate to
+modern serialization frameworks that separate data from behavioral
+logic:</p>
+<ul>
+<li><strong>System.Text.Json:</strong> The default, high-performance
+JSON serializer built into modern .NET. It uses explicit data contracts
+and does not deserialize arbitrary types by default, eliminating
+code-execution exploits.</li>
+<li><strong>Protocol Buffers (protobuf-net):</strong> A contract-based
+binary format developed by Google that produces compact payloads,
+provides rapid serialization speeds, and supports cross-language
+environments.</li>
+<li><strong>MessagePack:</strong> An efficient binary format that
+mirrors JSON data models but provides the performance and payload size
+advantages of binary data.</li>
+<li><strong>MemoryPack:</strong> A high-speed, zero-encoding binary
+serializer specifically optimized for modern C# that avoids polymorphic
+deserialization vulnerabilities through compile-time code
+generation.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/why-binary-formatter-was-deprecated-in-modern-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

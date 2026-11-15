@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observer Pattern with Events and Delegates in C# - cs</title>
+    <meta name="description" content="The Observer pattern is a behavioral design pattern that defines a one-to-many dependency between objects, allowing one object (the subject) to notify multiple dependents (observers) when its state changes. In C#, the language provides first-class support">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/observer-pattern-with-events-and-delegates-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Observer Pattern with Events and Delegates in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/observer-pattern-with-events-and-delegates-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Observer pattern is a behavioral design pattern that defines a one-to-many dependency between objects, allowing one object (the subject) to notify multiple dependents (observers) when its state changes. In C#, the language provides first-class support" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="observer-pattern-with-events-and-delegates-in-c">Observer
+Pattern with Events and Delegates in C</h1>
+<p>The Observer pattern is a behavioral design pattern that defines a
+one-to-many dependency between objects, allowing one object (the
+subject) to notify multiple dependents (observers) when its state
+changes. In C#, the language provides first-class support for this
+pattern natively through delegates and events, eliminating the need to
+manually implement boilerplate subject and observer interfaces. This
+guide demonstrates how to build an idiomatic, type-safe implementation
+of the Observer pattern using C#'s built-in <code>event</code> keyword
+and <code>EventHandler&lt;T&gt;</code> delegate.</p>
+<h2 id="core-concepts">Core Concepts</h2>
+<p>In traditional object-oriented implementations of the Observer
+pattern, you define an <code>ISubject</code> interface with
+<code>Attach()</code>, <code>Detach()</code>, and <code>Notify()</code>
+methods, alongside an <code>IObserver</code> interface with an
+<code>Update()</code> method.</p>
+<p>C# abstracts these responsibilities using:</p>
+<ul>
+<li><strong>Delegates</strong>: Define the method signature for
+callbacks (acting as the abstract observer contract).</li>
+<li><strong>Events</strong>: Encapsulate delegates on the publisher
+(subject), restricting subscribers to only register (<code>+=</code>) or
+unregister (<code>-=</code>) handlers.</li>
+<li><strong><code>EventArgs</code></strong>: Encapsulates the state data
+passed from the publisher to the subscribers.</li>
+</ul>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="1-define-custom-event-arguments">1. Define Custom Event
+Arguments</h3>
+<p>Create a class that inherits from <code>EventArgs</code> to carry the
+state change information to subscribers.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OrderStatusChangedEventArgs <span class="op">:</span> EventArgs</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> OrderId <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> NewStatus <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">OrderStatusChangedEventArgs</span><span class="op">(</span><span class="dt">int</span> orderId<span class="op">,</span> <span class="dt">string</span> newStatus<span class="op">)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        OrderId <span class="op">=</span> orderId<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        NewStatus <span class="op">=</span> newStatus<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-implement-the-subject-publisher">2. Implement the Subject
+(Publisher)</h3>
+<p>The subject exposes an <code>event</code> using
+<code>EventHandler&lt;TEventArgs&gt;</code>. It triggers the event using
+thread-safe null-conditional invocation (<code>?.Invoke()</code>).</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Order</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Id <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">string</span> _status<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The event acts as the subject&#39;s notification mechanism</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">event</span> EventHandler<span class="op">&lt;</span>OrderStatusChangedEventArgs<span class="op">&gt;?</span> StatusChanged<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Order</span><span class="op">(</span><span class="dt">int</span> id<span class="op">,</span> <span class="dt">string</span> initialStatus<span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        Id <span class="op">=</span> id<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        _status <span class="op">=</span> initialStatus<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">UpdateStatus</span><span class="op">(</span><span class="dt">string</span> newStatus<span class="op">)</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>_status <span class="op">!=</span> newStatus<span class="op">)</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>            _status <span class="op">=</span> newStatus<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>            <span class="fu">OnStatusChanged</span><span class="op">(</span><span class="kw">new</span> <span class="fu">OrderStatusChangedEventArgs</span><span class="op">(</span>Id<span class="op">,</span> newStatus<span class="op">));</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Protected virtual method enables derived classes to handle or override the event</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">virtual</span> <span class="dt">void</span> <span class="fu">OnStatusChanged</span><span class="op">(</span>OrderStatusChangedEventArgs e<span class="op">)</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        StatusChanged<span class="op">?.</span><span class="fu">Invoke</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> e<span class="op">);</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-implement-the-observers-subscribers">3. Implement the
+Observers (Subscribers)</h3>
+<p>Observers define handler methods matching the signature
+<code>void Handler(object? sender, TEventArgs e)</code> and attach them
+to the subject's event.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> EmailNotifier</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">OnOrderStatusChanged</span><span class="op">(</span><span class="dt">object</span><span class="op">?</span> sender<span class="op">,</span> OrderStatusChangedEventArgs e<span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[Email] Order #{e.OrderId} updated: {e.NewStatus}&quot;</span><span class="op">);</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> SmsNotifier</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">OnOrderStatusChanged</span><span class="op">(</span><span class="dt">object</span><span class="op">?</span> sender<span class="op">,</span> OrderStatusChangedEventArgs e<span class="op">)</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[SMS] Order #{e.OrderId} updated: {e.NewStatus}&quot;</span><span class="op">);</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="4-wire-the-subject-and-observers-together">4. Wire the Subject
+and Observers Together</h3>
+<p>Register handlers using the <code>+=</code> operator and trigger
+notifications by altering the subject's state.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Program</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> order <span class="op">=</span> <span class="kw">new</span> <span class="fu">Order</span><span class="op">(</span><span class="dv">101</span><span class="op">,</span> <span class="st">&quot;Pending&quot;</span><span class="op">);</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> emailNotifier <span class="op">=</span> <span class="kw">new</span> <span class="fu">EmailNotifier</span><span class="op">();</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> smsNotifier <span class="op">=</span> <span class="kw">new</span> <span class="fu">SmsNotifier</span><span class="op">();</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Subscribe to the event</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        order<span class="op">.</span><span class="fu">StatusChanged</span> <span class="op">+=</span> emailNotifier<span class="op">.</span><span class="fu">OnOrderStatusChanged</span><span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        order<span class="op">.</span><span class="fu">StatusChanged</span> <span class="op">+=</span> smsNotifier<span class="op">.</span><span class="fu">OnOrderStatusChanged</span><span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Triggers notifications to both observers</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        order<span class="op">.</span><span class="fu">UpdateStatus</span><span class="op">(</span><span class="st">&quot;Shipped&quot;</span><span class="op">);</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Unsubscribe an observer</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        order<span class="op">.</span><span class="fu">StatusChanged</span> <span class="op">-=</span> smsNotifier<span class="op">.</span><span class="fu">OnOrderStatusChanged</span><span class="op">;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Triggers notification only to the email notifier</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        order<span class="op">.</span><span class="fu">UpdateStatus</span><span class="op">(</span><span class="st">&quot;Delivered&quot;</span><span class="op">);</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Prevent Memory Leaks</strong>: An event holds a strong
+reference to its subscriber objects. If a publisher has a longer
+lifespan than a subscriber, always unregister the handler using
+<code>-=</code> or implement <code>IDisposable</code> on the subscriber
+to avoid keeping objects alive in memory.</li>
+<li><strong>Use Standard Signatures</strong>: Stick to
+<code>EventHandler&lt;TEventArgs&gt;</code> rather than creating custom
+delegate types. This adheres to .NET framework design guidelines and
+ensures consistency across libraries.</li>
+<li><strong>Thread Safety</strong>: Invoking events via
+<code>StatusChanged?.Invoke(this, e)</code> copies the delegate
+reference before evaluation, ensuring thread safety if a subscriber
+unregisters on another thread just before invocation.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/observer-pattern-with-events-and-delegates-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

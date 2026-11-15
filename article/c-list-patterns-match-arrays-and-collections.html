@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# List Patterns: Match Arrays and Collections - cs</title>
+    <meta name="description" content="List patterns, introduced in C# 11, extend pattern matching to sequences such as arrays, lists, and spans. This article covers how list patterns work, their core syntax elements—including exact matching, discard patterns, and slice patterns—and practical">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-list-patterns-match-arrays-and-collections">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# List Patterns: Match Arrays and Collections - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-list-patterns-match-arrays-and-collections" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="List patterns, introduced in C# 11, extend pattern matching to sequences such as arrays, lists, and spans. This article covers how list patterns work, their core syntax elements—including exact matching, discard patterns, and slice patterns—and practical" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-list-patterns-match-arrays-and-collections">C# List Patterns:
+Match Arrays and Collections</h1>
+<p>List patterns, introduced in C# 11, extend pattern matching to
+sequences such as arrays, lists, and spans. This article covers how list
+patterns work, their core syntax elements—including exact matching,
+discard patterns, and slice patterns—and practical examples
+demonstrating how to match and deconstruct collections efficiently using
+<code>is</code> expressions and <code>switch</code> statements.</p>
+<h2 id="what-are-list-patterns">What Are List Patterns?</h2>
+<p>List patterns allow you to test whether a collection matches a
+specific sequence of elements and structure. They work with any type
+that is countable (has a <code>Length</code> or <code>Count</code>
+property) and indexable (provides an integer indexer), including
+<code>T[]</code>, <code>List&lt;T&gt;</code>,
+<code>Span&lt;T&gt;</code>, and <code>ReadOnlySpan&lt;T&gt;</code>.</p>
+<p>A list pattern is enclosed in square brackets <code>[...]</code>. The
+pattern checks both the length of the collection and the values or
+patterns of its individual elements.</p>
+<h2 id="basic-sequence-and-element-matching">Basic Sequence and Element
+Matching</h2>
+<p>The simplest list pattern matches elements in exact sequence and
+checks the exact length of the collection:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[]</span> numbers <span class="op">=</span> <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span> <span class="op">};</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>numbers <span class="kw">is</span> <span class="op">[</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">])</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Matches exact values and length of 3.&quot;</span><span class="op">);</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If the array has fewer or more elements, the pattern fails.</p>
+<h3 id="discard-pattern-_">Discard Pattern (<code>_</code>)</h3>
+<p>To match an element regardless of its value while enforcing
+collection length, use the discard pattern <code>_</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[]</span> scores <span class="op">=</span> <span class="op">{</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">42</span><span class="op">,</span> <span class="dv">30</span> <span class="op">};</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>scores <span class="kw">is</span> <span class="op">[</span><span class="dv">10</span><span class="op">,</span> _<span class="op">,</span> <span class="dv">30</span><span class="op">])</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Starts with 10, ends with 30, and has exactly 3 items.&quot;</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="the-slice-pattern-">The Slice Pattern (<code>..</code>)</h2>
+<p>The slice pattern (<code>..</code>) matches zero or more elements. It
+allows you to inspect specific positions without restricting the
+collection to a fixed size.</p>
+<h3 id="matching-prefixes-and-suffixes">Matching Prefixes and
+Suffixes</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[]</span> values <span class="op">=</span> <span class="op">{</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">5</span> <span class="op">};</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Matches any collection that starts with 1</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> startsWithOne <span class="op">=</span> values <span class="kw">is</span> <span class="op">[</span><span class="dv">1</span><span class="op">,</span> <span class="op">..];</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Matches any collection that ends with 5</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> endsWithFive <span class="op">=</span> values <span class="kw">is</span> <span class="op">[..,</span> <span class="dv">5</span><span class="op">];</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Matches any collection starting with 1 and ending with 5</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> startsOneEndsFive <span class="op">=</span> values <span class="kw">is</span> <span class="op">[</span><span class="dv">1</span><span class="op">,</span> <span class="op">..,</span> <span class="dv">5</span><span class="op">];</span></span></code></pre></div>
+<p>Only one slice pattern (<code>..</code>) is permitted within a single
+list pattern.</p>
+<h3 id="capturing-slices">Capturing Slices</h3>
+<p>You can capture the elements matched by a slice pattern using a
+variable declaration:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span><span class="op">[]</span> pathSegments <span class="op">=</span> <span class="op">{</span> <span class="st">&quot;api&quot;</span><span class="op">,</span> <span class="st">&quot;v1&quot;</span><span class="op">,</span> <span class="st">&quot;users&quot;</span><span class="op">,</span> <span class="st">&quot;123&quot;</span> <span class="op">};</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>pathSegments <span class="kw">is</span> <span class="op">[</span><span class="st">&quot;api&quot;</span><span class="op">,</span> <span class="dt">var</span> version<span class="op">,</span> <span class="op">..</span> <span class="dt">var</span> remaining<span class="op">])</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Version: {version}&quot;</span><span class="op">);</span> <span class="co">// &quot;v1&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Remaining: {string.Join(&#39;/&#39;, remaining)}&quot;</span><span class="op">);</span> <span class="co">// &quot;users/123&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The captured sub-sequence retains the collection's compatible slice
+type (for example, an array slice yields an array, while a span slice
+yields a sub-span).</p>
+<h2 id="combining-with-relational-and-logical-patterns">Combining with
+Relational and Logical Patterns</h2>
+<p>Elements inside list patterns can use relational (<code>&lt;</code>,
+<code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>) and logical
+(<code>and</code>, <code>or</code>, <code>not</code>) patterns:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span><span class="op">[]</span> measurements <span class="op">=</span> <span class="op">{</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">12</span><span class="op">,</span> <span class="dv">100</span> <span class="op">};</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>measurements <span class="kw">is</span> <span class="op">[&gt;</span> <span class="dv">0</span><span class="op">,</span> <span class="op">&gt;=</span> <span class="dv">10</span> and <span class="op">&lt;=</span> <span class="dv">20</span><span class="op">,</span> not <span class="dv">0</span><span class="op">])</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;All three elements satisfy their respective conditions.&quot;</span><span class="op">);</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="practical-application-command-line-argument-parsing">Practical
+Application: Command-Line Argument Parsing</h2>
+<p>List patterns are particularly effective inside <code>switch</code>
+expressions for command-line parsing or message handling:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> <span class="fu">HandleCommand</span><span class="op">(</span><span class="dt">string</span><span class="op">[]</span> args<span class="op">)</span> <span class="op">=&gt;</span> args <span class="kw">switch</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="st">&quot;run&quot;</span><span class="op">]</span>                      <span class="op">=&gt;</span> <span class="st">&quot;Executing default run...&quot;</span><span class="op">,</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="st">&quot;run&quot;</span><span class="op">,</span> <span class="st">&quot;--profile&quot;</span><span class="op">,</span> <span class="dt">var</span> p<span class="op">]</span>  <span class="op">=&gt;</span> $<span class="st">&quot;Running with profile: {p}&quot;</span><span class="op">,</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="st">&quot;config&quot;</span><span class="op">,</span> <span class="st">&quot;set&quot;</span><span class="op">,</span> <span class="dt">var</span> k<span class="op">,</span> <span class="dt">var</span> v<span class="op">]</span> <span class="op">=&gt;</span> $<span class="st">&quot;Setting {k} to {v}&quot;</span><span class="op">,</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="st">&quot;help&quot;</span> or <span class="st">&quot;-h&quot;</span> or <span class="st">&quot;--help&quot;</span><span class="op">]</span> <span class="op">=&gt;</span> <span class="st">&quot;Displaying help...&quot;</span><span class="op">,</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">[]</span>                           <span class="op">=&gt;</span> <span class="st">&quot;No arguments provided.&quot;</span><span class="op">,</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="dt">var</span> cmd<span class="op">,</span> <span class="op">..]</span>                <span class="op">=&gt;</span> $<span class="st">&quot;Unknown command: {cmd}&quot;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<p>This syntax replaces multiple nested length checks, null validations,
+and index boundary checks with declarative, type-safe constructs
+evaluated by the compiler.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-list-patterns-match-arrays-and-collections';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

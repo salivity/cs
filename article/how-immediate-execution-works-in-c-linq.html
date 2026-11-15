@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Immediate Execution Works in C# LINQ - cs</title>
+    <meta name="description" content="In Language Integrated Query (LINQ), queries are typically evaluated lazily through deferred execution, meaning the query logic is not executed until the sequence is actually enumerated. However, immediate execution operators like ToList(), ToArray(), and">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-immediate-execution-works-in-c-linq">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Immediate Execution Works in C# LINQ - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-immediate-execution-works-in-c-linq" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Language Integrated Query (LINQ), queries are typically evaluated lazily through deferred execution, meaning the query logic is not executed until the sequence is actually enumerated. However, immediate execution operators like ToList(), ToArray(), and" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-immediate-execution-works-in-c-linq">How Immediate Execution
+Works in C# LINQ</h1>
+<p>In Language Integrated Query (LINQ), queries are typically evaluated
+lazily through deferred execution, meaning the query logic is not
+executed until the sequence is actually enumerated. However, immediate
+execution operators like <code>ToList()</code>, <code>ToArray()</code>,
+and <code>Count()</code> bypass this behavior by forcing the underlying
+sequence to be iterated right when the method is called. This article
+explains the internal mechanics of immediate execution in C# LINQ,
+contrasting how materializing operators like <code>ToList()</code>
+differ from scalar aggregators like <code>Count()</code>, and outlines
+their practical impact on memory, performance, and database queries.</p>
+<h2 id="the-mechanism-behind-immediate-execution">The Mechanism Behind
+Immediate Execution</h2>
+<p>When a LINQ query is defined using deferred methods like
+<code>Where()</code> or <code>Select()</code>, C# constructs an iterator
+or expression tree representing the sequence of operations. No data is
+filtered, mapped, or loaded into memory at declaration time.</p>
+<p>Immediate execution occurs when a method requires access to the
+complete dataset or a resolved scalar value to produce its result. To
+achieve this, the operator internally initiates a loop:</p>
+<ol type="1">
+<li>It invokes <code>IEnumerable&lt;T&gt;.GetEnumerator()</code>.</li>
+<li>It advances through the elements using a
+<code>while (enumerator.MoveNext())</code> loop.</li>
+<li>It evaluates the deferred pipeline logic for every item yielded by
+the sequence.</li>
+<li>It either accumulates the items into a new structure or aggregates
+them into a final primitive value before returning control to the
+caller.</li>
+</ol>
+<p>Once the method finishes, the query evaluation is complete, and the
+result is fixed in memory.</p>
+<h2 id="how-tolist-works">How <code>ToList()</code> Works</h2>
+<p><code>ToList()</code> is a collection materialization operator. Its
+primary role is to consume the incoming enumerable sequence and store
+every resulting element in a newly allocated
+<code>List&lt;T&gt;</code>.</p>
+<h3 id="memory-allocation-and-sizing">Memory Allocation and Sizing</h3>
+<p>Under the hood, <code>ToList()</code> checks if the source implements
+<code>ICollection&lt;T&gt;</code> or
+<code>IIListProvider&lt;T&gt;</code>. If it does, the framework reads
+the <code>Count</code> property upfront to initialize a
+<code>List&lt;T&gt;</code> with an internal array of the exact required
+capacity, preventing resizing overhead. If the source is a purely
+deferred stream where the final count is unknown, the internal buffer
+starts with a default size and dynamically doubles its internal array
+capacity as elements are added.</p>
+<h3 id="state-snapshot">State Snapshot</h3>
+<p>Because <code>ToList()</code> evaluates the pipeline immediately and
+caches the results:</p>
+<ul>
+<li>The query is detached from its source; subsequent mutations to the
+source data will not affect the generated list.</li>
+<li>Repeated access to the list will not re-run the LINQ pipeline,
+eliminating the risk of multiple enumerations.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> query <span class="op">=</span> numbers<span class="op">.</span><span class="fu">Where</span><span class="op">(</span>n <span class="op">=&gt;</span> n <span class="op">&gt;</span> <span class="dv">10</span><span class="op">);</span> <span class="co">// Query defined (deferred)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> result <span class="op">=</span> query<span class="op">.</span><span class="fu">ToList</span><span class="op">();</span>       <span class="co">// Pipeline evaluated and results stored immediately</span></span></code></pre></div>
+<h2 id="how-count-works">How <code>Count()</code> Works</h2>
+<p><code>Count()</code> is a scalar aggregation operator. Instead of
+retaining elements in memory, it traverses the sequence solely to return
+the total number of items matching the criteria as an integer.</p>
+<h3 id="optimization-shortcuts">Optimization Shortcuts</h3>
+<p>When calling <code>Count()</code>, the method attempts performance
+optimizations before resorting to full enumeration:</p>
+<ul>
+<li>If the source directly implements <code>ICollection&lt;T&gt;</code>
+or the non-generic <code>ICollection</code>, it simply queries the
+<code>.Count</code> property in <span
+class="math inline">\(O(1)\)</span> time without iterating through the
+elements.</li>
+<li>If a predicate is provided (e.g.,
+<code>.Count(x =&gt; x &gt; 5)</code>), or if the source is an
+unmaterialized iterator pipeline, it must iterate through every item
+sequentially using an internal accumulator variable, resulting in <span
+class="math inline">\(O(n)\)</span> time complexity.</li>
+</ul>
+<p>Unlike <code>ToList()</code>, <code>Count()</code> discards the
+actual items as it visits them, meaning it requires minimal additional
+memory allocations.</p>
+<h2 id="behavior-with-remote-data-sources-iqueryable">Behavior with
+Remote Data Sources (IQueryable)</h2>
+<p>When targeting database providers like Entity Framework Core via
+<code>IQueryable&lt;T&gt;</code>, immediate execution operators change
+what SQL is generated and transmitted over the network:</p>
+<ul>
+<li><strong><code>ToList()</code></strong>: Translates the preceding
+LINQ expressions into a <code>SELECT</code> statement, sends the query
+across the network, reads the tabular results into memory, and
+instantiates entity objects for each row returned.</li>
+<li><strong><code>Count()</code></strong>: Translates the query into an
+aggregate SQL command—typically
+<code>SELECT COUNT(*) FROM Table WHERE ...</code>—executing the counting
+logic directly on the database engine. Only the single integer value is
+transmitted back over the network, minimizing bandwidth usage and
+client-side memory consumption.</li>
+</ul>
+<h2 id="summary-of-differences">Summary of Differences</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>ToList()</code></th>
+<th style="text-align: left;"><code>Count()</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Return Type</strong></td>
+<td style="text-align: left;"><code>List&lt;T&gt;</code></td>
+<td style="text-align: left;"><code>int</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Memory Footprint</strong></td>
+<td style="text-align: left;">Proportional to result set size (<span
+class="math inline">\(O(n)\)</span>)</td>
+<td style="text-align: left;">Constant scalar allocation (<span
+class="math inline">\(O(1)\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Purpose</strong></td>
+<td style="text-align: left;">Materializing and caching data</td>
+<td style="text-align: left;">Quantifying elements</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>SQL Equivalent (LINQ to
+Entities)</strong></td>
+<td
+style="text-align: left;"><code>SELECT [Columns] FROM ...</code></td>
+<td style="text-align: left;"><code>SELECT COUNT(*) FROM ...</code></td>
+</tr>
+</tbody>
+</table></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-immediate-execution-works-in-c-linq';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

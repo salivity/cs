@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thread-Safe Async State Machines in C# - cs</title>
+    <meta name="description" content="Building thread-safe asynchronous state machines in custom C# libraries requires managing state transitions reliably across concurrent execution contexts while handling non-blocking asynchronous operations without deadlocks or race conditions. This articl">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/thread-safe-async-state-machines-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Thread-Safe Async State Machines in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/thread-safe-async-state-machines-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Building thread-safe asynchronous state machines in custom C# libraries requires managing state transitions reliably across concurrent execution contexts while handling non-blocking asynchronous operations without deadlocks or race conditions. This articl" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="thread-safe-async-state-machines-in-c">Thread-Safe Async State
+Machines in C</h1>
+<p>Building thread-safe asynchronous state machines in custom C#
+libraries requires managing state transitions reliably across concurrent
+execution contexts while handling non-blocking asynchronous operations
+without deadlocks or race conditions. This article explores the core
+synchronization strategies, design patterns, and C# primitives necessary
+to build robust async state machines, covering atomic operations,
+async-compatible locks, and event-loop-style message passing.</p>
+<h2 id="the-core-challenge-asynchrony-and-thread-concurrency">The Core
+Challenge: Asynchrony and Thread Concurrency</h2>
+<p>Standard C# state machines rely on synchronous locks
+(<code>lock (syncRoot)</code>) to guard state mutations. However,
+standard locks are thread-affine and cannot span across an
+<code>await</code> expression; the compiler forbids using
+<code>await</code> inside a <code>lock</code> block because the
+continuation may resume on a different thread, causing synchronization
+faults or deadlocks.</p>
+<p>To build an asynchronous state machine, you must handle two
+concurrent dimensions:</p>
+<ol type="1">
+<li><strong>Thread Safety:</strong> Ensuring that multiple threads
+calling transition triggers simultaneously do not corrupt internal
+state.</li>
+<li><strong>Transition Atomicity:</strong> Ensuring that no other
+transition can begin while an asynchronous transition (involving I/O,
+network calls, or timers) is pending.</li>
+</ol>
+<hr />
+<h2 id="strategy-1-async-locking-with-semaphoreslim">Strategy 1: Async
+Locking with <code>SemaphoreSlim</code></h2>
+<p>The most direct way to serialize asynchronous transitions is by
+utilizing a <code>SemaphoreSlim</code> initialized with an initial and
+maximum count of <code>1</code>. This acts as an async-compatible mutual
+exclusion lock (async mutex).</p>
+<h3 id="implementation-pattern">Implementation Pattern</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">.</span><span class="fu">Tasks</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">enum</span> ConnectionState</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    Disconnected<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    Connecting<span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    Connected<span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    Disconnecting</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> AsyncConnectionStateMachine</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> SemaphoreSlim _gate <span class="op">=</span> <span class="kw">new</span><span class="op">(</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> ConnectionState State <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> ConnectionState<span class="op">.</span><span class="fu">Disconnected</span><span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task <span class="fu">ConnectAsync</span><span class="op">(</span>CancellationToken cancellationToken <span class="op">=</span> <span class="kw">default</span><span class="op">)</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        await _gate<span class="op">.</span><span class="fu">WaitAsync</span><span class="op">(</span>cancellationToken<span class="op">).</span><span class="fu">ConfigureAwait</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(</span>State <span class="op">!=</span> ConnectionState<span class="op">.</span><span class="fu">Disconnected</span><span class="op">)</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>                <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">InvalidOperationException</span><span class="op">(</span>$<span class="st">&quot;Cannot connect while in state: {State}&quot;</span><span class="op">);</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>            State <span class="op">=</span> ConnectionState<span class="op">.</span><span class="fu">Connecting</span><span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Perform asynchronous connection logic</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>            await <span class="fu">ExecuteConnectAsync</span><span class="op">(</span>cancellationToken<span class="op">).</span><span class="fu">ConfigureAwait</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>            State <span class="op">=</span> ConnectionState<span class="op">.</span><span class="fu">Connected</span><span class="op">;</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>        <span class="kw">catch</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>            State <span class="op">=</span> ConnectionState<span class="op">.</span><span class="fu">Disconnected</span><span class="op">;</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span><span class="op">;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>        <span class="kw">finally</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>            _gate<span class="op">.</span><span class="fu">Release</span><span class="op">();</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> async Task <span class="fu">ExecuteConnectAsync</span><span class="op">(</span>CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Simulated asynchronous work</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>        await Task<span class="op">.</span><span class="fu">Delay</span><span class="op">(</span><span class="dv">100</span><span class="op">,</span> cancellationToken<span class="op">).</span><span class="fu">ConfigureAwait</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="considerations-for-semaphoreslim">Considerations for
+<code>SemaphoreSlim</code></h3>
+<ul>
+<li><strong>Re-entrancy:</strong> Unlike
+<code>Monitor</code>/<code>lock</code>, <code>SemaphoreSlim</code> is
+not re-entrant. Calling a method that requests the lock from within a
+state action already holding the lock will cause a permanent
+deadlock.</li>
+<li><strong>Fairness:</strong> By default, <code>SemaphoreSlim</code>
+does not guarantee FIFO order. If strict FIFO transition ordering is
+required, an explicit transition queue must be used.</li>
+</ul>
+<hr />
+<h2 id="strategy-2-single-writer-actor-pattern-via-channels">Strategy 2:
+Single-Writer Actor Pattern via Channels</h2>
+<p>For high-throughput systems or scenarios where lock contention is
+undesirable, serialize state machine mutations using a message-passing
+actor model. By routing trigger requests through a
+<code>System.Threading.Channels.Channel&lt;T&gt;</code>, you ensure that
+exactly one worker loop mutates the state sequentially.</p>
+<h3 id="implementation-pattern-1">Implementation Pattern</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">.</span><span class="fu">Channels</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">.</span><span class="fu">Tasks</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ActorStateMachine</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">enum</span> Trigger <span class="op">{</span> Start<span class="op">,</span> Complete<span class="op">,</span> Fail <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> Channel<span class="op">&lt;</span>Trigger<span class="op">&gt;</span> _triggers <span class="op">=</span> Channel<span class="op">.</span><span class="fu">CreateUnbounded</span><span class="op">&lt;</span>Trigger<span class="op">&gt;(</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">new</span> UnboundedChannelOptions <span class="op">{</span> SingleReader <span class="op">=</span> <span class="kw">true</span><span class="op">,</span> SingleWriter <span class="op">=</span> <span class="kw">false</span> <span class="op">});</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> TaskCompletionSource _completion <span class="op">=</span> <span class="kw">new</span><span class="op">();</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">int</span> _currentState<span class="op">;</span> <span class="co">// 0: Idle, 1: Running, 2: Finished</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">ActorStateMachine</span><span class="op">()</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        Task<span class="op">.</span><span class="fu">Run</span><span class="op">(</span>ProcessTriggersAsync<span class="op">);</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> ValueTask <span class="fu">FireAsync</span><span class="op">(</span>Trigger trigger<span class="op">)</span> <span class="op">=&gt;</span> _triggers<span class="op">.</span><span class="fu">Writer</span><span class="op">.</span><span class="fu">WriteAsync</span><span class="op">(</span>trigger<span class="op">);</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> async Task <span class="fu">ProcessTriggersAsync</span><span class="op">()</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> reader <span class="op">=</span> _triggers<span class="op">.</span><span class="fu">Reader</span><span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        <span class="kw">while</span> <span class="op">(</span>await reader<span class="op">.</span><span class="fu">WaitToReadAsync</span><span class="op">().</span><span class="fu">ConfigureAwait</span><span class="op">(</span><span class="kw">false</span><span class="op">))</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>            <span class="kw">while</span> <span class="op">(</span>reader<span class="op">.</span><span class="fu">TryRead</span><span class="op">(</span><span class="kw">out</span> <span class="dt">var</span> trigger<span class="op">))</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>                await <span class="fu">ApplyTransitionAsync</span><span class="op">(</span>trigger<span class="op">).</span><span class="fu">ConfigureAwait</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> async Task <span class="fu">ApplyTransitionAsync</span><span class="op">(</span>Trigger trigger<span class="op">)</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>        <span class="kw">switch</span> <span class="op">(</span>_currentState<span class="op">)</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>            <span class="kw">case</span> <span class="dv">0</span> when trigger <span class="op">==</span> Trigger<span class="op">.</span><span class="fu">Start</span><span class="op">:</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>                _currentState <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>                await Task<span class="op">.</span><span class="fu">Delay</span><span class="op">(</span><span class="dv">50</span><span class="op">);</span> <span class="co">// Async transition work</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>                <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>            <span class="kw">case</span> <span class="dv">1</span> when trigger <span class="op">==</span> Trigger<span class="op">.</span><span class="fu">Complete</span><span class="op">:</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>                _currentState <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>                _triggers<span class="op">.</span><span class="fu">Writer</span><span class="op">.</span><span class="fu">Complete</span><span class="op">();</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>                <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="advantages-of-the-channel-approach">Advantages of the Channel
+Approach</h3>
+<ul>
+<li><strong>Zero Locks:</strong> Eliminates deadlocks caused by locking
+mechanisms.</li>
+<li><strong>Natural Backpressure:</strong> You can bound the channel
+capacity to limit memory consumption under heavy trigger loads.</li>
+<li><strong>Predictable Ordering:</strong> Transitions are processed
+strictly in the order they were scheduled.</li>
+</ul>
+<hr />
+<h2 id="strategy-3-lightweight-lock-free-cas-compare-and-swap">Strategy
+3: Lightweight Lock-Free CAS (Compare-And-Swap)</h2>
+<p>If transition logic does not require prolonged asynchronous execution
+inside the transition window itself, lock-free primitives using
+<code>Interlocked</code> provide the highest performance.</p>
+<p>This pattern is best suited for state machines with simple linear
+flows, such as lifecycle guards (<code>Created</code> -&gt;
+<code>Running</code> -&gt; <code>Disposed</code>).</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Threading</span><span class="op">.</span><span class="fu">Tasks</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> LifecycleStateMachine</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">const</span> <span class="dt">int</span> StateCreated <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">const</span> <span class="dt">int</span> StateRunning <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">const</span> <span class="dt">int</span> StateDisposed <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">int</span> _state <span class="op">=</span> StateCreated<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task <span class="fu">StartAsync</span><span class="op">()</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Atomically ensure we are transitioning from Created to Running</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>Interlocked<span class="op">.</span><span class="fu">CompareExchange</span><span class="op">(</span><span class="kw">ref</span> _state<span class="op">,</span> StateRunning<span class="op">,</span> StateCreated<span class="op">)</span> <span class="op">!=</span> StateCreated<span class="op">)</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>            <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">InvalidOperationException</span><span class="op">(</span><span class="st">&quot;Component has already started or is disposed.&quot;</span><span class="op">);</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Asynchronous initialization safe to run here</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        await Task<span class="op">.</span><span class="fu">Yield</span><span class="op">();</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async ValueTask <span class="fu">DisposeAsync</span><span class="op">()</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Atomically mark as disposed from any state other than Disposed</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> previousState <span class="op">=</span> Interlocked<span class="op">.</span><span class="fu">Exchange</span><span class="op">(</span><span class="kw">ref</span> _state<span class="op">,</span> StateDisposed<span class="op">);</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>previousState <span class="op">==</span> StateDisposed<span class="op">)</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span><span class="op">;</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Perform cleanup</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        await Task<span class="op">.</span><span class="fu">CompletedTask</span><span class="op">;</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<hr />
+<h2 id="best-practices-for-custom-async-state-machines">Best Practices
+for Custom Async State Machines</h2>
+<ol type="1">
+<li><strong>Always Use <code>ConfigureAwait(false)</code>:</strong>
+Custom libraries should never capture synchronization contexts. Resuming
+on arbitrary contexts (like UI or ASP.NET thread contexts) degrades
+throughput and can induce deadlocks.</li>
+<li><strong>Accept <code>CancellationToken</code> on
+Transitions:</strong> Asynchronous operations may stall. Every async
+trigger method must accept and observe a <code>CancellationToken</code>
+to cancel long-running transitions.</li>
+<li><strong>Handle State Rollbacks on Failure:</strong> If an exception
+occurs within an asynchronous transition, internal states can become
+corrupted if not handled explicitly. Use <code>try-catch</code> blocks
+to transition the machine into a designated <code>Faulted</code>
+state.</li>
+<li><strong>Expose Read-Only Snapshots:</strong> Do not expose mutable
+state objects. Expose states as immutable enums, records, or read-only
+properties to prevent external consumers from bypassing state machine
+validation.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/thread-safe-async-state-machines-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

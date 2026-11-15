@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Primary Constructors for Classes and Structs - cs</title>
+    <meta name="description" content="Primary constructors in C# provide a concise syntax to declare and use constructor parameters directly within the class or struct definition. Introduced for standard classes and structs in C# 12, this feature removes boilerplate code associated with priva">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-primary-constructors-for-classes-and-structs">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Primary Constructors for Classes and Structs - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-primary-constructors-for-classes-and-structs" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Primary constructors in C# provide a concise syntax to declare and use constructor parameters directly within the class or struct definition. Introduced for standard classes and structs in C# 12, this feature removes boilerplate code associated with priva" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-primary-constructors-for-classes-and-structs">C# Primary
+Constructors for Classes and Structs</h1>
+<p>Primary constructors in C# provide a concise syntax to declare and
+use constructor parameters directly within the class or struct
+definition. Introduced for standard classes and structs in C# 12, this
+feature removes boilerplate code associated with private fields and
+constructor assignments. This article explains how primary constructors
+function across both classes and structs, covers syntax and parameter
+scoping, details their integration with base constructors and secondary
+constructors, and highlights the key differences between them and record
+types.</p>
+<h2 id="syntax-and-core-mechanics">Syntax and Core Mechanics</h2>
+<p>A primary constructor is defined by appending a parameter list
+directly after the type name:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> <span class="fu">User</span><span class="op">(</span><span class="dt">string</span> name<span class="op">,</span> <span class="dt">int</span> age<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> name<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Age <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> age<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The parameters declared in the primary constructor (<code>name</code>
+and <code>age</code>) are in scope throughout the entire type
+declaration. They can be used to initialize properties, fields, or even
+accessed directly inside methods and properties.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> <span class="fu">Greeter</span><span class="op">(</span><span class="dt">string</span> message<span class="op">)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Greet</span><span class="op">()</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>message<span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>When a parameter is referenced directly in a member method or
+property accessor rather than used purely for field initialization, the
+C# compiler captures the parameter by generating a hidden backing field
+automatically.</p>
+<h2 id="differences-from-record-types">Differences from Record
+Types</h2>
+<p>In C# records, primary constructor parameters automatically generate
+public, init-only properties. In standard classes and structs, primary
+constructor parameters <strong>do not</strong> generate public
+properties.</p>
+<p>If you do not explicitly assign a primary constructor parameter to a
+public property or field, it remains private to the type implementation
+and is not accessible by external callers.</p>
+<h2 id="base-constructor-calls">Base Constructor Calls</h2>
+<p>If a class derives from a base class that requires constructor
+arguments, the primary constructor must pass those arguments to the base
+class at the type declaration level:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> <span class="fu">Person</span><span class="op">(</span><span class="dt">string</span> name<span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> name<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> <span class="fu">Employee</span><span class="op">(</span><span class="dt">string</span> name<span class="op">,</span> <span class="dt">int</span> employeeId<span class="op">)</span> <span class="op">:</span> <span class="fu">Person</span><span class="op">(</span>name<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> EmployeeId <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> employeeId<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The base class constructor invocation <code>Person(name)</code>
+directly follows the type declaration, fulfilling the inheritance
+requirement without an explicit constructor block.</p>
+<h2 id="secondary-constructors">Secondary Constructors</h2>
+<p>If a class or struct defines additional (secondary) constructors,
+every secondary constructor must directly or indirectly call the primary
+constructor using the <code>this(...)</code> initializer:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> <span class="fu">Product</span><span class="op">(</span><span class="dt">string</span> name<span class="op">,</span> <span class="dt">decimal</span> price<span class="op">)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> name<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">decimal</span> Price <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> price<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Secondary constructor chaining to the primary constructor</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Product</span><span class="op">(</span><span class="dt">string</span> name<span class="op">)</span> <span class="op">:</span> <span class="kw">this</span><span class="op">(</span>name<span class="op">,</span> <span class="fl">0.0m</span><span class="op">)</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This guarantees that the primary constructor logic and initialization
+always execute, preserving initialization invariants.</p>
+<h2 id="primary-constructors-in-structs">Primary Constructors in
+Structs</h2>
+<p>Primary constructors behave identically in structs with respect to
+syntax and capture semantics, but they adhere to struct-specific memory
+rules:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">struct</span> <span class="fu">Point</span><span class="op">(</span><span class="dt">int</span> x<span class="op">,</span> <span class="dt">int</span> y<span class="op">)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> X <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> x<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Y <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> y<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Key considerations for structs include:</p>
+<ul>
+<li><strong>Field Initialization:</strong> All fields and
+auto-properties must be definitively assigned before control leaves the
+constructor, including when using primary constructors.</li>
+<li><strong>Default Values:</strong> Structs always have an implicit
+parameterless constructor that initializes all fields to their default
+values (e.g., <code>0</code> or <code>null</code>). If a struct defines
+a primary constructor, the default parameterless constructor
+<code>default(MyStruct)</code> or <code>new MyStruct()</code> can still
+be invoked without executing the primary constructor logic.</li>
+<li><strong>Readonly Structs:</strong> In a
+<code>readonly struct</code>, all properties and captured primary
+constructor fields are immutable.</li>
+</ul>
+<h2 id="mutable-parameter-capture-warning">Mutable Parameter Capture
+Warning</h2>
+<p>When primary constructor parameters are captured by methods, they act
+as mutable state inside the instance. Modifying a captured parameter
+inside a method changes the value for other members referencing that
+parameter:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> <span class="fu">Counter</span><span class="op">(</span><span class="dt">int</span> start<span class="op">)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Increment</span><span class="op">()</span> <span class="op">=&gt;</span> start<span class="op">++;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> CurrentCount <span class="op">=&gt;</span> start<span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>While functional, this pattern can lead to confusion because
+constructor parameters are traditionally treated as immutable input
+arguments. To maintain maintainability, explicitly assign primary
+constructor parameters to standard fields or properties when mutation is
+required.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-primary-constructors-for-classes-and-structs';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

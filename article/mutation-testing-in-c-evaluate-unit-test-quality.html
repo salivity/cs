@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mutation Testing in C#: Evaluate Unit Test Quality - cs</title>
+    <meta name="description" content="Mutation testing is an advanced testing technique that evaluates the actual effectiveness of your unit tests by deliberately injecting bugs into your source code to see if your tests detect them. While traditional code coverage only measures which lines o">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/mutation-testing-in-c-evaluate-unit-test-quality">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mutation Testing in C#: Evaluate Unit Test Quality - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/mutation-testing-in-c-evaluate-unit-test-quality" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Mutation testing is an advanced testing technique that evaluates the actual effectiveness of your unit tests by deliberately injecting bugs into your source code to see if your tests detect them. While traditional code coverage only measures which lines o" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="mutation-testing-in-c-evaluate-unit-test-quality">Mutation
+Testing in C#: Evaluate Unit Test Quality</h1>
+<p>Mutation testing is an advanced testing technique that evaluates the
+actual effectiveness of your unit tests by deliberately injecting bugs
+into your source code to see if your tests detect them. While
+traditional code coverage only measures which lines of code are executed
+during test runs, mutation testing assesses whether those tests are
+capable of identifying logical errors. This guide explains the core
+concepts of mutation testing, contrasts it with traditional code
+coverage, and demonstrates how to implement it in C# using Stryker.NET
+to ensure your test suite provides genuine quality assurance.</p>
+<h2 id="the-limitation-of-traditional-code-coverage">The Limitation of
+Traditional Code Coverage</h2>
+<p>Standard code coverage metrics—such as line, branch, or statement
+coverage—measure only execution, not verification. A test suite can
+achieve 100% code coverage without containing a single assertion, simply
+by executing application code paths without checking the outputs.
+Consequently, high code coverage often creates a false sense of
+security, leaving edge cases and critical business logic vulnerable to
+uncaught regressions.</p>
+<h2 id="what-is-mutation-testing">What Is Mutation Testing?</h2>
+<p>Mutation testing shifts the focus from measuring test execution to
+measuring test quality. It operates on a simple premise: if a fault is
+introduced into your code, at least one of your unit tests should
+fail.</p>
+<p>During mutation testing, a testing framework creates multiple
+variations of your compiled or source code, known as
+<strong>mutants</strong>. Each mutant contains a small, intentional
+syntactic modification (a mutation). The framework runs your existing
+test suite against each mutant:</p>
+<ul>
+<li><strong>Killed Mutant:</strong> At least one test fails when run
+against the modified code. This indicates that your tests successfully
+caught the fault.</li>
+<li><strong>Survived Mutant:</strong> All tests pass despite the
+introduced fault. This indicates a gap in your assertions or missing
+test cases.</li>
+<li><strong>Timed Out / Error:</strong> The mutant caused an infinite
+loop or compilation error and is accounted for separately.</li>
+</ul>
+<p>The primary metric produced is the <strong>Mutation Score</strong>,
+calculated as:</p>
+<p><span class="math display">\[\text{Mutation Score} = \left(
+\frac{\text{Killed Mutants}}{\text{Total Mutants}} \right) \times
+100\]</span></p>
+<p>A higher mutation score reflects a more resilient and thorough test
+suite.</p>
+<h2 id="common-mutation-operators">Common Mutation Operators</h2>
+<p>Mutation frameworks apply predefined modification rules called
+mutation operators. Common examples in C# include:</p>
+<ul>
+<li><strong>Arithmetic Operators:</strong> Replacing <code>+</code> with
+<code>-</code>, or <code>*</code> with <code>/</code>.</li>
+<li><strong>Equality Operators:</strong> Changing <code>==</code> to
+<code>!=</code>, or <code>&gt;=</code> to <code>&gt;</code>.</li>
+<li><strong>Logical Operators:</strong> Swapping <code>&amp;&amp;</code>
+with <code>||</code>.</li>
+<li><strong>Boolean Literals:</strong> Flipping <code>true</code> to
+<code>false</code>.</li>
+<li><strong>Statement Removal:</strong> Removing a method call,
+assignment, or return value to check if side effects are tested.</li>
+</ul>
+<h2 id="implementing-mutation-testing-in-c-with-strykernet">Implementing
+Mutation Testing in C# with Stryker.NET</h2>
+<p>In the .NET ecosystem, <strong>Stryker.NET</strong> is the standard
+open-source framework for mutation testing. It supports .NET Core, .NET
+5+, and .NET Framework, integrating with popular testing frameworks such
+as xUnit, NUnit, and MSTest.</p>
+<h3 id="step-1-install-strykernet">Step 1: Install Stryker.NET</h3>
+<p>Stryker.NET can be installed globally as a .NET tool via the command
+line:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> tool install <span class="at">-g</span> dotnet-stryker</span></code></pre></div>
+<p>Alternatively, you can install it locally within a project directory
+by using a tool manifest:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> new tool-manifest</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> tool install dotnet-stryker</span></code></pre></div>
+<h3 id="step-2-run-stryker">Step 2: Run Stryker</h3>
+<p>Navigate to the directory of your unit test project and execute:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> stryker</span></code></pre></div>
+<p>Stryker automatically identifies the target project under test,
+introduces mutations, executes the test suite for each mutant, and
+generates an execution report.</p>
+<h3 id="step-3-analyze-the-results">Step 3: Analyze the Results</h3>
+<p>Once the process completes, Stryker outputs a mutation score directly
+in the terminal and generates an interactive HTML report located in the
+<code>StrykerOutput</code> folder.</p>
+<p>The report details:</p>
+<ul>
+<li>The exact source code lines where mutations were generated.</li>
+<li>The nature of each mutation (e.g., binary expression altered).</li>
+<li>Which mutants survived and which were killed.</li>
+<li>The specific tests that killed each mutant.</li>
+</ul>
+<p>If a mutant survived, you should inspect the relevant code and
+test:</p>
+<ol type="1">
+<li><strong>Missing Assertion:</strong> The test executes the code but
+does not assert on the output or state change affected by the
+mutation.</li>
+<li><strong>Missing Test Case:</strong> A specific boundary or
+conditional branch is not being tested at all.</li>
+<li><strong>Equivalent Mutant:</strong> In rare cases, the mutation
+alters the code syntax without changing its semantic behavior; these do
+not indicate test deficiencies.</li>
+</ol>
+<h2 id="best-practices-for-c-mutation-testing">Best Practices for C#
+Mutation Testing</h2>
+<ul>
+<li><strong>Focus on Domain Logic:</strong> Running mutation tests
+across entire solutions can be resource-intensive. Target core business
+logic, domain models, and calculation engines rather than auto-generated
+code, DTOs, or thin wrappers.</li>
+<li><strong>Integrate Selectively into CI/CD:</strong> Because running
+hundreds of variations takes significantly longer than standard unit
+test execution, configure Stryker to run on pull requests using its
+<code>--since</code> flag (which only mutates changed files) or schedule
+full runs during nightly builds.</li>
+<li><strong>Set Realistic Thresholds:</strong> Aiming for a 100%
+mutation score across an entire application is often impractical.
+Instead, establish baseline thresholds (e.g., a break threshold of 70%
+or 80%) using <code>stryker-config.json</code> to prevent quality
+regressions in critical assemblies.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/mutation-testing-in-c-evaluate-unit-test-quality';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

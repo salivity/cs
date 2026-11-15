@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EF Core Migrations: Managing Schema Evolution in C# - cs</title>
+    <meta name="description" content="Entity Framework Core (EF Core) migrations provide a structured, version-controlled mechanism for updating a relational database schema to keep it synchronized with your application&#39;s C# domain models. As business requirements change, your data models ine">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/ef-core-migrations-managing-schema-evolution-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="EF Core Migrations: Managing Schema Evolution in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/ef-core-migrations-managing-schema-evolution-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Entity Framework Core (EF Core) migrations provide a structured, version-controlled mechanism for updating a relational database schema to keep it synchronized with your application&#39;s C# domain models. As business requirements change, your data models ine" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="ef-core-migrations-managing-schema-evolution-in-c">EF Core
+Migrations: Managing Schema Evolution in C</h1>
+<p>Entity Framework Core (EF Core) migrations provide a structured,
+version-controlled mechanism for updating a relational database schema
+to keep it synchronized with your application's C# domain models. As
+business requirements change, your data models inevitably shift,
+requiring new tables, columns, or modified relationships. This guide
+explains the core concepts of EF Core migrations, demonstrates how to
+generate and apply schema changes, and covers best practices for
+managing database evolution safely across development and production
+environments.</p>
+<h3 id="what-are-ef-core-migrations">What Are EF Core Migrations?</h3>
+<p>In EF Core, migrations bridge the gap between your C# entity classes
+and the underlying relational database structure. Instead of manually
+writing and maintaining separate SQL DDL (Data Definition Language)
+scripts, EF Core inspects your <code>DbContext</code> and model
+configurations, compares them against a snapshot of your previous
+schema, and automatically generates code to reconcile the
+differences.</p>
+<p>Every migration consists of three primary elements:</p>
+<ul>
+<li><strong>The Migration File:</strong> Contains an <code>Up</code>
+method (applying the changes) and a <code>Down</code> method (reverting
+the changes) using EF Core's fluent migration API.</li>
+<li><strong>The Metadata File:</strong> Stores internal EF Core
+information used during operations.</li>
+<li><strong>The Model Snapshot:</strong> A C# representation of your
+current overall database schema, which EF Core references when
+calculating the next migration.</li>
+</ul>
+<h3 id="the-migration-lifecycle">The Migration Lifecycle</h3>
+<p>Database evolution using EF Core follows a predictable cycle:</p>
+<ol type="1">
+<li><strong>Modify C# Models:</strong> Update, add, or remove entity
+classes, properties, or Fluent API configurations in your
+<code>DbContext</code>.</li>
+<li><strong>Add a Migration:</strong> EF Core computes the difference
+between the updated models and the existing snapshot, generating a new
+migration file.</li>
+<li><strong>Review the Migration:</strong> Developers inspect the
+generated <code>Up</code> and <code>Down</code> methods to verify
+operations, especially for destructive changes such as dropped columns
+or renamed properties.</li>
+<li><strong>Apply to Database:</strong> The migration updates the
+database schema and logs the applied migration name in a tracking table
+named <code>__EFMigrationsHistory</code>.</li>
+</ol>
+<h3 id="essential-commands-for-schema-management">Essential Commands for
+Schema Management</h3>
+<p>You can execute migrations using either the .NET CLI or the Visual
+Studio Package Manager Console (PMC).</p>
+<h4 id="adding-a-migration">Adding a Migration</h4>
+<p>When you modify an entity, generate a migration by providing a
+descriptive name:</p>
+<ul>
+<li><p><strong>.NET CLI:</strong></p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> ef migrations add AddUserProfileTable</span></code></pre></div></li>
+<li><p><strong>Package Manager Console:</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Add-Migration AddUserProfileTable</span></code></pre></div></li>
+</ul>
+<h4 id="applying-migrations-to-the-database">Applying Migrations to the
+Database</h4>
+<p>To apply all pending migrations directly to your target database:</p>
+<ul>
+<li><p><strong>.NET CLI:</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> ef database update</span></code></pre></div></li>
+<li><p><strong>Package Manager Console:</strong></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Update-Database</span></code></pre></div></li>
+</ul>
+<h4 id="reverting-changes">Reverting Changes</h4>
+<p>To roll back a database to a specific earlier migration, target that
+migration name:</p>
+<ul>
+<li><p><strong>.NET CLI:</strong></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> ef database update PreviousMigrationName</span></code></pre></div></li>
+</ul>
+<p>To remove the last generated migration file (only if it has not yet
+been applied to the database):</p>
+<ul>
+<li><p><strong>.NET CLI:</strong></p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> ef migrations remove</span></code></pre></div></li>
+</ul>
+<h3 id="handling-complex-schema-evolution">Handling Complex Schema
+Evolution</h3>
+<p>Not all schema evolutions are straightforward column additions.
+Real-world evolution requires handling edge cases deliberately:</p>
+<ul>
+<li><strong>Renaming Properties:</strong> By default, EF Core may
+interpret a renamed property as dropping the old column and creating a
+new one, causing data loss. You can explicitly customize the generated
+migration using the <code>migrationBuilder.RenameColumn()</code> method
+instead.</li>
+<li><strong>Custom SQL Execution:</strong> When a schema change requires
+data transformation (such as populating a new column with transformed
+data from an existing one), you can inject raw SQL directly into the
+migration using
+<code>migrationBuilder.Sql("UPDATE Users SET ...")</code>.</li>
+</ul>
+<h3 id="deploying-migrations-to-production">Deploying Migrations to
+Production</h3>
+<p>While running <code>context.Database.Migrate()</code> at application
+startup is convenient for local development, it is discouraged in
+production environments. Startup execution can cause concurrency
+deadlocks if multiple application instances start simultaneously and
+risks deploying unreviewed changes to live data.</p>
+<p>The recommended approaches for production schema evolution are:</p>
+<ol type="1">
+<li><p><strong>SQL Script Generation:</strong> Generate idempotent SQL
+scripts from your migrations using CI/CD pipelines:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> ef migrations script <span class="at">--idempotent</span> <span class="at">--output</span> migrate.sql</span></code></pre></div>
+<p>An idempotent script uses conditional logic (checking the
+<code>__EFMigrationsHistory</code> table) so it can safely execute
+against databases at any revision level.</p></li>
+<li><p><strong>Migration Bundles:</strong> Generate a standalone,
+self-contained executable that applies migrations:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> ef migrations bundle</span></code></pre></div>
+<p>Migration bundles run directly inside deployment pipelines without
+requiring the entire .NET SDK on the target execution
+environment.</p></li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/ef-core-migrations-managing-schema-evolution-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

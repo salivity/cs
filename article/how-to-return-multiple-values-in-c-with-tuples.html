@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Return Multiple Values in C# with Tuples - cs</title>
+    <meta name="description" content="Returning multiple values from a method in C# traditionally required using out parameters, dedicated data transfer objects (DTOs), or the non-type-safe System.Tuple. Modern C# simplifies this process through lightweight value tuples (System.ValueTuple) an">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-return-multiple-values-in-c-with-tuples">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Return Multiple Values in C# with Tuples - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-return-multiple-values-in-c-with-tuples" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Returning multiple values from a method in C# traditionally required using out parameters, dedicated data transfer objects (DTOs), or the non-type-safe System.Tuple. Modern C# simplifies this process through lightweight value tuples (System.ValueTuple) an" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-return-multiple-values-in-c-with-tuples">How to Return
+Multiple Values in C# with Tuples</h1>
+<p>Returning multiple values from a method in C# traditionally required
+using <code>out</code> parameters, dedicated data transfer objects
+(DTOs), or the non-type-safe <code>System.Tuple</code>. Modern C#
+simplifies this process through lightweight value tuples
+(<code>System.ValueTuple</code>) and deconstruction syntax. This article
+covers how to define methods that return multiple values using tuples,
+how to deconstruct those values upon consumption, and how to implement
+custom deconstruct methods on your own classes.</p>
+<hr />
+<h3 id="returning-tuples-from-methods">Returning Tuples from
+Methods</h3>
+<p>Modern C# allows you to declare a method return type as a tuple with
+named elements. This provides compile-time safety and clarity without
+the overhead of creating a custom class or struct.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="op">(</span><span class="dt">int</span> Min<span class="op">,</span> <span class="dt">int</span> Max<span class="op">)</span> <span class="fu">FindMinMax</span><span class="op">(</span><span class="dt">int</span><span class="op">[]</span> numbers<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>numbers <span class="op">==</span> <span class="kw">null</span> <span class="op">||</span> numbers<span class="op">.</span><span class="fu">Length</span> <span class="op">==</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">throw</span> <span class="kw">new</span> <span class="fu">ArgumentException</span><span class="op">(</span><span class="st">&quot;Array cannot be empty.&quot;</span><span class="op">,</span> <span class="fu">nameof</span><span class="op">(</span>numbers<span class="op">));</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> min <span class="op">=</span> numbers<span class="op">[</span><span class="dv">0</span><span class="op">];</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> max <span class="op">=</span> numbers<span class="op">[</span><span class="dv">0</span><span class="op">];</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> n <span class="kw">in</span> numbers<span class="op">)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>n <span class="op">&lt;</span> min<span class="op">)</span> min <span class="op">=</span> n<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>n <span class="op">&gt;</span> max<span class="op">)</span> max <span class="op">=</span> n<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="op">(</span>min<span class="op">,</span> max<span class="op">);</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>By naming the fields in the tuple (<code>Min</code> and
+<code>Max</code>), consumers of the method can access the returned
+values using meaningful property names:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> result <span class="op">=</span> <span class="fu">FindMinMax</span><span class="op">(</span><span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">9</span><span class="op">,</span> <span class="dv">5</span> <span class="op">});</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Min: {result.Min}, Max: {result.Max}&quot;</span><span class="op">);</span></span></code></pre></div>
+<hr />
+<h3 id="deconstructing-tuple-returns">Deconstructing Tuple Returns</h3>
+<p>Instead of assigning the returned tuple to a single variable, you can
+deconstruct it directly into separate local variables.</p>
+<h4 id="1-explicit-typing">1. Explicit Typing</h4>
+<p>You can declare the types of the individual variables explicitly:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">(</span><span class="dt">int</span> minimum<span class="op">,</span> <span class="dt">int</span> maximum<span class="op">)</span> <span class="op">=</span> <span class="fu">FindMinMax</span><span class="op">(</span><span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">42</span><span class="op">,</span> <span class="dv">5</span> <span class="op">});</span></span></code></pre></div>
+<h4 id="2-implicit-typing-var">2. Implicit Typing
+(<code>var</code>)</h4>
+<p>Using <code>var</code> places the type inference burden on the
+compiler, making the code more concise:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="op">(</span>minimum<span class="op">,</span> maximum<span class="op">)</span> <span class="op">=</span> <span class="fu">FindMinMax</span><span class="op">(</span><span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">42</span><span class="op">,</span> <span class="dv">5</span> <span class="op">});</span></span></code></pre></div>
+<h4 id="3-using-discards">3. Using Discards</h4>
+<p>If you only need a subset of the returned values, use an underscore
+(<code>_</code>) as a discard:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="op">(</span>minimum<span class="op">,</span> _<span class="op">)</span> <span class="op">=</span> <span class="fu">FindMinMax</span><span class="op">(</span><span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">42</span><span class="op">,</span> <span class="dv">5</span> <span class="op">});</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Only min is needed: {minimum}&quot;</span><span class="op">);</span></span></code></pre></div>
+<hr />
+<h3 id="custom-deconstruct-methods">Custom Deconstruct Methods</h3>
+<p>Deconstruction is not limited to tuples. You can enable tuple-like
+deconstruction on any custom class or struct by implementing a
+<code>Deconstruct</code> method. The method must:</p>
+<ul>
+<li>Be named <code>Deconstruct</code>.</li>
+<li>Return <code>void</code>.</li>
+<li>Use <code>out</code> parameters for each value you wish to
+extract.</li>
+</ul>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> User</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> FirstName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> LastName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Role <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">User</span><span class="op">(</span><span class="dt">string</span> firstName<span class="op">,</span> <span class="dt">string</span> lastName<span class="op">,</span> <span class="dt">string</span> role<span class="op">)</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        FirstName <span class="op">=</span> firstName<span class="op">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        LastName <span class="op">=</span> lastName<span class="op">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        Role <span class="op">=</span> role<span class="op">;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Deconstruct</span><span class="op">(</span><span class="kw">out</span> <span class="dt">string</span> firstName<span class="op">,</span> <span class="kw">out</span> <span class="dt">string</span> lastName<span class="op">,</span> <span class="kw">out</span> <span class="dt">string</span> role<span class="op">)</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        firstName <span class="op">=</span> FirstName<span class="op">;</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        lastName <span class="op">=</span> LastName<span class="op">;</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        role <span class="op">=</span> Role<span class="op">;</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Once defined, instances of the class can be deconstructed using the
+same tuple syntax:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>User user <span class="op">=</span> <span class="kw">new</span> <span class="fu">User</span><span class="op">(</span><span class="st">&quot;Jane&quot;</span><span class="op">,</span> <span class="st">&quot;Doe&quot;</span><span class="op">,</span> <span class="st">&quot;Administrator&quot;</span><span class="op">);</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="op">(</span>first<span class="op">,</span> last<span class="op">,</span> role<span class="op">)</span> <span class="op">=</span> user<span class="op">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;{first} {last} is an {role}.&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>You can also provide multiple overloads of <code>Deconstruct</code>
+with different numbers of <code>out</code> parameters to allow callers
+to extract only the properties they need.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-return-multiple-values-in-c-with-tuples';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

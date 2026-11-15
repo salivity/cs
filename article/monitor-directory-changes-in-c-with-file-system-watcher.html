@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Directory Changes in C# with FileSystemWatcher - cs</title>
+    <meta name="description" content="The FileSystemWatcher class in .NET provides a built-in mechanism to listen to file system change notifications and react in real time when files or directories are created, modified, deleted, or renamed. This article explains what FileSystemWatcher is, h">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/monitor-directory-changes-in-c-with-file-system-watcher">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Monitor Directory Changes in C# with FileSystemWatcher - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/monitor-directory-changes-in-c-with-file-system-watcher" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The FileSystemWatcher class in .NET provides a built-in mechanism to listen to file system change notifications and react in real time when files or directories are created, modified, deleted, or renamed. This article explains what FileSystemWatcher is, h" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="monitor-directory-changes-in-c-with-filesystemwatcher">Monitor
+Directory Changes in C# with FileSystemWatcher</h1>
+<p>The <code>FileSystemWatcher</code> class in .NET provides a built-in
+mechanism to listen to file system change notifications and react in
+real time when files or directories are created, modified, deleted, or
+renamed. This article explains what <code>FileSystemWatcher</code> is,
+how to configure and implement it in C#, and how to handle common edge
+cases like duplicate events and buffer overflows.</p>
+<h2 id="what-is-filesystemwatcher">What Is FileSystemWatcher?</h2>
+<p><code>FileSystemWatcher</code> is a component located in the
+<code>System.IO</code> namespace. It hooks into the underlying operating
+system's file notification system (such as the Win32
+<code>ReadDirectoryChangesW</code> API on Windows) to track changes in a
+specified directory. Instead of manually polling a folder at regular
+intervals, which consumes unnecessary CPU and disk resources,
+<code>FileSystemWatcher</code> raises asynchronous events immediately
+when a file system change occurs.</p>
+<h2 id="essential-properties-and-events">Essential Properties and
+Events</h2>
+<p>To use <code>FileSystemWatcher</code> effectively, you must configure
+its target location, what types of changes to listen for, and which
+events to subscribe to.</p>
+<h3 id="core-properties">Core Properties</h3>
+<ul>
+<li><strong><code>Path</code></strong>: The absolute or relative path of
+the directory you want to monitor.</li>
+<li><strong><code>Filter</code></strong>: A search string used to match
+specific files (e.g., <code>*.txt</code>, <code>data_*.json</code>). To
+monitor all files, set it to <code>*.*</code> or leave it default.</li>
+<li><strong><code>IncludeSubdirectories</code></strong>: A boolean
+indicating whether child directories inside the target path should also
+be monitored.</li>
+<li><strong><code>NotifyFilter</code></strong>: A bitwise combination of
+<code>NotifyFilters</code> flags specifying what attributes trigger an
+event (e.g., <code>FileName</code>, <code>DirectoryName</code>,
+<code>LastWrite</code>, <code>Size</code>).</li>
+<li><strong><code>EnableRaisingEvents</code></strong>: A boolean that
+starts (<code>true</code>) or stops (<code>false</code>) the component
+from raising events.</li>
+</ul>
+<h3 id="core-events">Core Events</h3>
+<ul>
+<li><strong><code>Created</code></strong>: Triggered when a new file or
+directory is created.</li>
+<li><strong><code>Changed</code></strong>: Triggered when a file or
+directory is modified (e.g., content changes, attribute changes).</li>
+<li><strong><code>Deleted</code></strong>: Triggered when a file or
+directory is deleted.</li>
+<li><strong><code>Renamed</code></strong>: Triggered when a file or
+directory changes its name.</li>
+<li><strong><code>Error</code></strong>: Triggered when the internal
+buffer overflows or a system error occurs.</li>
+</ul>
+<h2 id="implementing-filesystemwatcher-in-c">Implementing
+FileSystemWatcher in C</h2>
+<p>Below is a complete implementation showing how to initialize,
+configure, and process file notifications in a console application.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> directoryToWatch <span class="op">=</span> @<span class="st">&quot;C:\MonitoredFolder&quot;</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(!</span>Directory<span class="op">.</span><span class="fu">Exists</span><span class="op">(</span>directoryToWatch<span class="op">))</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>            Directory<span class="op">.</span><span class="fu">CreateDirectory</span><span class="op">(</span>directoryToWatch<span class="op">);</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="dt">var</span> watcher <span class="op">=</span> <span class="kw">new</span> <span class="fu">FileSystemWatcher</span><span class="op">(</span>directoryToWatch<span class="op">);</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Configure what changes to watch</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        watcher<span class="op">.</span><span class="fu">NotifyFilter</span> <span class="op">=</span> NotifyFilters<span class="op">.</span><span class="fu">FileName</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>                             <span class="op">|</span> NotifyFilters<span class="op">.</span><span class="fu">DirectoryName</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>                             <span class="op">|</span> NotifyFilters<span class="op">.</span><span class="fu">LastWrite</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>                             <span class="op">|</span> NotifyFilters<span class="op">.</span><span class="fu">Size</span><span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Monitor only text files (use &quot;*.*&quot; for all files)</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        watcher<span class="op">.</span><span class="fu">Filter</span> <span class="op">=</span> <span class="st">&quot;*.txt&quot;</span><span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        watcher<span class="op">.</span><span class="fu">IncludeSubdirectories</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Attach event handlers</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        watcher<span class="op">.</span><span class="fu">Created</span> <span class="op">+=</span> OnCreated<span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        watcher<span class="op">.</span><span class="fu">Changed</span> <span class="op">+=</span> OnChanged<span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>        watcher<span class="op">.</span><span class="fu">Deleted</span> <span class="op">+=</span> OnDeleted<span class="op">;</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>        watcher<span class="op">.</span><span class="fu">Renamed</span> <span class="op">+=</span> OnRenamed<span class="op">;</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>        watcher<span class="op">.</span><span class="fu">Error</span> <span class="op">+=</span> OnError<span class="op">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Start listening</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>        watcher<span class="op">.</span><span class="fu">EnableRaisingEvents</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Watching directory: {directoryToWatch}. Press &#39;q&#39; to exit.&quot;</span><span class="op">);</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        <span class="kw">while</span> <span class="op">(</span>Console<span class="op">.</span><span class="fu">ReadKey</span><span class="op">().</span><span class="fu">KeyChar</span> <span class="op">!=</span> <span class="ch">&#39;q&#39;</span><span class="op">)</span> <span class="op">;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">OnCreated</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> FileSystemEventArgs e<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[Created] {e.FullPath}&quot;</span><span class="op">);</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">OnChanged</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> FileSystemEventArgs e<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[Changed] {e.FullPath}&quot;</span><span class="op">);</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">OnDeleted</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> FileSystemEventArgs e<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[Deleted] {e.FullPath}&quot;</span><span class="op">);</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">OnRenamed</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> RenamedEventArgs e<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[Renamed] {e.OldFullPath} -&gt; {e.FullPath}&quot;</span><span class="op">);</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">OnError</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> ErrorEventArgs e<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[Error] {e.GetException().Message}&quot;</span><span class="op">);</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="common-challenges-and-best-practices">Common Challenges and Best
+Practices</h2>
+<h3 id="1-handling-duplicate-events">1. Handling Duplicate Events</h3>
+<p>Operating systems often trigger multiple <code>Changed</code>
+notifications for a single file operation (for example, when file
+contents and metadata like <code>LastWriteTime</code> are written in
+separate steps).</p>
+<p>To prevent redundant processing:</p>
+<ul>
+<li>Implement a short debounce mechanism using a memory cache or a
+<code>Dictionary</code> that tracks the last processed timestamp for a
+file.</li>
+<li>Ignore any duplicate events for the same file that arrive within a
+short threshold (e.g., 200–500 milliseconds).</li>
+</ul>
+<h3 id="2-file-locking">2. File Locking</h3>
+<p>When the <code>Created</code> event fires, the application that
+created the file may still have an exclusive write lock on it.
+Attempting to open or read the file immediately can throw an
+<code>IOException</code>.</p>
+<p>To resolve this:</p>
+<ul>
+<li>Wrap file access inside a retry loop with exponential backoff.</li>
+<li>Catch <code>IOException</code> and delay for a few hundred
+milliseconds before attempting to read again.</li>
+</ul>
+<h3 id="3-preventing-buffer-overflows">3. Preventing Buffer
+Overflows</h3>
+<p><code>FileSystemWatcher</code> relies on an internal buffer to hold
+events before delivering them to your code. If thousands of files change
+simultaneously and your event handlers take too long to complete, the
+buffer overflows, and changes are lost.</p>
+<p>To avoid buffer drops:</p>
+<ul>
+<li>Keep event handlers extremely lightweight: offload file processing
+to a background worker or a channel
+(<code>System.Threading.Channels.Channel&lt;T&gt;</code>).</li>
+<li>Increase the buffer size via <code>watcher.InternalBufferSize</code>
+(default is 8 KB, can be increased up to 64 KB) if burst file activity
+is expected.</li>
+<li>Always subscribe to the <code>Error</code> event to detect when a
+buffer overflow occurs.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/monitor-directory-changes-in-c-with-file-system-watcher';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

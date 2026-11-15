@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Trace Context Propagation in C# - cs</title>
+    <meta name="description" content="Distributed telemetry tracing allows developers to monitor, debug, and understand the path of a request as it navigates complex multi-service architectures. This article defines the fundamentals of telemetry tracing and demonstrates how to reliably propag">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/distributed-trace-context-propagation-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Distributed Trace Context Propagation in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/distributed-trace-context-propagation-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Distributed telemetry tracing allows developers to monitor, debug, and understand the path of a request as it navigates complex multi-service architectures. This article defines the fundamentals of telemetry tracing and demonstrates how to reliably propag" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="distributed-trace-context-propagation-in-c">Distributed Trace
+Context Propagation in C</h1>
+<p>Distributed telemetry tracing allows developers to monitor, debug,
+and understand the path of a request as it navigates complex
+multi-service architectures. This article defines the fundamentals of
+telemetry tracing and demonstrates how to reliably propagate distributed
+trace contexts across outbound HTTP calls in modern C# and .NET
+applications using native diagnostic APIs.</p>
+<h2 id="what-is-telemetry-tracing">What is Telemetry Tracing?</h2>
+<p>Telemetry tracing—often called distributed tracing—is the process of
+recording the lifecycle of an execution path across disparate systems,
+services, and network boundaries. While traditional logging records
+isolated events within a single application, distributed tracing
+stitches together the entire journey of an end-to-end operation.</p>
+<p>A distributed trace consists of one or more "spans."</p>
+<ul>
+<li><strong>Trace:</strong> Represents the entire transaction across all
+systems from start to finish. It shares a globally unique identifier
+(TraceId).</li>
+<li><strong>Span:</strong> Represents a single unit of contiguous work
+within that trace (e.g., an HTTP request, a database query, or an
+internal method execution). Each span has its own identifier (SpanId), a
+start time, a duration, and a reference to its parent span.</li>
+</ul>
+<p>By linking these spans together in a parent-child hierarchy, tracing
+tools visualize the exact execution flow, identify performance
+bottlenecks, and pinpoint where errors originate in a microservice
+ecosystem.</p>
+<h2 id="the-role-of-trace-context-propagation">The Role of Trace Context
+Propagation</h2>
+<p>For tracing to work across network calls, services must pass the
+trace state to downstream systems. This is achieved via <strong>Trace
+Context Propagation</strong>.</p>
+<p>Most modern platforms adhere to the <strong>W3C Trace
+Context</strong> specification, which relies on standardized HTTP
+headers:</p>
+<ul>
+<li><strong><code>traceparent</code></strong>: Encodes the version,
+TraceId, ParentSpanId, and trace flags (e.g., whether the request is
+sampled).
+<ul>
+<li>Example:
+<code>00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</code></li>
+</ul></li>
+<li><strong><code>tracestate</code></strong>: Carries vendor-specific
+routing and filtering metadata as opaque key-value pairs.</li>
+</ul>
+<h2 id="automatic-trace-propagation-in-net">Automatic Trace Propagation
+in .NET</h2>
+<p>In C# and modern .NET (Core 3.1 and .NET 5+), the runtime natively
+supports the W3C Trace Context specification via the
+<code>System.Diagnostics.Activity</code> API, which maps directly to the
+OpenTelemetry Span concept.</p>
+<p>When using standard .NET components, context propagation over HTTP
+occurs automatically:</p>
+<ol type="1">
+<li>An inbound request to an ASP.NET Core application creates an
+<code>Activity</code> (extracting the <code>traceparent</code> header if
+present).</li>
+<li>Any outbound HTTP request made using <code>HttpClient</code>
+automatically inspects the ambient <code>Activity.Current</code>.</li>
+<li>If an active activity exists, <code>HttpClient</code> generates a
+new child span ID and automatically injects the <code>traceparent</code>
+and <code>tracestate</code> headers into the outgoing request.</li>
+</ol>
+<h3 id="basic-setup-example">Basic Setup Example</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Diagnostics</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define an ActivitySource for creating custom spans</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> activitySource <span class="op">=</span> <span class="kw">new</span> <span class="fu">ActivitySource</span><span class="op">(</span><span class="st">&quot;OrderService&quot;</span><span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Start a parent span</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> <span class="op">(</span><span class="dt">var</span> activity <span class="op">=</span> activitySource<span class="op">.</span><span class="fu">StartActivity</span><span class="op">(</span><span class="st">&quot;ProcessOrder&quot;</span><span class="op">))</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The activity is now ambient (Activity.Current is populated)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> <span class="dt">var</span> httpClient <span class="op">=</span> <span class="kw">new</span> <span class="fu">HttpClient</span><span class="op">();</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Outgoing call: HttpClient automatically injects W3C headers</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> response <span class="op">=</span> await httpClient<span class="op">.</span><span class="fu">GetAsync</span><span class="op">(</span><span class="st">&quot;https://api.inventory.local/check-stock&quot;</span><span class="op">);</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The receiving service will extract the header and continue the same TraceId</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Dispatched request with TraceId: {activity?.TraceId}&quot;</span><span class="op">);</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2
+id="manual-context-propagation-using-distributedcontextpropagator">Manual
+Context Propagation Using DistributedContextPropagator</h2>
+<p>In scenarios where <code>HttpClient</code> cannot be used directly,
+or when working with custom message brokers, raw sockets, or third-party
+HTTP wrappers, you must inject the context manually.</p>
+<p>.NET provides the <code>DistributedContextPropagator</code> class to
+handle standards-compliant context injection and extraction.</p>
+<h3 id="manually-injecting-trace-headers">Manually Injecting Trace
+Headers</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Diagnostics</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> client <span class="op">=</span> <span class="kw">new</span> <span class="fu">HttpClient</span><span class="op">();</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> request <span class="op">=</span> <span class="kw">new</span> <span class="fu">HttpRequestMessage</span><span class="op">(</span>HttpMethod<span class="op">.</span><span class="fu">Get</span><span class="op">,</span> <span class="st">&quot;https://api.inventory.local/check-stock&quot;</span><span class="op">);</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Retrieve the default W3C propagator</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> propagator <span class="op">=</span> DistributedContextPropagator<span class="op">.</span><span class="fu">Current</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Inject the current ambient Activity into the HttpRequestMessage headers</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>propagator<span class="op">.</span><span class="fu">Inject</span><span class="op">(</span>Activity<span class="op">.</span><span class="fu">Current</span><span class="op">,</span> request<span class="op">,</span> <span class="op">(</span>carrier<span class="op">,</span> key<span class="op">,</span> value<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>carrier <span class="kw">is</span> HttpRequestMessage req<span class="op">)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        req<span class="op">.</span><span class="fu">Headers</span><span class="op">.</span><span class="fu">TryAddWithoutValidation</span><span class="op">(</span>key<span class="op">,</span> value<span class="op">);</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> response <span class="op">=</span> await client<span class="op">.</span><span class="fu">SendAsync</span><span class="op">(</span>request<span class="op">);</span></span></code></pre></div>
+<h3 id="manually-extracting-trace-headers-on-the-receiving-end">Manually
+Extracting Trace Headers on the Receiving End</h3>
+<p>When writing a custom receiver (such as a generic TCP server or a
+custom HTTP listener), use <code>ExtractTraceIdAndState</code> to read
+the headers and initialize the next <code>Activity</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Diagnostics</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Simulated incoming header retrieval</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span><span class="op">?</span> incomingTraceParent <span class="op">=</span> requestHeaders<span class="op">[</span><span class="st">&quot;traceparent&quot;</span><span class="op">];</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span><span class="op">?</span> incomingTraceState <span class="op">=</span> requestHeaders<span class="op">[</span><span class="st">&quot;tracestate&quot;</span><span class="op">];</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> propagator <span class="op">=</span> DistributedContextPropagator<span class="op">.</span><span class="fu">Current</span><span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Extract parent context</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>propagator<span class="op">.</span><span class="fu">ExtractTraceIdAndState</span><span class="op">(</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    requestHeaders<span class="op">,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    getter<span class="op">:</span> <span class="op">(</span>carrier<span class="op">,</span> key<span class="op">)</span> <span class="op">=&gt;</span> carrier<span class="op">.</span><span class="fu">TryGetValue</span><span class="op">(</span>key<span class="op">,</span> <span class="kw">out</span> <span class="dt">var</span> val<span class="op">)</span> <span class="op">?</span> <span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> val <span class="op">}</span> <span class="op">:</span> <span class="kw">null</span><span class="op">,</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">out</span> <span class="dt">string</span><span class="op">?</span> traceParent<span class="op">,</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">out</span> <span class="dt">string</span><span class="op">?</span> traceState<span class="op">);</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="co">// Start child activity linked to the incoming trace context</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> activitySource <span class="op">=</span> <span class="kw">new</span> <span class="fu">ActivitySource</span><span class="op">(</span><span class="st">&quot;InventoryService&quot;</span><span class="op">);</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> <span class="dt">var</span> activity <span class="op">=</span> activitySource<span class="op">.</span><span class="fu">StartActivity</span><span class="op">(</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;CheckStock&quot;</span><span class="op">,</span> </span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    ActivityKind<span class="op">.</span><span class="fu">Server</span><span class="op">,</span> </span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    parentContext<span class="op">:</span> ActivityContext<span class="op">.</span><span class="fu">Parse</span><span class="op">(</span>traceParent<span class="op">,</span> traceState<span class="op">));</span></span></code></pre></div>
+<h2 id="summary">Summary</h2>
+<p>Modern C# applications leverage the
+<code>System.Diagnostics.Activity</code> library to achieve
+standards-based distributed tracing. For standard HTTP operations,
+<code>HttpClient</code> handles W3C header injection automatically
+whenever an ambient <code>Activity</code> is active. For non-standard or
+decoupled transport mechanisms,
+<code>DistributedContextPropagator</code> provides explicit programmatic
+control over the injection and extraction of trace contexts.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/distributed-trace-context-propagation-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

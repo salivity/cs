@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspect Generic Types Using Reflection in C# - cs</title>
+    <meta name="description" content="In .NET, inspecting generics through reflection requires understanding the distinction between open generic type definitions and closed constructed types. This guide explains how to use the System.Type API to determine whether a type is generic, retrieve">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/inspect-generic-types-using-reflection-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Inspect Generic Types Using Reflection in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/inspect-generic-types-using-reflection-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In .NET, inspecting generics through reflection requires understanding the distinction between open generic type definitions and closed constructed types. This guide explains how to use the System.Type API to determine whether a type is generic, retrieve" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="inspect-generic-types-using-reflection-in-c">Inspect Generic
+Types Using Reflection in C</h1>
+<p>In .NET, inspecting generics through reflection requires
+understanding the distinction between open generic type definitions and
+closed constructed types. This guide explains how to use the
+<code>System.Type</code> API to determine whether a type is generic,
+retrieve its generic type definition, extract underlying type arguments
+or parameters, inspect parameter constraints, and construct new generic
+types at runtime.</p>
+<h3 id="understanding-generic-type-states">Understanding Generic Type
+States</h3>
+<p>Reflection categorizes generic types into two primary states:</p>
+<ol type="1">
+<li><strong>Generic Type Definition:</strong> An unbound generic
+template containing type parameters rather than concrete types (for
+example, <code>List&lt;&gt;</code> or
+<code>Dictionary&lt;,&gt;</code>).</li>
+<li><strong>Constructed Generic Type:</strong> A generic type where
+specific types have been assigned to its type parameters (for example,
+<code>List&lt;int&gt;</code> or
+<code>Dictionary&lt;string, int&gt;</code>). A constructed type is
+<em>closed</em> if all type arguments are concrete, or <em>open</em> if
+it still contains unbound generic parameters (often encountered inside
+generic classes or methods).</li>
+</ol>
+<h3 id="key-reflection-properties">Key Reflection Properties</h3>
+<p>You can inspect the generic state of any <code>Type</code> instance
+using these boolean properties:</p>
+<ul>
+<li><code>IsGenericType</code>: Returns <code>true</code> if the type
+represents any generic structure (either a definition or a constructed
+type).</li>
+<li><code>IsGenericTypeDefinition</code>: Returns <code>true</code> only
+if the instance is the open generic template (e.g.,
+<code>typeof(List&lt;&gt;)</code>).</li>
+<li><code>IsConstructedGenericType</code>: Returns <code>true</code> if
+type arguments have been applied to the definition (e.g.,
+<code>typeof(List&lt;int&gt;)</code>).</li>
+<li><code>ContainsGenericParameters</code>: Returns <code>true</code> if
+any type arguments are open generic parameters that have not yet been
+assigned concrete types.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Type openType <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>List<span class="op">&lt;&gt;);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Type closedType <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>List<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;);</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>openType<span class="op">.</span><span class="fu">IsGenericTypeDefinition</span><span class="op">);</span> <span class="co">// True</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>closedType<span class="op">.</span><span class="fu">IsGenericTypeDefinition</span><span class="op">);</span> <span class="co">// False</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>closedType<span class="op">.</span><span class="fu">IsConstructedGenericType</span><span class="op">);</span> <span class="co">// True</span></span></code></pre></div>
+<h3 id="navigating-between-definitions-and-constructed-types">Navigating
+Between Definitions and Constructed Types</h3>
+<p>To retrieve the original generic blueprint from a constructed type,
+call <code>GetGenericTypeDefinition()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Type constructed <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>Dictionary<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>constructed<span class="op">.</span><span class="fu">IsGenericType</span> <span class="op">&amp;&amp;</span> <span class="op">!</span>constructed<span class="op">.</span><span class="fu">IsGenericTypeDefinition</span><span class="op">)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    Type definition <span class="op">=</span> constructed<span class="op">.</span><span class="fu">GetGenericTypeDefinition</span><span class="op">();</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>definition<span class="op">.</span><span class="fu">FullName</span><span class="op">);</span> <span class="co">// System.Collections.Generic.Dictionary`2</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Conversely, you can turn a generic type definition into a constructed
+type dynamically by calling <code>MakeGenericType()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Type definition <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>Dictionary<span class="op">&lt;,&gt;);</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>Type<span class="op">[]</span> typeArgs <span class="op">=</span> <span class="op">{</span> <span class="kw">typeof</span><span class="op">(</span><span class="dt">string</span><span class="op">),</span> <span class="kw">typeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">};</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>Type constructed <span class="op">=</span> definition<span class="op">.</span><span class="fu">MakeGenericType</span><span class="op">(</span>typeArgs<span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>constructed<span class="op">.</span><span class="fu">FullName</span><span class="op">);</span> </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// System.Collections.Generic.Dictionary`2[[System.String...],[System.Int32...]]</span></span></code></pre></div>
+<h3 id="inspecting-generic-arguments-and-parameters">Inspecting Generic
+Arguments and Parameters</h3>
+<p>The <code>GetGenericArguments()</code> method behaves differently
+depending on whether you invoke it on a generic type definition or a
+constructed type:</p>
+<ul>
+<li>On a <strong>Generic Type Definition</strong>, it returns an array
+of <code>Type</code> objects representing the generic type parameters
+(e.g., <code>TKey</code>, <code>TValue</code>).</li>
+<li>On a <strong>Constructed Type</strong>, it returns an array
+representing the substituted type arguments (e.g., <code>string</code>,
+<code>int</code>).</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Type dictionaryType <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>Dictionary<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;);</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>Type<span class="op">[]</span> typeArguments <span class="op">=</span> dictionaryType<span class="op">.</span><span class="fu">GetGenericArguments</span><span class="op">();</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span>Type t <span class="kw">in</span> typeArguments<span class="op">)</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Argument: {t.Name}&quot;</span><span class="op">);</span> <span class="co">// Argument: String, Argument: Int32</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="inspecting-constraints-on-type-parameters">Inspecting
+Constraints on Type Parameters</h3>
+<p>When working with a generic type parameter (obtained from a generic
+definition), you can inspect its constraints using
+<code>GetGenericParameterConstraints()</code> and
+<code>GenericParameterAttributes</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Repository<span class="op">&lt;</span>T<span class="op">&gt;</span> where T <span class="op">:</span> <span class="kw">class</span><span class="op">,</span> IComparable<span class="op">,</span> <span class="kw">new</span><span class="op">()</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>Type repoType <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>Repository<span class="op">&lt;&gt;);</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>Type tParam <span class="op">=</span> repoType<span class="op">.</span><span class="fu">GetGenericArguments</span><span class="op">()[</span><span class="dv">0</span><span class="op">];</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Check base class or interface constraints</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>Type<span class="op">[]</span> constraints <span class="op">=</span> tParam<span class="op">.</span><span class="fu">GetGenericParameterConstraints</span><span class="op">();</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span>Type constraint <span class="kw">in</span> constraints<span class="op">)</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Constraint: {constraint.Name}&quot;</span><span class="op">);</span> <span class="co">// IComparable</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Check special constraints (class, struct, new())</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>GenericParameterAttributes attributes <span class="op">=</span> tParam<span class="op">.</span><span class="fu">GenericParameterAttributes</span><span class="op">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> hasReferenceTypeConstraint <span class="op">=</span> <span class="op">(</span>attributes <span class="op">&amp;</span> GenericParameterAttributes<span class="op">.</span><span class="fu">ReferenceTypeConstraint</span><span class="op">)</span> <span class="op">!=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> hasDefaultConstructorConstraint <span class="op">=</span> <span class="op">(</span>attributes <span class="op">&amp;</span> GenericParameterAttributes<span class="op">.</span><span class="fu">DefaultConstructorConstraint</span><span class="op">)</span> <span class="op">!=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> hasNotNullableValueTypeConstraint <span class="op">=</span> <span class="op">(</span>attributes <span class="op">&amp;</span> GenericParameterAttributes<span class="op">.</span><span class="fu">NotNullableValueTypeConstraint</span><span class="op">)</span> <span class="op">!=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;where T : class -&gt; {hasReferenceTypeConstraint}&quot;</span><span class="op">);</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;where T : new() -&gt; {hasDefaultConstructorConstraint}&quot;</span><span class="op">);</span></span></code></pre></div>
+<h3 id="inspecting-generic-methods">Inspecting Generic Methods</h3>
+<p>Generic methods follow the same pattern using methods available on
+<code>MethodInfo</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>MethodInfo openMethod <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>Enumerable<span class="op">)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">GetMethods</span><span class="op">()</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">First</span><span class="op">(</span>m <span class="op">=&gt;</span> m<span class="op">.</span><span class="fu">Name</span> <span class="op">==</span> <span class="st">&quot;ToArray&quot;</span> <span class="op">&amp;&amp;</span> m<span class="op">.</span><span class="fu">IsGenericMethodDefinition</span><span class="op">);</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Check method generic state</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>openMethod<span class="op">.</span><span class="fu">IsGenericMethodDefinition</span><span class="op">);</span> <span class="co">// True</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Make a concrete generic method</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>MethodInfo closedMethod <span class="op">=</span> openMethod<span class="op">.</span><span class="fu">MakeGenericMethod</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span><span class="dt">int</span><span class="op">));</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>closedMethod<span class="op">.</span><span class="fu">IsGenericMethod</span><span class="op">);</span> <span class="co">// True</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>closedMethod<span class="op">.</span><span class="fu">IsGenericMethodDefinition</span><span class="op">);</span> <span class="co">// False</span></span></code></pre></div></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/inspect-generic-types-using-reflection-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

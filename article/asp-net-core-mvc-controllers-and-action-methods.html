@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASP.NET Core MVC Controllers and Action Methods - cs</title>
+    <meta name="description" content="In ASP.NET Core Model-View-Controller (MVC), controllers and action methods serve as the central coordinators of web applications. This article breaks down how incoming HTTP requests are received by controllers, processed through specific C# action method">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/asp-net-core-mvc-controllers-and-action-methods">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ASP.NET Core MVC Controllers and Action Methods - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/asp-net-core-mvc-controllers-and-action-methods" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In ASP.NET Core Model-View-Controller (MVC), controllers and action methods serve as the central coordinators of web applications. This article breaks down how incoming HTTP requests are received by controllers, processed through specific C# action method" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="aspnet-core-mvc-controllers-and-action-methods">ASP.NET Core MVC
+Controllers and Action Methods</h1>
+<p>In ASP.NET Core Model-View-Controller (MVC), controllers and action
+methods serve as the central coordinators of web applications. This
+article breaks down how incoming HTTP requests are received by
+controllers, processed through specific C# action methods, integrated
+with model binding, and returned to the client as views, JSON data, or
+HTTP status codes.</p>
+<h3 id="the-role-of-a-controller">The Role of a Controller</h3>
+<p>A controller is a C# class that orchestrates application logic by
+accepting HTTP requests, interacting with data models or services, and
+selecting an appropriate response. In traditional ASP.NET Core MVC, a
+controller typically inherits from the built-in
+<code>Microsoft.AspNetCore.Mvc.Controller</code> class.</p>
+<p>Inheriting from <code>Controller</code> provides access to core MVC
+features, including the <code>HttpContext</code>,
+<code>ModelState</code>, and helper methods for rendering views (such as
+<code>View()</code>, <code>PartialView()</code>, and
+<code>RedirectToAction()</code>). By convention, controller class names
+end with the suffix "Controller" (e.g., <code>HomeController</code>),
+which the framework's routing engine uses to identify valid
+endpoints.</p>
+<h3 id="understanding-action-methods">Understanding Action Methods</h3>
+<p>Action methods are public methods defined within a controller that
+execute in response to an incoming URL. Any public method inside a
+controller class is treated as an action method unless explicitly
+decorated with the <code>[NonAction]</code> attribute.</p>
+<p>Action methods can be restricted to specific HTTP verbs using
+attributes such as <code>[HttpGet]</code>, <code>[HttpPost]</code>,
+<code>[HttpPut]</code>, and <code>[HttpDelete]</code>. By default, an
+action method responds to <code>GET</code> requests if no HTTP method
+attribute is specified.</p>
+<h3 id="routing-and-the-request-lifecycle">Routing and the Request
+Lifecycle</h3>
+<p>When a client sends a request to an ASP.NET Core application, the
+routing middleware inspects the URL to determine which controller and
+action method should execute. Traditional MVC uses conventional routing,
+defined in the <code>Program.cs</code> file:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapControllerRoute</span><span class="op">(</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    name<span class="op">:</span> <span class="st">&quot;default&quot;</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    pattern<span class="op">:</span> <span class="st">&quot;{controller=Home}/{action=Index}/{id?}&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>With this pattern, a request to <code>/Products/Details/5</code>
+triggers the following lifecycle:</p>
+<ol type="1">
+<li>The routing engine parses the URL and identifies the
+<code>ProductsController</code>.</li>
+<li>It looks for a public method named <code>Details</code> on that
+controller.</li>
+<li>It passes the value <code>5</code> as an argument to the method's
+parameter.</li>
+</ol>
+<p>Alternatively, developers can use attribute routing by decorating
+controllers and actions directly with <code>[Route("...")]</code>
+attributes.</p>
+<h3 id="model-binding">Model Binding</h3>
+<p>Before an action method executes, ASP.NET Core uses model binding to
+extract data from the HTTP request and populate the action method's
+parameters. The framework searches multiple sources in a defined
+order:</p>
+<ol type="1">
+<li>Form fields (from POST requests)</li>
+<li>The request body (such as JSON data)</li>
+<li>Route values (from URL segments like <code>{id}</code>)</li>
+<li>Query strings (from URL parameters like <code>?id=5</code>)</li>
+<li>Uploaded files</li>
+</ol>
+<p>Model binding automatically handles data type conversions (e.g.,
+parsing a string from a query string into a C# <code>int</code> or
+<code>DateTime</code>) and runs validation attributes defined on the
+model, storing errors in <code>ModelState</code>.</p>
+<h3 id="action-results">Action Results</h3>
+<p>Action methods process data and return a type that implements the
+<code>IActionResult</code> interface. This allows the method to define
+how the framework should respond to the client. Common return types
+include:</p>
+<ul>
+<li><strong>ViewResult (<code>View()</code>):</strong> Renders an HTML
+Razor view using data passed to it via a model.</li>
+<li><strong>JsonResult (<code>Json()</code>):</strong> Serializes an
+object to JSON, useful for AJAX requests.</li>
+<li><strong>RedirectToActionResult
+(<code>RedirectToAction()</code>):</strong> Issues an HTTP 302 redirect
+to another action method.</li>
+<li><strong>NotFoundResult (<code>NotFound()</code>):</strong> Returns
+an HTTP 404 status code.</li>
+<li><strong>StatusCodeResult (<code>StatusCode()</code>):</strong>
+Returns a specific HTTP status code, such as 200, 400, or 500.</li>
+</ul>
+<h3 id="code-example">Code Example</h3>
+<p>Below is a complete implementation of a controller managing product
+data:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Mvc</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ProductsController <span class="op">:</span> Controller</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Responds to: GET /Products/Details/5</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>HttpGet<span class="op">]</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IActionResult <span class="fu">Details</span><span class="op">(</span><span class="dt">int</span><span class="op">?</span> id<span class="op">)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>id <span class="op">==</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> <span class="fu">NotFound</span><span class="op">();</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> product <span class="op">=</span> <span class="kw">new</span> Product <span class="op">{</span> Id <span class="op">=</span> id<span class="op">.</span><span class="fu">Value</span><span class="op">,</span> Name <span class="op">=</span> <span class="st">&quot;Sample Item&quot;</span> <span class="op">};</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="fu">View</span><span class="op">(</span>product<span class="op">);</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Responds to: POST /Products/Create</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>HttpPost<span class="op">]</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>ValidateAntiForgeryToken<span class="op">]</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IActionResult <span class="fu">Create</span><span class="op">(</span>Product product<span class="op">)</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(!</span>ModelState<span class="op">.</span><span class="fu">IsValid</span><span class="op">)</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> <span class="fu">View</span><span class="op">(</span>product<span class="op">);</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Save logic executed here</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="fu">RedirectToAction</span><span class="op">(</span><span class="fu">nameof</span><span class="op">(</span>Details<span class="op">),</span> <span class="kw">new</span> <span class="op">{</span> id <span class="op">=</span> product<span class="op">.</span><span class="fu">Id</span> <span class="op">});</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Through this mechanism, ASP.NET Core MVC maintains a clean separation
+of concerns: controllers handle the flow of application execution,
+models represent business data and rules, and views handle UI
+presentation.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/asp-net-core-mvc-controllers-and-action-methods';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

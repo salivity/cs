@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assembly Trimming: Remove Unused Code in C# Deployments - cs</title>
+    <meta name="description" content="Assembly trimming is a .NET deployment optimization that analyzes your application, identifies unused code, and strips it away from your final published binaries. In self-contained C# deployments, where the entire .NET runtime and framework libraries are">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/assembly-trimming-remove-unused-code-in-c-deployments">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Assembly Trimming: Remove Unused Code in C# Deployments - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/assembly-trimming-remove-unused-code-in-c-deployments" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Assembly trimming is a .NET deployment optimization that analyzes your application, identifies unused code, and strips it away from your final published binaries. In self-contained C# deployments, where the entire .NET runtime and framework libraries are" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="assembly-trimming-remove-unused-code-in-c-deployments">Assembly
+Trimming: Remove Unused Code in C# Deployments</h1>
+<p>Assembly trimming is a .NET deployment optimization that analyzes
+your application, identifies unused code, and strips it away from your
+final published binaries. In self-contained C# deployments, where the
+entire .NET runtime and framework libraries are packaged alongside your
+application, file sizes can quickly balloon to 60MB or more. By enabling
+trimming, you can drastically reduce this footprint—often by 50% to
+80%—resulting in faster downloads, reduced storage requirements, and
+quicker startup times.</p>
+<h3 id="what-is-assembly-trimming">What Is Assembly Trimming?</h3>
+<p>During the publish process, the .NET trimmer (an evolved version of
+the IL Linker) scans your application starting from the entry point
+(<code>Main</code>). It constructs a dependency graph by tracing all
+referenced types, methods, fields, and external assemblies. Any code or
+library that is not reached during this static analysis is considered
+dead code and is excluded from the final output directory.</p>
+<h3 id="enabling-trimming-in-self-contained-deployments">Enabling
+Trimming in Self-Contained Deployments</h3>
+<p>To enable trimming, you must publish your application as a
+self-contained executable targeting a specific runtime identifier
+(RID).</p>
+<h4 id="1-configuring-the-project-file-csproj">1. Configuring the
+Project File (<code>.csproj</code>)</h4>
+<p>You can enable trimming permanently for release builds by adding the
+<code>&lt;PublishTrimmed&gt;</code> property inside a
+<code>&lt;PropertyGroup&gt;</code> in your <code>.csproj</code>
+file:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">Project</span> <span class="ot">Sdk=</span><span class="st">&quot;Microsoft.NET.Sdk&quot;</span>&gt;</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">PropertyGroup</span>&gt;</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">OutputType</span>&gt;Exe&lt;/<span class="kw">OutputType</span>&gt;</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">TargetFramework</span>&gt;net8.0&lt;/<span class="kw">TargetFramework</span>&gt;</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">Nullable</span>&gt;enable&lt;/<span class="kw">Nullable</span>&gt;</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">PublishTrimmed</span>&gt;true&lt;/<span class="kw">PublishTrimmed</span>&gt;</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">PropertyGroup</span>&gt;</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">Project</span>&gt;</span></code></pre></div>
+<h4 id="2-using-the-net-cli">2. Using the .NET CLI</h4>
+<p>Alternatively, you can enable trimming directly from the command line
+using the <code>/p:PublishTrimmed=true</code> flag with
+<code>dotnet publish</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> publish <span class="at">-c</span> Release <span class="at">-r</span> win-x64 <span class="at">--self-contained</span> true /p:PublishTrimmed=true</span></code></pre></div>
+<p>Replace <code>win-x64</code> with your target RID (such as
+<code>linux-x64</code> or <code>osx-arm64</code>).</p>
+<h3 id="trimming-granularity-levels">Trimming Granularity Levels</h3>
+<p>Modern .NET versions (NET 6 and later) support different trimming
+granularities via the <code>&lt;TrimMode&gt;</code> property:</p>
+<ul>
+<li><strong>Partial Trimming
+(<code>&lt;TrimMode&gt;partial&lt;/TrimMode&gt;</code>):</strong> The
+default setting. It only trims assemblies that explicitly opt-in via the
+<code>[assembly: AssemblyMetadata("IsTrimmable", "True")]</code>
+attribute, which includes most of the core .NET runtime libraries.
+Application code and third-party libraries not marked as trimmable
+remain untouched.</li>
+<li><strong>Full Trimming
+(<code>&lt;TrimMode&gt;full&lt;/TrimMode&gt;</code>):</strong>
+Aggressively analyzes and strips unused code at the member level across
+all assemblies, including your own application code and external NuGet
+packages. This yields the smallest possible binary size but requires
+thorough testing.</li>
+</ul>
+<h3 id="handling-reflection-and-dynamic-code">Handling Reflection and
+Dynamic Code</h3>
+<p>Because trimming relies on static code analysis, dynamic behaviors
+like reflection, late-bound dependency injection, and runtime
+serialization cannot always be detected. If the trimmer removes a method
+that is only called via reflection, your application will throw a
+<code>MissingMethodException</code> at runtime.</p>
+<p>To prevent critical code from being trimmed:</p>
+<ol type="1">
+<li><strong>Annotate with Attributes:</strong> Use code annotations from
+the <code>System.Diagnostics.CodeAnalysis</code> namespace to inform the
+trimmer of dynamic dependencies.
+<ul>
+<li><code>[DynamicallyAccessedMembers]</code>: Instructs the trimmer to
+preserve specific types, constructors, or methods.</li>
+<li><code>[RequiresUnreferencedCode]</code>: Marks a method as
+incompatible with trimming, generating build-time warnings when
+called.</li>
+</ul></li>
+<li><strong>Exclude Specific Assemblies:</strong> If a third-party
+dependency is breaking due to trimming, you can prevent the trimmer from
+altering it by adding a <code>&lt;TrimmableAssembly&gt;</code> entry in
+your <code>.csproj</code>:</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">ItemGroup</span>&gt;</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">TrimmableAssembly</span> <span class="ot">Remove=</span><span class="st">&quot;ProblematicLibrary&quot;</span> /&gt;</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">ItemGroup</span>&gt;</span></code></pre></div>
+<p>Always test trimmed self-contained builds thoroughly in an
+environment that mirrors your target production deployment to verify
+that all runtime-loaded paths function correctly.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/assembly-trimming-remove-unused-code-in-c-deployments';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

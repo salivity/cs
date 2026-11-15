@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Nullable Annotations Affect C# Reflection - cs</title>
+    <meta name="description" content="Nullable reference types, introduced in C# 8.0, are a compile-time safety feature rather than a runtime type system change. Because the Common Language Runtime (CLR) treats string and string? identically as System.String, nullability state cannot be deter">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-nullable-annotations-affect-c-reflection">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Nullable Annotations Affect C# Reflection - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-nullable-annotations-affect-c-reflection" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Nullable reference types, introduced in C# 8.0, are a compile-time safety feature rather than a runtime type system change. Because the Common Language Runtime (CLR) treats string and string? identically as System.String, nullability state cannot be deter" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-nullable-annotations-affect-c-reflection">How Nullable
+Annotations Affect C# Reflection</h1>
+<p>Nullable reference types, introduced in C# 8.0, are a compile-time
+safety feature rather than a runtime type system change. Because the
+Common Language Runtime (CLR) treats <code>string</code> and
+<code>string?</code> identically as <code>System.String</code>,
+nullability state cannot be determined by checking an object's runtime
+<code>Type</code>. Instead, the C# compiler embeds nullability metadata
+directly into assemblies using specific metadata attributes. This
+article explores how the compiler encodes this metadata, the challenges
+it presents for standard reflection, and how modern .NET APIs allow
+developers to accurately inspect nullability at runtime.</p>
+<h3 id="the-underlying-metadata-mechanism">The Underlying Metadata
+Mechanism</h3>
+<p>To preserve backward compatibility, the runtime does not introduce
+new nullable CLR types for reference types. Instead, the compiler
+synthesizes internal attributes in the
+<code>System.Runtime.CompilerServices</code> namespace:</p>
+<ol type="1">
+<li><strong><code>NullableAttribute</code></strong>: Applied to specific
+members, parameters, return types, or fields. It contains a
+<code>byte[]</code> flag payload indicating nullability:
+<ul>
+<li><code>0</code>: Oblivious (unannotated or pre-C# 8 code).</li>
+<li><code>1</code>: Not null (e.g., <code>string</code>).</li>
+<li><code>2</code>: Nullable (e.g., <code>string?</code>). For complex
+generic types like
+<code>Dictionary&lt;string, List&lt;int?&gt;?&gt;</code>, the byte array
+stores a traversal of the type tree to represent the nullability of each
+component.</li>
+</ul></li>
+<li><strong><code>NullableContextAttribute</code></strong>: To minimize
+metadata size in compiled assemblies, the compiler applies this
+attribute to entire classes, structs, methods, or assemblies. It
+contains a single byte (<code>0</code>, <code>1</code>, or
+<code>2</code>) that establishes the default nullability context for any
+member within that scope that does not have an explicit
+<code>NullableAttribute</code>.</li>
+</ol>
+<h3 id="challenges-with-traditional-reflection">Challenges with
+Traditional Reflection</h3>
+<p>Using traditional reflection methods—such as
+<code>MemberInfo.GetCustomAttributes()</code>—to inspect nullability is
+notoriously complex. To determine whether a property is nullable using
+manual attribute inspection, you must:</p>
+<ul>
+<li>Check for an explicit <code>NullableAttribute</code> on the target
+property.</li>
+<li>Decode its nested byte array if generics or arrays are
+involved.</li>
+<li>Fall back to the enclosing method, declaring type, or assembly to
+look for a <code>NullableContextAttribute</code> if the member lacks an
+explicit attribute.</li>
+<li>Account for differing read/write nullability (such as a property
+with a nullable getter but a non-nullable setter).</li>
+</ul>
+<p>Due to these layered rules, manually parsing the metadata attributes
+is error-prone and inefficient.</p>
+<h3 id="the-modern-solution-nullabilityinfocontext">The Modern Solution:
+<code>NullabilityInfoContext</code></h3>
+<p>Starting in .NET 6, the runtime introduced
+<code>System.Reflection.NullabilityInfoContext</code> to eliminate the
+complexity of manual attribute parsing. This utility automates the
+resolution of both <code>NullableAttribute</code> and
+<code>NullableContextAttribute</code> across scopes.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Reflection</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Example</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> NonNullProp <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> <span class="dt">string</span><span class="op">.</span><span class="fu">Empty</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span><span class="op">?</span> NullableProp <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> context <span class="op">=</span> <span class="kw">new</span> <span class="fu">NullabilityInfoContext</span><span class="op">();</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>PropertyInfo propInfo <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>Example<span class="op">).</span><span class="fu">GetProperty</span><span class="op">(</span><span class="fu">nameof</span><span class="op">(</span>Example<span class="op">.</span><span class="fu">NullableProp</span><span class="op">))!;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>NullabilityInfo nullInfo <span class="op">=</span> context<span class="op">.</span><span class="fu">Create</span><span class="op">(</span>propInfo<span class="op">);</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>nullInfo<span class="op">.</span><span class="fu">ReadState</span><span class="op">);</span>  <span class="co">// Outputs: Nullable</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>nullInfo<span class="op">.</span><span class="fu">WriteState</span><span class="op">);</span> <span class="co">// Outputs: Nullable</span></span></code></pre></div>
+<p>The resulting <code>NullabilityInfo</code> object exposes properties
+including:</p>
+<ul>
+<li><strong><code>ReadState</code></strong>: The nullability of the
+value when read (e.g., getter return value).</li>
+<li><strong><code>WriteState</code></strong>: The nullability
+requirements when written (e.g., setter value parameter).</li>
+<li><strong><code>GenericTypeArguments</code></strong>: An array of
+<code>NullabilityInfo</code> instances representing the nested generic
+arguments, accurately handling structures like
+<code>List&lt;string?&gt;</code>.</li>
+</ul>
+<h3 id="practical-implications-for-modern-frameworks">Practical
+Implications for Modern Frameworks</h3>
+<p>For libraries heavily reliant on reflection—such as object mappers,
+serialization engines (e.g., <code>System.Text.Json</code>), and
+validation frameworks—nullability annotations fundamentally change
+runtime behavior:</p>
+<ul>
+<li><strong>Deserialization</strong>: Modern deserializers can enforce
+non-nullable reference types at runtime, throwing exceptions if incoming
+JSON payloads contain <code>null</code> for a non-nullable
+property.</li>
+<li><strong>Validation and ORMs</strong>: Tools like Entity Framework
+Core leverage nullability metadata to configure database column
+nullability automatically during schema generation.</li>
+<li><strong>Performance Overhead</strong>: Inspecting nullability
+metadata involves extra reflection operations and allocation overhead.
+As a best practice, instances of <code>NullabilityInfoContext</code>
+should be cached and reused when analyzing metadata across
+high-throughput paths.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-nullable-annotations-affect-c-reflection';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

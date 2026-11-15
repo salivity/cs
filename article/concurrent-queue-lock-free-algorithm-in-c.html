@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConcurrentQueue Lock-Free Algorithm in C# - cs</title>
+    <meta name="description" content="The ConcurrentQueue&lt;T&gt; in .NET provides a high-throughput, thread-safe, first-in-first-out (FIFO) collection without relying on traditional mutual-exclusion locks. Modern implementations in .NET achieve this lock-free behavior by utilizing a linked list o">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/concurrent-queue-lock-free-algorithm-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ConcurrentQueue Lock-Free Algorithm in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/concurrent-queue-lock-free-algorithm-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The ConcurrentQueue&lt;T&gt; in .NET provides a high-throughput, thread-safe, first-in-first-out (FIFO) collection without relying on traditional mutual-exclusion locks. Modern implementations in .NET achieve this lock-free behavior by utilizing a linked list o" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="concurrentqueue-lock-free-algorithm-in-c">ConcurrentQueue
+Lock-Free Algorithm in C</h1>
+<p>The <code>ConcurrentQueue&lt;T&gt;</code> in .NET provides a
+high-throughput, thread-safe, first-in-first-out (FIFO) collection
+without relying on traditional mutual-exclusion locks. Modern
+implementations in .NET achieve this lock-free behavior by utilizing a
+linked list of fixed-size ring-buffer segments, coordinating concurrent
+enqueues and dequeues through low-level atomic CPU instructions like
+<code>Interlocked.CompareExchange</code>. This article details the
+underlying architecture of <code>ConcurrentQueue&lt;T&gt;</code>, how it
+evolved from the classic Michael-Scott queue, and the specific mechanics
+governing its lock-free operations.</p>
+<h3
+id="transition-from-michael-scott-to-segmented-ring-buffers">Transition
+from Michael-Scott to Segmented Ring Buffers</h3>
+<p>Early versions of <code>ConcurrentQueue&lt;T&gt;</code> in .NET
+Framework were directly based on the standard Michael &amp; Scott (1996)
+lock-free queue algorithm. That algorithm uses a singly linked list
+where every enqueued item requires allocating a new node, and operations
+coordinate head and tail updates via Compare-And-Swap (CAS)
+instructions. While mathematically sound and lock-free, this approach
+created substantial garbage collection (GC) pressure and poor cache
+locality due to frequent individual node allocations.</p>
+<p>Starting in .NET Core and continuing in modern .NET, the
+implementation was redesigned into an array-based segmented
+architecture. Instead of allocating a node per element,
+<code>ConcurrentQueue&lt;T&gt;</code> organizes data into a linked list
+of bounded arrays, known as segments. Each segment acts as a fixed-size
+circular buffer (typically 32 elements). This hybrid model preserves
+lock-free guarantees while significantly reducing allocations,
+maximizing CPU cache line utilization, and mitigating cache
+contention.</p>
+<h3 id="core-architecture-segments-and-slots">Core Architecture:
+Segments and Slots</h3>
+<p>A <code>ConcurrentQueue&lt;T&gt;</code> maintains a reference to a
+head segment (where consumers read) and a tail segment (where producers
+write). Each segment contains an array of <code>Slot</code> structures
+alongside two primary 32-bit integer counters: <code>_headAndTail</code>
+or individual head and tail positions tracking the segment's logical
+range.</p>
+<p>Each slot inside a segment holds:</p>
+<ol type="1">
+<li><strong>The Item (<code>T</code>):</strong> The actual payload
+stored in the queue.</li>
+<li><strong>A Sequence Number (<code>int</code>):</strong> A
+monotonically increasing state tracker used to validate slot ownership
+and prevent read/write hazards.</li>
+</ol>
+<p>Because the capacity of each segment is a power of two (such as 32),
+indexing into the array uses a fast bitwise AND operation
+(<code>index &amp; (Capacity - 1)</code>) instead of an expensive modulo
+operation.</p>
+<h3 id="the-lock-free-enqueue-pattern">The Lock-Free Enqueue
+Pattern</h3>
+<p>The enqueue algorithm reserves a slot in the current tail segment
+using an atomic fetch-and-add pattern rather than acquiring a lock:</p>
+<ol type="1">
+<li><strong>Reserve Index:</strong> The producer thread atomically
+increments the segment's tail counter using
+<code>Interlocked.Increment</code> or <code>Interlocked.Add</code>.</li>
+<li><strong>Capacity Validation:</strong> The thread checks whether the
+returned index falls within the segment's boundaries.
+<ul>
+<li>If the index is within range, the thread owns that specific
+slot.</li>
+<li>If the index exceeds the segment's capacity, the thread detects that
+the segment is full. It then ensures a new segment is allocated, links
+it to the chain using <code>Interlocked.CompareExchange</code>, and
+attempts the enqueue in the new segment.</li>
+</ul></li>
+<li><strong>State Verification and Slot Write:</strong> The thread
+inspects the sequence number of the assigned slot. The sequence number
+acts as a barrier:
+<ul>
+<li>When a slot is ready to be written, its sequence number matches the
+expected turn for that index.</li>
+<li>The thread writes the element <code>T</code> to the slot.</li>
+<li>The thread uses a volatile or atomic write to increment the slot's
+sequence number, signaling to consumers that the slot now contains
+valid, fully published data.</li>
+</ul></li>
+</ol>
+<h3 id="the-lock-free-dequeue-pattern">The Lock-Free Dequeue
+Pattern</h3>
+<p>The dequeue operation mirrors the producer flow but reads from the
+head segment:</p>
+<ol type="1">
+<li><strong>Reserve Index:</strong> The consumer thread atomically
+increments the segment's head counter using
+<code>Interlocked.Increment</code>.</li>
+<li><strong>Boundary and Availability Check:</strong> The consumer
+compares the reserved head index against the segment's tail.
+<ul>
+<li>If the head index has caught up to or surpassed the tail, the
+segment is empty (or the entire queue is empty), and the operation fails
+or transitions to the next segment.</li>
+</ul></li>
+<li><strong>Spinning for In-Flight Writes:</strong> If the head index is
+valid, the consumer checks the slot's sequence number. If a producer has
+reserved the slot but has not finished writing the value, the consumer
+briefly spins until the sequence number confirms the write is
+complete.</li>
+<li><strong>Data Extraction and Cleanup:</strong> Once the sequence
+number indicates the slot is populated:
+<ul>
+<li>The consumer extracts the item <code>T</code>.</li>
+<li>The slot reference is reset to <code>default(T)</code> to avoid
+memory leaks (loitering objects under the GC).</li>
+<li>The sequence number is updated to indicate the slot has been
+consumed.</li>
+</ul></li>
+<li><strong>Segment Disposal:</strong> When a segment's head counter
+reaches its capacity, the segment is completely drained. The consumer
+advances the queue's global head reference to the next segment, allowing
+the exhausted segment to be collected by the GC or returned to an
+internal object pool.</li>
+</ol>
+<h3 id="synchronization-and-race-condition-mitigation">Synchronization
+and Race Condition Mitigation</h3>
+<p>The pattern eliminates several common concurrency pitfalls through
+hardware-level primitives:</p>
+<ul>
+<li><strong>Preventing the ABA Problem:</strong> By relying on
+monotonically increasing sequence numbers and index ranges rather than
+recycling raw node pointers, the implementation avoids the classic ABA
+hazard common to pointer-based CAS queues.</li>
+<li><strong>Cache Line Padding:</strong> Internal fields susceptible to
+frequent simultaneous modification (such as separate head and tail
+counters) are padded with empty bytes. This prevents false sharing,
+ensuring that writes to the tail by producers do not invalidate the CPU
+cache line holding the head counter used by consumers.</li>
+<li><strong>Memory Barriers:</strong> Modern .NET relies on the
+acquire/release semantics inherent in operations like
+<code>Volatile.Write</code> and <code>Interlocked</code> methods to
+enforce memory ordering. This guarantees that an enqueued payload is
+completely written to main memory before its corresponding sequence flag
+signals that the item is readable.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/concurrent-queue-lock-free-algorithm-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

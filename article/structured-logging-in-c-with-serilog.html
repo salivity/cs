@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structured Logging in C# with Serilog - cs</title>
+    <meta name="description" content="Structured logging is a modern approach to application logging that treats log entries as structured data rather than flat text strings. This article explores what structured logging libraries like Serilog are, why they are essential in modern software de">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/structured-logging-in-c-with-serilog">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Structured Logging in C# with Serilog - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/structured-logging-in-c-with-serilog" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Structured logging is a modern approach to application logging that treats log entries as structured data rather than flat text strings. This article explores what structured logging libraries like Serilog are, why they are essential in modern software de" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="structured-logging-in-c-with-serilog">Structured Logging in C#
+with Serilog</h1>
+<p>Structured logging is a modern approach to application logging that
+treats log entries as structured data rather than flat text strings.
+This article explores what structured logging libraries like Serilog
+are, why they are essential in modern software development, and how they
+capture, serialize, and format log events in C#.</p>
+<h2
+id="understanding-structured-logging-vs-traditional-logging">Understanding
+Structured Logging vs. Traditional Logging</h2>
+<p>Traditional logging formats data into unformatted strings using
+standard string concatenation or interpolation. For example:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Traditional string formatting</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>logger<span class="op">.</span><span class="fu">Info</span><span class="op">(</span>$<span class="st">&quot;Order {orderId} processed for customer {customerId} with total {amount}.&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>While readable by humans, this approach produces flat text.
+Extracting specific fields—such as searching for all orders where the
+amount exceeded $100—requires complex regular expressions that break
+easily if the message wording changes.</p>
+<p>Structured logging solves this by preserving the original data types
+and values alongside the human-readable message. Instead of flattening
+data into a single string at the moment of logging, it captures fields
+as key-value pairs, often formatted as JSON:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;@timestamp&quot;</span><span class="fu">:</span> <span class="st">&quot;2023-10-25T14:30:00Z&quot;</span><span class="fu">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;level&quot;</span><span class="fu">:</span> <span class="st">&quot;Information&quot;</span><span class="fu">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;messageTemplate&quot;</span><span class="fu">:</span> <span class="st">&quot;Order {OrderId} processed for customer {CustomerId} with total {Amount}.&quot;</span><span class="fu">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;properties&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;OrderId&quot;</span><span class="fu">:</span> <span class="dv">1042</span><span class="fu">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;CustomerId&quot;</span><span class="fu">:</span> <span class="st">&quot;CUST-987&quot;</span><span class="fu">,</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;Amount&quot;</span><span class="fu">:</span> <span class="fl">150.75</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>This format allows modern log ingestion systems (such as Seq,
+Elasticsearch, Datadog, or Azure Application Insights) to index each
+field natively, enabling fast searching, filtering, and aggregation.</p>
+<h2 id="what-is-serilog">What is Serilog?</h2>
+<p>Serilog is one of the most widely used structured logging libraries
+for the .NET ecosystem. It integrates natively with the
+<code>Microsoft.Extensions.Logging</code> abstraction and provides a
+modular architecture composed of:</p>
+<ul>
+<li><strong>Message Templates:</strong> The core mechanism for defining
+structured data in log statements.</li>
+<li><strong>Sinks:</strong> Destinations for log events, such as the
+Console, local files, relational databases, or cloud-based
+aggregators.</li>
+<li><strong>Enrichers:</strong> Middleware that automatically attaches
+contextual properties (such as Machine Name, Thread ID, or Correlation
+IDs) to every log entry.</li>
+</ul>
+<h2 id="how-serilog-formats-logs-in-c">How Serilog Formats Logs in
+C</h2>
+<p>Serilog achieves structured logging through a concept called
+<strong>Message Templates</strong>. A message template uses named
+placeholders inside a string literal instead of positional or
+interpolated parameters.</p>
+<h3 id="1-capturing-scalar-values">1. Capturing Scalar Values</h3>
+<p>When logging simple data types (strings, integers, dates), provide
+property names within curly braces:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> orderId <span class="op">=</span> <span class="dv">1042</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> customerId <span class="op">=</span> <span class="st">&quot;CUST-987&quot;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">decimal</span> amount <span class="op">=</span> <span class="fl">150.75m</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Correct: Using Serilog message templates</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>logger<span class="op">.</span><span class="fu">Information</span><span class="op">(</span><span class="st">&quot;Order {OrderId} processed for customer {CustomerId} with total {Amount}&quot;</span><span class="op">,</span> </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    orderId<span class="op">,</span> customerId<span class="op">,</span> amount<span class="op">);</span></span></code></pre></div>
+<p>Behind the scenes, Serilog parses <code>{OrderId}</code>,
+<code>{CustomerId}</code>, and <code>{Amount}</code> as distinct
+properties, captures their runtime values, and maintains them in an
+event property dictionary.</p>
+<h3 id="2-capturing-complex-objects-destructuring">2. Capturing Complex
+Objects (Destructuring)</h3>
+<p>By default, passing a complex C# object to a placeholder calls its
+<code>.ToString()</code> method. To instruct Serilog to serialize the
+entire object graph into structured properties, prefix the identifier
+with the destructuring operator (<code>@</code>):</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> customer <span class="op">=</span> <span class="kw">new</span> Customer </span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span> </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    Id <span class="op">=</span> <span class="st">&quot;CUST-987&quot;</span><span class="op">,</span> </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    Name <span class="op">=</span> <span class="st">&quot;Jane Doe&quot;</span><span class="op">,</span> </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    Email <span class="op">=</span> <span class="st">&quot;jane@example.com&quot;</span> </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Destructuring the customer object into JSON properties</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>logger<span class="op">.</span><span class="fu">Information</span><span class="op">(</span><span class="st">&quot;Created new customer: {@Customer}&quot;</span><span class="op">,</span> customer<span class="op">);</span></span></code></pre></div>
+<p>This generates a nested JSON object within the log payload, allowing
+individual properties like <code>Customer.Email</code> to be queried
+independently in log management tools.</p>
+<h3 id="3-stringification-operator">3. Stringification Operator</h3>
+<p>If you want to ensure a complex object is explicitly captured as a
+flat string rather than decomposed, prefix the property name with
+<code>$</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>logger<span class="op">.</span><span class="fu">Information</span><span class="op">(</span><span class="st">&quot;Processed payload: {$Payload}&quot;</span><span class="op">,</span> complexPayload<span class="op">);</span></span></code></pre></div>
+<h2 id="basic-configuration-example-in-c">Basic Configuration Example in
+C</h2>
+<p>Configuring Serilog in a modern .NET application involves creating a
+<code>LoggerConfiguration</code> and directing the output to the desired
+sinks.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Serilog<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Serilog<span class="op">.</span><span class="fu">Formatting</span><span class="op">.</span><span class="fu">Json</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Configure Serilog</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>Log<span class="op">.</span><span class="fu">Logger</span> <span class="op">=</span> <span class="kw">new</span> <span class="fu">LoggerConfiguration</span><span class="op">()</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">MinimumLevel</span><span class="op">.</span><span class="fu">Debug</span><span class="op">()</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">Enrich</span><span class="op">.</span><span class="fu">FromLogContext</span><span class="op">()</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">WriteTo</span><span class="op">.</span><span class="fu">Console</span><span class="op">()</span> <span class="co">// Human-readable console output</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">WriteTo</span><span class="op">.</span><span class="fu">File</span><span class="op">(</span><span class="kw">new</span> <span class="fu">JsonFormatter</span><span class="op">(),</span> <span class="st">&quot;logs/app-log.json&quot;</span><span class="op">,</span> rollingInterval<span class="op">:</span> RollingInterval<span class="op">.</span><span class="fu">Day</span><span class="op">)</span> <span class="co">// Structured JSON</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">CreateLogger</span><span class="op">();</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    Log<span class="op">.</span><span class="fu">Information</span><span class="op">(</span><span class="st">&quot;Application starting up on {Environment}&quot;</span><span class="op">,</span> <span class="st">&quot;Production&quot;</span><span class="op">);</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Application code...</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>Exception ex<span class="op">)</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    Log<span class="op">.</span><span class="fu">Fatal</span><span class="op">(</span>ex<span class="op">,</span> <span class="st">&quot;Application terminated unexpectedly&quot;</span><span class="op">);</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="kw">finally</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    Log<span class="op">.</span><span class="fu">CloseAndFlush</span><span class="op">();</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>In this setup, standard console logs remain easy to read during local
+development, while file output is written as structured JSON ready for
+ingestion into monitoring platforms.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/structured-logging-in-c-with-serilog';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

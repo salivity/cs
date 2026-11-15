@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First vs FirstOrDefault vs Single vs SingleOrDefault in C# - cs</title>
+    <meta name="description" content="In C# LINQ, retrieving a specific element from an IEnumerable&lt;T&gt; collection is a common task, usually accomplished using First, FirstOrDefault, Single, or SingleOrDefault. While all four methods return a single item from a sequence, they differ significan">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/first-vs-first-or-default-vs-single-vs-single-or-default-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="First vs FirstOrDefault vs Single vs SingleOrDefault in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/first-vs-first-or-default-vs-single-vs-single-or-default-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C# LINQ, retrieving a specific element from an IEnumerable&lt;T&gt; collection is a common task, usually accomplished using First, FirstOrDefault, Single, or SingleOrDefault. While all four methods return a single item from a sequence, they differ significan" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="first-vs-firstordefault-vs-single-vs-singleordefault-in-c">First
+vs FirstOrDefault vs Single vs SingleOrDefault in C</h1>
+<p>In C# LINQ, retrieving a specific element from an
+<code>IEnumerable&lt;T&gt;</code> collection is a common task, usually
+accomplished using <code>First</code>, <code>FirstOrDefault</code>,
+<code>Single</code>, or <code>SingleOrDefault</code>. While all four
+methods return a single item from a sequence, they differ significantly
+in how they handle collections with zero elements or more than one
+matching element. Choosing the right method depends on whether missing
+items or duplicate entries are expected or should be treated as
+application-breaking errors.</p>
+<h2 id="quick-behavior-comparison">Quick Behavior Comparison</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Behavior on Empty Sequence</th>
+<th style="text-align: left;">Behavior on Exactly One Match</th>
+<th style="text-align: left;">Behavior on Multiple Matches</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>First()</strong></td>
+<td style="text-align: left;">Throws
+<code>InvalidOperationException</code></td>
+<td style="text-align: left;">Returns the item</td>
+<td style="text-align: left;">Returns the first item</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>FirstOrDefault()</strong></td>
+<td style="text-align: left;">Returns <code>default(T)</code></td>
+<td style="text-align: left;">Returns the item</td>
+<td style="text-align: left;">Returns the first item</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Single()</strong></td>
+<td style="text-align: left;">Throws
+<code>InvalidOperationException</code></td>
+<td style="text-align: left;">Returns the item</td>
+<td style="text-align: left;">Throws
+<code>InvalidOperationException</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>SingleOrDefault()</strong></td>
+<td style="text-align: left;">Returns <code>default(T)</code></td>
+<td style="text-align: left;">Returns the item</td>
+<td style="text-align: left;">Throws
+<code>InvalidOperationException</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-first">1. First()</h2>
+<p><code>First()</code> retrieves the first element in a collection or
+the first element that satisfies a specified predicate.</p>
+<ul>
+<li><strong>Success:</strong> Returns the very first matching element
+and stops evaluating the rest of the sequence.</li>
+<li><strong>Empty Sequence:</strong> Throws an
+<code>InvalidOperationException</code> ("Sequence contains no
+elements").</li>
+<li><strong>Multiple Matches:</strong> Does not care; it takes the first
+match and ignores any subsequent items.</li>
+</ul>
+<p><strong>When to use:</strong> Use <code>First()</code> when you are
+certain at least one matching element exists and having multiple matches
+is acceptable or expected.</p>
+<hr />
+<h2 id="2-firstordefault">2. FirstOrDefault()</h2>
+<p><code>FirstOrDefault()</code> behaves like <code>First()</code>, but
+instead of throwing an exception when no matching element is found, it
+returns the default value for the type (<code>null</code> for reference
+types, <code>0</code> for numeric types, <code>false</code> for
+booleans, etc.). You can also specify an explicit default value in
+modern .NET versions.</p>
+<ul>
+<li><strong>Success:</strong> Returns the first matching element.</li>
+<li><strong>Empty Sequence:</strong> Returns <code>default(T)</code> (or
+a user-specified fallback value).</li>
+<li><strong>Multiple Matches:</strong> Returns the first matching item
+without checking the remaining elements.</li>
+</ul>
+<p><strong>When to use:</strong> Use <code>FirstOrDefault()</code> when
+an element might not exist, and your code can gracefully handle a
+<code>null</code> or default value.</p>
+<hr />
+<h2 id="3-single">3. Single()</h2>
+<p><code>Single()</code> asserts that there is <strong>exactly
+one</strong> element in the sequence matching the condition.</p>
+<ul>
+<li><strong>Success:</strong> Returns the sole matching element.</li>
+<li><strong>Empty Sequence:</strong> Throws an
+<code>InvalidOperationException</code> ("Sequence contains no
+elements").</li>
+<li><strong>Multiple Matches:</strong> Throws an
+<code>InvalidOperationException</code> ("Sequence contains more than one
+matching element").</li>
+</ul>
+<p>Because it must ensure no second element exists,
+<code>Single()</code> may iterate through the entire sequence even after
+finding the first match.</p>
+<p><strong>When to use:</strong> Use <code>Single()</code> when business
+logic dictates that having zero or multiple records represents an
+invalid state (e.g., querying an entity by a unique primary key where
+the record must exist).</p>
+<hr />
+<h2 id="4-singleordefault">4. SingleOrDefault()</h2>
+<p><code>SingleOrDefault()</code> allows for <strong>zero or
+one</strong> element.</p>
+<ul>
+<li><strong>Success:</strong> Returns the matching element if exactly
+one exists.</li>
+<li><strong>Empty Sequence:</strong> Returns
+<code>default(T)</code>.</li>
+<li><strong>Multiple Matches:</strong> Throws an
+<code>InvalidOperationException</code> ("Sequence contains more than one
+matching element").</li>
+</ul>
+<p>Like <code>Single()</code>, it scans further in the collection to
+verify that a duplicate does not exist.</p>
+<p><strong>When to use:</strong> Use <code>SingleOrDefault()</code> when
+a match is optional, but having more than one match indicates corrupt
+data or an unexpected state (e.g., looking up a user by a unique email
+address).</p>
+<hr />
+<h2 id="summary-of-best-practices">Summary of Best Practices</h2>
+<ul>
+<li>Choose <strong><code>First</code> /
+<code>FirstOrDefault</code></strong> when multiple matches are
+acceptable or when performance is critical on large datasets, as they
+can stop iterating as soon as the first match is found.</li>
+<li>Choose <strong><code>Single</code> /
+<code>SingleOrDefault</code></strong> when uniqueness is mandatory. They
+carry a minor performance cost because they continue enumerating to
+guarantee that no second match exists, but they provide built-in
+validation against duplicate data.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/first-vs-first-or-default-vs-single-vs-single-or-default-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

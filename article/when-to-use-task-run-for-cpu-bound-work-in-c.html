@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>When to Use Task.Run for CPU-Bound Work in C# - cs</title>
+    <meta name="description" content="In modern C# development, Task.Run queues a unit of work to execute on the .NET ThreadPool, returning a Task that can be awaited asynchronously. This article explains the exact purpose of Task.Run, highlights the critical differences between CPU-bound and">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/when-to-use-task-run-for-cpu-bound-work-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="When to Use Task.Run for CPU-Bound Work in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/when-to-use-task-run-for-cpu-bound-work-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In modern C# development, Task.Run queues a unit of work to execute on the .NET ThreadPool, returning a Task that can be awaited asynchronously. This article explains the exact purpose of Task.Run, highlights the critical differences between CPU-bound and" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="when-to-use-taskrun-for-cpu-bound-work-in-c">When to Use
+Task.Run for CPU-Bound Work in C</h1>
+<p>In modern C# development, <code>Task.Run</code> queues a unit of work
+to execute on the .NET ThreadPool, returning a <code>Task</code> that
+can be awaited asynchronously. This article explains the exact purpose
+of <code>Task.Run</code>, highlights the critical differences between
+CPU-bound and I/O-bound workloads, outlines the scenarios where
+offloading compute-heavy tasks is necessary, and identifies common
+antipatterns to avoid in server-side environments.</p>
+<h3 id="the-purpose-of-taskrun">The Purpose of Task.Run</h3>
+<p>The primary function of <code>Task.Run</code> is to move execution
+off the current thread and onto an available worker thread in the .NET
+ThreadPool. It bridges the gap between compute-intensive synchronous
+logic and the <code>async</code>/<code>await</code> asynchronous
+programming model, enabling developers to execute blocking operations
+concurrently without halting the calling context.</p>
+<h3 id="cpu-bound-vs-io-bound-work">CPU-Bound vs. I/O-Bound Work</h3>
+<p>To use <code>Task.Run</code> correctly, you must distinguish between
+the two primary types of operations:</p>
+<ul>
+<li><strong>CPU-Bound Work:</strong> Operations that heavily utilize the
+processor, such as parsing massive JSON files, image/video processing,
+cryptographic calculations, sorting large collections, or running
+complex algorithms.</li>
+<li><strong>I/O-Bound Work:</strong> Operations that spend most of their
+time waiting for external systems, such as network calls, disk
+operations, or database queries.</li>
+</ul>
+<p><code>Task.Run</code> should strictly be used for CPU-bound tasks.
+Using <code>Task.Run</code> to wrap an I/O operation (such as
+<code>Task.Run(() =&gt; File.ReadAllText(path))</code>) wastes a thread
+pool thread, which sits idle waiting for the hardware instead of relying
+on non-blocking OS-level notifications (I/O Completion Ports).</p>
+<h3 id="when-to-offload-cpu-bound-work">When to Offload CPU-Bound
+Work</h3>
+<p>Offloading CPU-bound tasks is appropriate in the following
+circumstances:</p>
+<h4 id="1-maintaining-ui-responsiveness-client-applications">1.
+Maintaining UI Responsiveness (Client Applications)</h4>
+<p>In client environments like WPF, WinForms, MAUI, or Avalonia, all
+user interface interactions run on a single dedicated UI thread. If a
+compute-heavy task runs on this thread, the application freezes and
+becomes unresponsive. Offloading the intensive task keeps the UI
+fluid:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> async <span class="dt">void</span> <span class="fu">OnProcessDataClicked</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> EventArgs e<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    ProgressBar<span class="op">.</span><span class="fu">IsIndeterminate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Offload the heavy compute work to the ThreadPool</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> result <span class="op">=</span> await Task<span class="op">.</span><span class="fu">Run</span><span class="op">(()</span> <span class="op">=&gt;</span> <span class="fu">ComputeExtensiveCalculations</span><span class="op">(</span>dataset<span class="op">));</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Await resumes on the UI thread automatically</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">DisplayResults</span><span class="op">(</span>result<span class="op">);</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    ProgressBar<span class="op">.</span><span class="fu">IsIndeterminate</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="2-parallelizing-independent-operations">2. Parallelizing
+Independent Operations</h4>
+<p>When an algorithm can be divided into distinct, independent subtasks,
+you can dispatch them to multiple threads using <code>Task.Run</code> to
+utilize multi-core processors effectively, then synchronize them via
+<code>Task.WhenAll</code>.</p>
+<h3 id="when-to-avoid-taskrun">When to Avoid Task.Run</h3>
+<p>Despite its utility, <code>Task.Run</code> should be avoided in
+specific application layers and hosting environments:</p>
+<ul>
+<li><strong>ASP.NET Core / Web APIs:</strong> Incoming HTTP requests in
+ASP.NET already execute on ThreadPool threads. Wrapping code in
+<code>Task.Run</code> on the server does not increase scalability;
+instead, it introduces unnecessary context switching and increases the
+risk of thread pool starvation under high concurrency. Keep CPU-bound
+work synchronous on the server unless you are actively implementing
+background worker services.</li>
+<li><strong>Reusable Library APIs:</strong> Library authors should not
+expose "async-over-sync" wrapper methods (e.g., exposing
+<code>DoCalculationAsync()</code> when the implementation merely calls
+<code>Task.Run(() =&gt; DoCalculation())</code>). Expose synchronous
+methods for synchronous, compute-heavy work and allow the consumer (such
+as a UI layer) to decide if and when to offload execution via
+<code>Task.Run</code>.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/when-to-use-task-run-for-cpu-bound-work-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Dispatch Domain Events in C# Domain Models - cs</title>
+    <meta name="description" content="Domain events are an essential building block in Domain-Driven Design (DDD) that decouple business logic from side effects by signaling that a significant business occurrence has taken place. This article explains what domain events are, demonstrates how">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-dispatch-domain-events-in-c-domain-models">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Dispatch Domain Events in C# Domain Models - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-dispatch-domain-events-in-c-domain-models" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Domain events are an essential building block in Domain-Driven Design (DDD) that decouple business logic from side effects by signaling that a significant business occurrence has taken place. This article explains what domain events are, demonstrates how" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-dispatch-domain-events-in-c-domain-models">How to
+Dispatch Domain Events in C# Domain Models</h1>
+<p>Domain events are an essential building block in Domain-Driven Design
+(DDD) that decouple business logic from side effects by signaling that a
+significant business occurrence has taken place. This article explains
+what domain events are, demonstrates how to record them directly within
+your C# aggregate roots without introducing infrastructure dependencies,
+and shows how to cleanly dispatch them during persistence using Entity
+Framework Core and an event publisher.</p>
+<h2 id="what-are-domain-events">What Are Domain Events?</h2>
+<p>A domain event is a message that records an event that has already
+occurred within the domain model. By convention, they are represented as
+immutable objects named in the past tense (such as
+<code>OrderCreatedEvent</code> or
+<code>PaymentReceivedEvent</code>).</p>
+<p>Domain events help maintain separation of concerns. Instead of an
+aggregate directly calling external services—such as sending an email,
+notifying other bounded contexts, or updating read models—the aggregate
+simply raises an event. Other handlers listen for these events and
+perform the secondary actions asynchronously or within the same
+transaction.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IDomainEvent</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    DateTime OccurredOn <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">OrderPlacedEvent</span><span class="op">(</span>Guid OrderId<span class="op">,</span> <span class="dt">decimal</span> TotalAmount<span class="op">,</span> DateTime OccurredOn<span class="op">)</span> <span class="op">:</span> IDomainEvent<span class="op">;</span></span></code></pre></div>
+<h2 id="the-clean-approach-recording-events-in-entities">The Clean
+Approach: Recording Events in Entities</h2>
+<p>Domain entities should remain pure business objects without
+dependencies on dispatchers, dependency injection containers, or service
+locators. Injecting an event publisher or mediator directly into an
+entity creates unnecessary coupling and complicates unit testing.</p>
+<p>The standard pattern is to have entities append events to an internal
+collection instead of dispatching them immediately. An abstract base
+entity class can manage this collection:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">abstract</span> <span class="kw">class</span> Entity</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> List<span class="op">&lt;</span>IDomainEvent<span class="op">&gt;</span> _domainEvents <span class="op">=</span> <span class="kw">new</span><span class="op">();</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IReadOnlyCollection<span class="op">&lt;</span>IDomainEvent<span class="op">&gt;</span> DomainEvents <span class="op">=&gt;</span> _domainEvents<span class="op">.</span><span class="fu">AsReadOnly</span><span class="op">();</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">AddDomainEvent</span><span class="op">(</span>IDomainEvent domainEvent<span class="op">)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        _domainEvents<span class="op">.</span><span class="fu">Add</span><span class="op">(</span>domainEvent<span class="op">);</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ClearDomainEvents</span><span class="op">()</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        _domainEvents<span class="op">.</span><span class="fu">Clear</span><span class="op">();</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The business entity can then raise events naturally during method
+execution:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Order <span class="op">:</span> Entity</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Guid Id <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">decimal</span> TotalAmount <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">private</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Order</span><span class="op">(</span>Guid id<span class="op">,</span> <span class="dt">decimal</span> totalAmount<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        Id <span class="op">=</span> id<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        TotalAmount <span class="op">=</span> totalAmount<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">AddDomainEvent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">OrderPlacedEvent</span><span class="op">(</span>Id<span class="op">,</span> TotalAmount<span class="op">,</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">));</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="dispatching-events-with-ef-core">Dispatching Events with EF
+Core</h2>
+<p>Because the entity only records events, a mechanism is needed to
+extract and publish them when changes are committed to the database. The
+cleanest integration point in C# is within the Entity Framework Core
+<code>DbContext</code> or via a <code>SaveChangesInterceptor</code>.</p>
+<p>This approach ensures events are collected from tracked entities and
+published alongside data persistence:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ApplicationDbContext <span class="op">:</span> DbContext</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IMediator _mediator<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">ApplicationDbContext</span><span class="op">(</span>DbContextOptions<span class="op">&lt;</span>ApplicationDbContext<span class="op">&gt;</span> options<span class="op">,</span> IMediator mediator<span class="op">)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">:</span> <span class="kw">base</span><span class="op">(</span>options<span class="op">)</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        _mediator <span class="op">=</span> mediator<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> DbSet<span class="op">&lt;</span>Order<span class="op">&gt;</span> Orders <span class="op">=&gt;</span> Set<span class="op">&lt;</span>Order<span class="op">&gt;();</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> async Task<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> <span class="fu">SaveChangesAsync</span><span class="op">(</span>CancellationToken cancellationToken <span class="op">=</span> <span class="kw">default</span><span class="op">)</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> result <span class="op">=</span> await <span class="kw">base</span><span class="op">.</span><span class="fu">SaveChangesAsync</span><span class="op">(</span>cancellationToken<span class="op">);</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        await <span class="fu">DispatchDomainEventsAsync</span><span class="op">();</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> result<span class="op">;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> async Task <span class="fu">DispatchDomainEventsAsync</span><span class="op">()</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> domainEntities <span class="op">=</span> ChangeTracker</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Entries</span><span class="op">&lt;</span>Entity<span class="op">&gt;()</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Where</span><span class="op">(</span>x <span class="op">=&gt;</span> x<span class="op">.</span><span class="fu">Entity</span><span class="op">.</span><span class="fu">DomainEvents</span><span class="op">.</span><span class="fu">Any</span><span class="op">())</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Select</span><span class="op">(</span>x <span class="op">=&gt;</span> x<span class="op">.</span><span class="fu">Entity</span><span class="op">)</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> domainEvents <span class="op">=</span> domainEntities</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">SelectMany</span><span class="op">(</span>x <span class="op">=&gt;</span> x<span class="op">.</span><span class="fu">DomainEvents</span><span class="op">)</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        domainEntities<span class="op">.</span><span class="fu">ForEach</span><span class="op">(</span>entity <span class="op">=&gt;</span> entity<span class="op">.</span><span class="fu">ClearDomainEvents</span><span class="op">());</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> domainEvent <span class="kw">in</span> domainEvents<span class="op">)</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>            await _mediator<span class="op">.</span><span class="fu">Publish</span><span class="op">(</span>domainEvent<span class="op">);</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="timing-and-reliability-considerations">Timing and Reliability
+Considerations</h2>
+<p>When dispatching domain events, the timing relative to the database
+commit determines consistency guarantees:</p>
+<ol type="1">
+<li><strong>Before <code>base.SaveChangesAsync()</code></strong>:
+Handlers run in the same transaction as the entity changes. If a handler
+fails, the entire transaction rolls back. This provides immediate
+consistency but can degrade performance if handlers perform heavy
+operations.</li>
+<li><strong>After <code>base.SaveChangesAsync()</code></strong>: The
+entity state is safely stored before events are fired. However, if the
+process crashes mid-dispatch, events can be lost.</li>
+<li><strong>The Outbox Pattern</strong>: For guaranteed delivery across
+distributed systems or external messaging tools, save domain events into
+an "Outbox" database table within the same transaction, then use a
+background worker to publish them reliably.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-dispatch-domain-events-in-c-domain-models';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

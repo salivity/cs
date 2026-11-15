@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implement Observer Pattern in C# with Events and Rx - cs</title>
+    <meta name="description" content="This article provides a concise guide to implementing the Observer design pattern in C# using both native language events and Reactive Extensions (Rx). You will learn how the built-in event keyword provides a straightforward publish-subscribe mechanism, h">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/implement-observer-pattern-in-c-with-events-and-rx">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Implement Observer Pattern in C# with Events and Rx - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/implement-observer-pattern-in-c-with-events-and-rx" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a concise guide to implementing the Observer design pattern in C# using both native language events and Reactive Extensions (Rx). You will learn how the built-in event keyword provides a straightforward publish-subscribe mechanism, h" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="implement-observer-pattern-in-c-with-events-and-rx">Implement
+Observer Pattern in C# with Events and Rx</h1>
+<p>This article provides a concise guide to implementing the Observer
+design pattern in C# using both native language events and Reactive
+Extensions (Rx). You will learn how the built-in <code>event</code>
+keyword provides a straightforward publish-subscribe mechanism, how
+<code>System.Reactive</code> (<code>IObservable&lt;T&gt;</code> and
+<code>IObserver&lt;T&gt;</code>) elevates event handling with powerful
+LINQ-style composition, and how to choose the right approach for your
+application.</p>
+<h2 id="implementing-the-observer-pattern-using-c-events">Implementing
+the Observer Pattern Using C# Events</h2>
+<p>C# has built-in language support for the Observer pattern through
+delegates and events. The publisher (Subject) exposes an
+<code>event</code>, and subscribers (Observers) attach event handlers to
+receive notifications.</p>
+<h3 id="implementation">Implementation</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define custom event arguments</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> PriceChangedEventArgs <span class="op">:</span> EventArgs</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">decimal</span> NewPrice <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">PriceChangedEventArgs</span><span class="op">(</span><span class="dt">decimal</span> newPrice<span class="op">)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        NewPrice <span class="op">=</span> newPrice<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. The Subject (Publisher)</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> StockTicker</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">event</span> EventHandler<span class="op">&lt;</span>PriceChangedEventArgs<span class="op">&gt;?</span> PriceChanged<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">UpdatePrice</span><span class="op">(</span><span class="dt">decimal</span> newPrice<span class="op">)</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Notify all registered observers safely</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        PriceChanged<span class="op">?.</span><span class="fu">Invoke</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="kw">new</span> <span class="fu">PriceChangedEventArgs</span><span class="op">(</span>newPrice<span class="op">));</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. The Observers (Subscribers)</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Program</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> ticker <span class="op">=</span> <span class="kw">new</span> <span class="fu">StockTicker</span><span class="op">();</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Subscribe using a lambda or method group</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>        ticker<span class="op">.</span><span class="fu">PriceChanged</span> <span class="op">+=</span> <span class="op">(</span>sender<span class="op">,</span> args<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Observer 1: Price changed to {args.NewPrice:C}&quot;</span><span class="op">);</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        ticker<span class="op">.</span><span class="fu">PriceChanged</span> <span class="op">+=</span> LogToConsole<span class="op">;</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Trigger updates</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>        ticker<span class="op">.</span><span class="fu">UpdatePrice</span><span class="op">(</span><span class="fl">120.50m</span><span class="op">);</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>        ticker<span class="op">.</span><span class="fu">UpdatePrice</span><span class="op">(</span><span class="fl">122.00m</span><span class="op">);</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Unsubscribe to avoid memory leaks</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>        ticker<span class="op">.</span><span class="fu">PriceChanged</span> <span class="op">-=</span> LogToConsole<span class="op">;</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">LogToConsole</span><span class="op">(</span><span class="dt">object</span><span class="op">?</span> sender<span class="op">,</span> PriceChangedEventArgs e<span class="op">)</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Observer 2: Logged price {e.NewPrice:C}&quot;</span><span class="op">);</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Events are straightforward, require no external dependencies, and
+integrate directly with the .NET runtime. However, managing
+unsubscribing manually is necessary to prevent memory leaks, and complex
+operations such as throttling or combining multiple event sources
+require custom logic.</p>
+<hr />
+<h2
+id="implementing-the-observer-pattern-using-reactive-extensions-rx">Implementing
+the Observer Pattern Using Reactive Extensions (Rx)</h2>
+<p>Reactive Extensions formalizes the Observer pattern via the
+<code>IObservable&lt;T&gt;</code> and <code>IObserver&lt;T&gt;</code>
+interfaces. Rx treats events as collections over time, allowing you to
+filter, transform, and aggregate data streams using LINQ.</p>
+<p>Install the required package via NuGet:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> add package System.Reactive</span></code></pre></div>
+<h3 id="implementation-1">Implementation</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Reactive</span><span class="op">.</span><span class="fu">Linq</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Reactive</span><span class="op">.</span><span class="fu">Subjects</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. The Subject using Rx</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> StockTickerRx <span class="op">:</span> IDisposable</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// A Subject acts as both an Observer and an Observable</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> Subject<span class="op">&lt;</span><span class="dt">decimal</span><span class="op">&gt;</span> _priceSubject <span class="op">=</span> <span class="kw">new</span><span class="op">();</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IObservable<span class="op">&lt;</span><span class="dt">decimal</span><span class="op">&gt;</span> PriceStream <span class="op">=&gt;</span> _priceSubject<span class="op">.</span><span class="fu">AsObservable</span><span class="op">();</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">UpdatePrice</span><span class="op">(</span><span class="dt">decimal</span> newPrice<span class="op">)</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        _priceSubject<span class="op">.</span><span class="fu">OnNext</span><span class="op">(</span>newPrice<span class="op">);</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Complete</span><span class="op">()</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        _priceSubject<span class="op">.</span><span class="fu">OnCompleted</span><span class="op">();</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Dispose</span><span class="op">()</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        _priceSubject<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Program</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="dt">var</span> ticker <span class="op">=</span> <span class="kw">new</span> <span class="fu">StockTickerRx</span><span class="op">();</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 2. Subscribe directly to the stream</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>        IDisposable subscription1 <span class="op">=</span> ticker<span class="op">.</span><span class="fu">PriceStream</span><span class="op">.</span><span class="fu">Subscribe</span><span class="op">(</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>            price <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Observer 1: Price updated to {price:C}&quot;</span><span class="op">),</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>            ex <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Error: {ex.Message}&quot;</span><span class="op">),</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>            <span class="op">()</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Stream completed.&quot;</span><span class="op">)</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 3. Transform and filter streams using Rx LINQ operators</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>        IDisposable subscription2 <span class="op">=</span> ticker<span class="op">.</span><span class="fu">PriceStream</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Where</span><span class="op">(</span>price <span class="op">=&gt;</span> price <span class="op">&gt;</span> <span class="dv">100</span>m<span class="op">)</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">DistinctUntilChanged</span><span class="op">()</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Subscribe</span><span class="op">(</span>price <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Filtered Observer: High price {price:C}&quot;</span><span class="op">));</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>        ticker<span class="op">.</span><span class="fu">UpdatePrice</span><span class="op">(</span><span class="fl">95.00m</span><span class="op">);</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>        ticker<span class="op">.</span><span class="fu">UpdatePrice</span><span class="op">(</span><span class="fl">105.00m</span><span class="op">);</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>        ticker<span class="op">.</span><span class="fu">UpdatePrice</span><span class="op">(</span><span class="fl">105.00m</span><span class="op">);</span> <span class="co">// Ignored by subscription2 due to DistinctUntilChanged</span></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>        ticker<span class="op">.</span><span class="fu">UpdatePrice</span><span class="op">(</span><span class="fl">110.00m</span><span class="op">);</span></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Clean up subscriptions</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>        subscription1<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>        subscription2<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Rx handles lifetime management cleanly through
+<code>IDisposable</code>. Disposing of the subscription token
+automatically detaches the observer from the observable stream.</p>
+<hr />
+<h2 id="choosing-between-events-and-reactive-extensions">Choosing
+Between Events and Reactive Extensions</h2>
+<ul>
+<li><strong>Use C# Events when:</strong>
+<ul>
+<li>Implementing standard UI event handling (such as WPF, WinForms, or
+MAUI).</li>
+<li>Creating lightweight notification systems within a single
+assembly.</li>
+<li>The application does not require asynchronous stream composition,
+debouncing, or complex filtering.</li>
+</ul></li>
+<li><strong>Use Reactive Extensions (Rx) when:</strong>
+<ul>
+<li>Working with asynchronous data streams that require querying,
+throttling, merging, or windowing.</li>
+<li>You need built-in handling for completion (<code>OnCompleted</code>)
+and exceptions (<code>OnError</code>).</li>
+<li>You want declarative subscription lifecycle management via
+<code>IDisposable</code>.</li>
+</ul></li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/implement-observer-pattern-in-c-with-events-and-rx';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

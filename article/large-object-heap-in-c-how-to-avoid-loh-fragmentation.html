@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Large Object Heap in C#: How to Avoid LOH Fragmentation - cs</title>
+    <meta name="description" content="This article provides an overview of the Large Object Heap (LOH) in .NET, explaining how it works and why it is prone to memory fragmentation. It explores the operational behavior of the Garbage Collector (GC) regarding large memory allocations, the risks">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/large-object-heap-in-c-how-to-avoid-loh-fragmentation">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Large Object Heap in C#: How to Avoid LOH Fragmentation - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/large-object-heap-in-c-how-to-avoid-loh-fragmentation" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of the Large Object Heap (LOH) in .NET, explaining how it works and why it is prone to memory fragmentation. It explores the operational behavior of the Garbage Collector (GC) regarding large memory allocations, the risks" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="large-object-heap-in-c-how-to-avoid-loh-fragmentation">Large
+Object Heap in C#: How to Avoid LOH Fragmentation</h1>
+<p>This article provides an overview of the Large Object Heap (LOH) in
+.NET, explaining how it works and why it is prone to memory
+fragmentation. It explores the operational behavior of the Garbage
+Collector (GC) regarding large memory allocations, the risks of
+fragmentation leading to <code>OutOfMemoryException</code> errors, and
+actionable patterns and techniques developers can implement to eliminate
+or reduce LOH fragmentation in production C# applications.</p>
+<h2 id="what-is-the-large-object-heap-loh">What is the Large Object Heap
+(LOH)?</h2>
+<p>In .NET, the Garbage Collector partitions managed memory into
+distinct generations (Generation 0, 1, and 2) to optimize allocation and
+collection performance. Small, short-lived objects live in Generations 0
+and 1. However, when an object is 85,000 bytes or larger (or a double
+array with 1,000 or more elements on 64-bit platforms), the runtime
+allocates it directly onto a dedicated segment called the Large Object
+Heap.</p>
+<p>The LOH is collected exclusively during a full Generation 2
+collection. Because copying and moving tens or hundreds of megabytes of
+contiguous memory is computationally expensive, the GC historically
+never compacted the LOH during garbage collection; it simply swept it,
+marking the dead memory addresses as free space for future
+allocations.</p>
+<h2 id="what-causes-loh-fragmentation">What Causes LOH
+Fragmentation?</h2>
+<p>Fragmentation occurs when an application frequently creates and
+disposes of large objects with varying lifespans and sizes. When these
+objects are collected, they leave gaps of free memory between surviving
+objects.</p>
+<p>If a new 100 KB object needs allocation, but the available free space
+is fragmented into non-contiguous 40 KB blocks, the GC cannot fit the
+new object into those spaces. Consequently, the runtime is forced to
+allocate additional memory segments from the operating system, inflating
+memory consumption. Over time, an application can throw an
+<code>OutOfMemoryException</code> despite having plenty of total free
+memory, simply because no single contiguous block is large enough to
+satisfy the allocation request.</p>
+<h2 id="how-to-avoid-loh-fragmentation">How to Avoid LOH
+Fragmentation</h2>
+<p>To maintain low memory usage and avoid performance degradation,
+developers should focus on minimizing allocations on the LOH and reusing
+existing buffers.</p>
+<h3 id="1-reuse-buffers-with-arraypoolt">1. Reuse Buffers with
+<code>ArrayPool&lt;T&gt;</code></h3>
+<p>The most effective way to eliminate transient LOH allocations is to
+reuse large arrays using the <code>System.Buffers</code> namespace.
+Instead of allocating a new <code>byte[]</code> for every I/O operation,
+rent an array from the pool and return it when finished:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Buffers</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessLargeData</span><span class="op">(</span><span class="dt">int</span> bufferSize<span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Rent an array from the shared pool</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">byte</span><span class="op">[]</span> buffer <span class="op">=</span> ArrayPool<span class="op">&lt;</span><span class="dt">byte</span><span class="op">&gt;.</span><span class="fu">Shared</span><span class="op">.</span><span class="fu">Rent</span><span class="op">(</span>bufferSize<span class="op">);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">try</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Use the buffer (remember it may be larger than bufferSize)</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">ProcessBuffer</span><span class="op">(</span>buffer<span class="op">,</span> bufferSize<span class="op">);</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">finally</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Return the array to the pool for reuse</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        ArrayPool<span class="op">&lt;</span><span class="dt">byte</span><span class="op">&gt;.</span><span class="fu">Shared</span><span class="op">.</span><span class="fu">Return</span><span class="op">(</span>buffer<span class="op">);</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-stream-data-instead-of-loading-full-payloads">2. Stream Data
+Instead of Loading Full Payloads</h3>
+<p>Avoid reading massive payloads, files, or API responses into single
+contiguous structures such as strings or byte arrays. Use chunked
+streaming instead:</p>
+<ul>
+<li>Replace <code>File.ReadAllBytes()</code> or
+<code>MemoryStream</code> holding the entire payload with a
+<code>FileStream</code> or partitioned buffer reads.</li>
+<li>Deserialize large JSON or XML payloads directly from a stream using
+APIs like <code>System.Text.Json.JsonSerializer.DeserializeAsync</code>
+rather than reading the entire content into a <code>string</code>
+first.</li>
+</ul>
+<h3 id="3-break-up-large-collections">3. Break Up Large Collections</h3>
+<p>If an application requires storing massive amounts of data in memory,
+avoid monolithic single-array containers. A collection such as
+<code>List&lt;T&gt;</code> relies on an internal array that doubles in
+size when capacity is exceeded, often promoting the array to the
+LOH.</p>
+<p>Instead, consider chunked data structures, such as a linked list of
+smaller arrays (e.g., <code>List&lt;byte[]&gt;</code>, where each byte
+array is kept below the 85,000-byte threshold), preventing the GC from
+routing the collections to the LOH.</p>
+<h3 id="4-enable-loh-compaction-on-demand">4. Enable LOH Compaction On
+Demand</h3>
+<p>In modern .NET (.NET Core and .NET 5+), you can explicitly request
+that the GC compact the LOH during the next full collection. This should
+not be done routinely due to performance pauses, but it can be useful
+during low-traffic maintenance windows or after large, irregular batch
+processing jobs:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>GCSettings<span class="op">.</span><span class="fu">LargeObjectHeapCompactionMode</span> <span class="op">=</span> GCLargeObjectHeapCompactionMode<span class="op">.</span><span class="fu">CompactOnce</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>GC<span class="op">.</span><span class="fu">Collect</span><span class="op">(</span><span class="dv">2</span><span class="op">,</span> GCCollectionMode<span class="op">.</span><span class="fu">Forced</span><span class="op">,</span> <span class="kw">true</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span></code></pre></div>
+<h3 id="5-leverage-the-pinned-object-heap-net-5">5. Leverage the Pinned
+Object Heap (.NET 5+)</h3>
+<p>Pinned buffers previously had to reside on the LOH or Gen 0/1/2,
+worsening fragmentation because the GC cannot move pinned memory.
+Starting in .NET 5, native interop and socket buffers can be allocated
+on the Pinned Object Heap (POH) using
+<code>GC.AllocateArray&lt;T&gt;(..., pinned: true)</code>. This isolates
+pinned allocations away from the standard LOH, reducing fragmentation in
+high-throughput network or I/O applications.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/large-object-heap-in-c-how-to-avoid-loh-fragmentation';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

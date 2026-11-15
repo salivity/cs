@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System.Text.Json vs Newtonsoft.Json: Key Differences - cs</title>
+    <meta name="description" content="In C# and .NET development, handling JSON data typically comes down to two major libraries: the third-party standard Newtonsoft.Json (Json.NET) and Microsoft&#39;s built-in System.Text.Json. While Newtonsoft.Json provides a mature, highly flexible ecosystem s">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/system-text-json-vs-newtonsoft-json-key-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="System.Text.Json vs Newtonsoft.Json: Key Differences - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/system-text-json-vs-newtonsoft-json-key-differences" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C# and .NET development, handling JSON data typically comes down to two major libraries: the third-party standard Newtonsoft.Json (Json.NET) and Microsoft&#39;s built-in System.Text.Json. While Newtonsoft.Json provides a mature, highly flexible ecosystem s" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="systemtextjson-vs-newtonsoftjson-key-differences">System.Text.Json
+vs Newtonsoft.Json: Key Differences</h1>
+<p>In C# and .NET development, handling JSON data typically comes down
+to two major libraries: the third-party standard Newtonsoft.Json
+(Json.NET) and Microsoft's built-in System.Text.Json. While
+Newtonsoft.Json provides a mature, highly flexible ecosystem suited for
+complex serialization scenarios, System.Text.Json is engineered for
+modern runtimes to deliver maximum throughput and minimal memory
+overhead. This article outlines the key technical differences between
+these two libraries, examining their performance, feature sets, default
+behaviors, and ideal use cases.</p>
+<h3 id="origins-and-architecture">Origins and Architecture</h3>
+<ul>
+<li><strong>Newtonsoft.Json (Json.NET):</strong> Introduced in 2006, it
+served as the default JSON serializer in ASP.NET for years. It was built
+around deep object graph traversal, reflection, and rich developer
+convenience, supporting virtually any C# object structure.</li>
+<li><strong>System.Text.Json:</strong> Introduced in .NET Core 3.0 as
+part of the Base Class Library (BCL), it was built from scratch to
+leverage modern runtime features such as <code>Span&lt;T&gt;</code>,
+<code>ReadOnlySpan&lt;byte&gt;</code>, and UTF-8 byte processing
+directly without converting strings first.</li>
+</ul>
+<h3 id="performance-and-memory-allocation">Performance and Memory
+Allocation</h3>
+<p>Performance is the most prominent differentiator between the two
+libraries:</p>
+<ul>
+<li><strong>System.Text.Json</strong> avoids unnecessary allocations by
+processing UTF-8 byte streams directly using low-level structs like
+<code>Utf8JsonReader</code> and <code>Utf8JsonWriter</code>. This
+results in significantly faster execution speeds and substantially lower
+garbage collection (GC) pressure.</li>
+<li><strong>Newtonsoft.Json</strong> allocates intermediate string
+objects and complex metadata structures during serialization and
+deserialization, making it slower and more memory-intensive under
+high-throughput workloads.</li>
+</ul>
+<h3 id="default-behavior-and-strictness">Default Behavior and
+Strictness</h3>
+<p>System.Text.Json adheres strictly to the RFC 8259 JSON specification
+by default, whereas Newtonsoft.Json favors developer convenience.</p>
+<ul>
+<li><strong>Case Sensitivity:</strong> System.Text.Json is
+case-sensitive by default when matching properties. Newtonsoft.Json is
+case-insensitive.</li>
+<li><strong>Comments and Trailing Commas:</strong> System.Text.Json
+rejects JSON comments and trailing commas unless explicitly allowed via
+<code>JsonSerializerOptions</code>. Newtonsoft.Json tolerates comments
+and malformed elements more leniently.</li>
+<li><strong>String-to-Number Conversions:</strong> Newtonsoft.Json
+automatically coerces strings containing numbers into numeric types.
+System.Text.Json strictly requires numbers to be represented as JSON
+numbers unless <code>JsonNumberHandling</code> is configured.</li>
+</ul>
+<h3 id="feature-completeness-and-extensibility">Feature Completeness and
+Extensibility</h3>
+<p>Newtonsoft.Json remains the more feature-rich library, particularly
+for edge cases:</p>
+<ul>
+<li><strong>Document Object Model (DOM):</strong> Newtonsoft utilizes
+<code>JObject</code>, <code>JArray</code>, and <code>JToken</code>,
+which provide a flexible, mutable API for reading, modifying, and
+querying JSON via JSONPath. System.Text.Json offers
+<code>JsonNode</code> (mutable) and <code>JsonDocument</code>
+(read-only, high-performance), but with fewer querying
+conveniences.</li>
+<li><strong>Polymorphism and Type Handling:</strong> Newtonsoft.Json
+easily handles polymorphic types through <code>TypeNameHandling</code>.
+System.Text.Json supports polymorphism starting in .NET 7, but it
+requires explicit type discriminators and deliberate configuration to
+avoid security vulnerabilities.</li>
+<li><strong>Private Members:</strong> Newtonsoft.Json can serialize and
+deserialize private fields and properties out of the box using
+attributes. System.Text.Json focuses primarily on public properties,
+requiring custom converters or parameterless constructors to populate
+private state.</li>
+<li><strong>Dictionary Key Types:</strong> Newtonsoft.Json handles
+non-string dictionary keys (such as integer or object keys)
+automatically. System.Text.Json historically requires custom converters
+for complex dictionary keys.</li>
+</ul>
+<h3 id="attributes-and-mapping">Attributes and Mapping</h3>
+<p>Both libraries provide mapping attributes, but they reside in
+different namespaces:</p>
+<ul>
+<li>Property renaming: <code>[JsonProperty("name")]</code> (Newtonsoft)
+vs. <code>[JsonPropertyName("name")]</code> (System.Text.Json)</li>
+<li>Ignoring fields: <code>[JsonIgnore]</code> (used by both, but under
+separate namespaces)</li>
+<li>Constructor matching: <code>[JsonConstructor]</code> (used by both,
+under separate namespaces)</li>
+</ul>
+<h3 id="choosing-the-right-library">Choosing the Right Library</h3>
+<p><strong>Choose System.Text.Json if:</strong></p>
+<ul>
+<li>You are building high-performance web APIs, microservices, or cloud
+applications where memory efficiency and low latency are critical.</li>
+<li>You are working with standard Data Transfer Objects (DTOs) that do
+not require complex, non-standard mapping rules.</li>
+<li>You are running modern .NET (.NET 6+) and want to avoid external
+package dependencies.</li>
+</ul>
+<p><strong>Choose Newtonsoft.Json if:</strong></p>
+<ul>
+<li>You are maintaining legacy .NET Framework applications.</li>
+<li>Your application relies heavily on dynamic manipulation via
+<code>JObject</code>, <code>JToken</code>, or complex JSONPath
+queries.</li>
+<li>You require advanced serialization features, such as deep
+polymorphic hierarchies, object reference loops, or deserialization into
+classes with non-standard private constructors.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/system-text-json-vs-newtonsoft-json-key-differences';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

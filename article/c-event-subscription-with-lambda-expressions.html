@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Event Subscription with Lambda Expressions - cs</title>
+    <meta name="description" content="Lambda expressions in C# simplify event subscription by allowing developers to write inline, anonymous methods directly at the point of subscription, eliminating the need for dedicated, boilerplate handler methods. This article explains how lambda syntax">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-event-subscription-with-lambda-expressions">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Event Subscription with Lambda Expressions - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-event-subscription-with-lambda-expressions" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Lambda expressions in C# simplify event subscription by allowing developers to write inline, anonymous methods directly at the point of subscription, eliminating the need for dedicated, boilerplate handler methods. This article explains how lambda syntax" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-event-subscription-with-lambda-expressions">C# Event
+Subscription with Lambda Expressions</h1>
+<p>Lambda expressions in C# simplify event subscription by allowing
+developers to write inline, anonymous methods directly at the point of
+subscription, eliminating the need for dedicated, boilerplate handler
+methods. This article explains how lambda syntax reduces code clutter,
+demonstrates the practical contrast between traditional event handlers
+and lambdas, highlights the power of variable closures, and addresses
+the critical caveats regarding memory management and unsubscription.</p>
+<h3 id="the-traditional-approach-vs-lambda-expressions">The Traditional
+Approach vs. Lambda Expressions</h3>
+<p>Traditionally, subscribing to an event in C# requires declaring a
+separate named method matching the event delegate's signature and
+assigning it with the <code>+=</code> operator:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ButtonHandler</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Initialize</span><span class="op">(</span>Button button<span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        button<span class="op">.</span><span class="fu">Click</span> <span class="op">+=</span> HandleButtonClick<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">HandleButtonClick</span><span class="op">(</span><span class="dt">object</span> sender<span class="op">,</span> EventArgs e<span class="op">)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Button clicked!&quot;</span><span class="op">);</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>While effective for complex logic, this approach introduces
+unnecessary boilerplate for trivial operations. Lambda expressions
+streamline this pattern into a single, concise statement:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ButtonHandler</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Initialize</span><span class="op">(</span>Button button<span class="op">)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        button<span class="op">.</span><span class="fu">Click</span> <span class="op">+=</span> <span class="op">(</span>sender<span class="op">,</span> e<span class="op">)</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Button clicked!&quot;</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The compiler infers the types of <code>sender</code> and
+<code>e</code> automatically from the event definition, removing the
+requirement to explicitly declare them.</p>
+<h3 id="key-benefits">Key Benefits</h3>
+<h4 id="1-reduced-boilerplate-and-improved-proximity">1. Reduced
+Boilerplate and Improved Proximity</h4>
+<p>Lambda expressions keep the event-handling logic directly adjacent to
+where the event is wired up. When reading code, developers can instantly
+see what happens when the event fires without navigating to a separate
+method elsewhere in the class file.</p>
+<h4 id="2-discarding-unused-parameters">2. Discarding Unused
+Parameters</h4>
+<p>In modern C#, if the event arguments are not needed, you can use
+discards to make the code even cleaner:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>button<span class="op">.</span><span class="fu">Click</span> <span class="op">+=</span> <span class="op">(</span>_<span class="op">,</span> _<span class="op">)</span> <span class="op">=&gt;</span> <span class="fu">ProcessAction</span><span class="op">();</span></span></code></pre></div>
+<h4 id="3-access-to-local-context-closures">3. Access to Local Context
+(Closures)</h4>
+<p>A major advantage of lambda expressions is their ability to capture
+local variables from the enclosing scope. In traditional event handlers,
+passing state typically requires class-level fields, custom event
+arguments, or the <code>sender</code> object. Lambdas capture local
+state seamlessly:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">RegisterUser</span><span class="op">(</span><span class="dt">int</span> userId<span class="op">,</span> Button submitButton<span class="op">)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The lambda captures &#39;userId&#39; directly from the method scope</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    submitButton<span class="op">.</span><span class="fu">Click</span> <span class="op">+=</span> <span class="op">(</span>s<span class="op">,</span> e<span class="op">)</span> <span class="op">=&gt;</span> <span class="fu">SaveUserPreferences</span><span class="op">(</span>userId<span class="op">);</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3
+id="important-considerations-unsubscribing-and-memory-leaks">Important
+Considerations: Unsubscribing and Memory Leaks</h3>
+<p>While lambdas simplify subscription, they introduce a distinct
+challenge: unsubscribing.</p>
+<p>Because a lambda generates an anonymous delegate instance behind the
+scenes, using the <code>-=</code> operator with a syntactically
+identical lambda will not work:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// This does NOT unsubscribe the handler</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>button<span class="op">.</span><span class="fu">Click</span> <span class="op">-=</span> <span class="op">(</span>sender<span class="op">,</span> e<span class="op">)</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Button clicked!&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>If an object subscribes to an event on a longer-lived publisher using
+a lambda, that subscriber cannot be garbage collected, leading to a
+memory leak.</p>
+<p>To safely unsubscribe a lambda expression, you must retain a
+reference to the delegate:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>EventHandler handler <span class="op">=</span> <span class="op">(</span>sender<span class="op">,</span> e<span class="op">)</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Action executed&quot;</span><span class="op">);</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Subscribe</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>button<span class="op">.</span><span class="fu">Click</span> <span class="op">+=</span> handler<span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Unsubscribe</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>button<span class="op">.</span><span class="fu">Click</span> <span class="op">-=</span> handler<span class="op">;</span></span></code></pre></div>
+<p>Lambda expressions are ideal for short-lived publishers,
+self-contained UI components, or scenarios where unsubscription is
+handled via lifetime tokens or not required.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-event-subscription-with-lambda-expressions';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

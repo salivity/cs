@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type Reification in the C# Common Language Runtime - cs</title>
+    <meta name="description" content="Type reification in the C# Common Language Runtime (CLR) refers to the preservation of generic type metadata at runtime rather than discarding it during compilation. This article provides a clear overview of how the CLR handles reified generics, contrasts">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/type-reification-in-the-c-common-language-runtime">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Type Reification in the C# Common Language Runtime - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/type-reification-in-the-c-common-language-runtime" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Type reification in the C# Common Language Runtime (CLR) refers to the preservation of generic type metadata at runtime rather than discarding it during compilation. This article provides a clear overview of how the CLR handles reified generics, contrasts" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="type-reification-in-the-c-common-language-runtime">Type
+Reification in the C# Common Language Runtime</h1>
+<p>Type reification in the C# Common Language Runtime (CLR) refers to
+the preservation of generic type metadata at runtime rather than
+discarding it during compilation. This article provides a clear overview
+of how the CLR handles reified generics, contrasts this approach with
+type erasure found in other languages, and highlights the performance,
+safety, and architectural benefits it introduces to .NET
+applications.</p>
+<h2 id="understanding-reification">Understanding Reification</h2>
+<p>In computer science, to "reify" something means to make an abstract
+concept concrete. In the context of programming languages and runtimes,
+type reification means that generic type parameters exist as
+first-class, fully recognized entities during program execution.</p>
+<p>When you write a generic type in C#, such as
+<code>List&lt;int&gt;</code> or
+<code>Dictionary&lt;string, User&gt;</code>, the CLR maintains the exact
+identity of <code>int</code> and <code>string, User</code> when
+executing the compiled Intermediate Language (IL) and machine code. The
+runtime is fully aware of the type arguments rather than treating them
+merely as general <code>object</code> references.</p>
+<h2 id="how-the-clr-implements-reification">How the CLR Implements
+Reification</h2>
+<p>The CLR achieves type reification through a combination of metadata
+preservation and Just-In-Time (JIT) compilation strategies:</p>
+<h3 id="1-specialized-code-for-value-types">1. Specialized Code for
+Value Types</h3>
+<p>When a generic class or method is instantiated with a value type
+(such as <code>int</code>, <code>double</code>, or a custom
+<code>struct</code>), the JIT compiler generates a specialized version
+of machine code specifically optimized for the size and layout of that
+value type.</p>
+<p>For instance, <code>List&lt;int&gt;</code> and
+<code>List&lt;double&gt;</code> generate distinct native machine code
+implementations. This eliminates the need for boxing and unboxing,
+allowing value types to sit directly in contiguous memory blocks with
+native performance.</p>
+<h3 id="2-shared-code-for-reference-types">2. Shared Code for Reference
+Types</h3>
+<p>When instantiating generics with reference types (such as
+<code>List&lt;string&gt;</code> or <code>List&lt;Stream&gt;</code>), the
+JIT compiler shares the underlying native machine code across all
+instances. Since all references are pointers of uniform size on a given
+architecture (4 bytes on 32-bit systems, 8 bytes on 64-bit systems),
+sharing code conserves memory.</p>
+<p>Despite sharing execution logic, the CLR still maintains distinct
+runtime type descriptors for each instantiation.
+<code>typeof(List&lt;string&gt;)</code> will never equal
+<code>typeof(List&lt;Stream&gt;)</code>.</p>
+<h2 id="reification-vs-type-erasure">Reification vs. Type Erasure</h2>
+<p>To understand reification, it helps to compare it to type erasure,
+the mechanism utilized by languages like Java:</p>
+<ul>
+<li><strong>Type Erasure:</strong> Generic parameters are checked at
+compile time and then erased from the binary. The compiler replaces type
+parameters with their upper bounds (typically <code>Object</code>) and
+injects explicit casts. At runtime, the virtual machine has no knowledge
+that a collection was intended to hold a specific type.</li>
+<li><strong>Reification:</strong> Generic parameters are stored in the
+assembly's metadata. The runtime loads, instantiates, and enforces the
+generic rules directly during execution.</li>
+</ul>
+<h2 id="benefits-of-type-reification">Benefits of Type Reification</h2>
+<h3 id="superior-performance">Superior Performance</h3>
+<p>Because value types do not need to be boxed into heap objects to fit
+into generic structures, reification provides high-performance memory
+utilization and eliminates unnecessary garbage collection overhead.</p>
+<h3 id="full-runtime-type-inspection">Full Runtime Type Inspection</h3>
+<p>Reification allows rich reflection capabilities. At runtime, code can
+inspect:</p>
+<ul>
+<li><code>typeof(T)</code> to identify the exact type parameter.</li>
+<li>The differences between open generic types
+(<code>List&lt;&gt;</code>) and closed generic types
+(<code>List&lt;int&gt;</code>).</li>
+<li>Runtime type checks using the <code>is</code> and <code>as</code>
+operators on exact generic signatures (e.g., checking if an object is an
+<code>IEnumerable&lt;int&gt;</code>).</li>
+</ul>
+<h3 id="direct-instantiation">Direct Instantiation</h3>
+<p>Because the runtime knows the actual type parameter, C# allows
+patterns that are impossible under type erasure, such as
+<code>new T()</code> (via the <code>where T : new()</code> constraint)
+and array creation based on generic parameters
+(<code>new T[size]</code>).</p>
+<h3 id="enforced-type-safety">Enforced Type Safety</h3>
+<p>Type safety is not merely a compile-time guarantee; the CLR validates
+types at runtime across assembly boundaries, preventing corrupted state
+caused by type mismatches.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/type-reification-in-the-c-common-language-runtime';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

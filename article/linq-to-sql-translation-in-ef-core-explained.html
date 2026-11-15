@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINQ to SQL Translation in EF Core Explained - cs</title>
+    <meta name="description" content="Entity Framework Core (EF Core) translates C# Language Integrated Queries (LINQ) into relational SQL commands through an internal pipeline that parses expression trees, maps them against database metadata, and generates provider-specific SQL. This article">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/linq-to-sql-translation-in-ef-core-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="LINQ to SQL Translation in EF Core Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/linq-to-sql-translation-in-ef-core-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Entity Framework Core (EF Core) translates C# Language Integrated Queries (LINQ) into relational SQL commands through an internal pipeline that parses expression trees, maps them against database metadata, and generates provider-specific SQL. This article" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="linq-to-sql-translation-in-ef-core-explained">LINQ to SQL
+Translation in EF Core Explained</h1>
+<p>Entity Framework Core (EF Core) translates C# Language Integrated
+Queries (LINQ) into relational SQL commands through an internal pipeline
+that parses expression trees, maps them against database metadata, and
+generates provider-specific SQL. This article details the end-to-end
+translation pipeline, covering how <code>IQueryable</code> structures
+are parsed, the role of database providers, how client versus server
+evaluation is handled, and how the resulting data is materialized into
+C# objects.</p>
+<h3 id="the-role-of-iqueryable-and-expression-trees">The Role of
+<code>IQueryable</code> and Expression Trees</h3>
+<p>When you write a LINQ query targeting an EF Core
+<code>DbSet&lt;T&gt;</code>, the query is stored as an
+<code>IQueryable&lt;T&gt;</code> rather than being executed immediately.
+Instead of compiling directly to Common Intermediate Language (CIL)
+execution code, the C# compiler converts the LINQ query into an
+<strong>Expression Tree</strong>.</p>
+<p>An Expression Tree is a structured, in-memory data representation of
+the logic inside the query. For example, a filter like
+<code>.Where(b =&gt; b.Price &gt; 20)</code> becomes a tree of binary
+operations, member access nodes, and constants:</p>
+<ul>
+<li><strong>NodeType:</strong> <code>GreaterThan</code></li>
+<li><strong>Left Node:</strong> Member access (<code>Price</code>
+property on parameter <code>b</code>)</li>
+<li><strong>Right Node:</strong> Constant (<code>20</code>)</li>
+</ul>
+<p>EF Core relies on this structural representation rather than raw code
+delegates so it can inspect, modify, and translate the logic into
+another language entirely: SQL.</p>
+<h3 id="the-query-compilation-pipeline">The Query Compilation
+Pipeline</h3>
+<p>The translation process does not occur until deferred execution is
+triggered—typically by enumerating the query using <code>foreach</code>,
+or calling methods such as <code>ToList()</code>,
+<code>ToArray()</code>, <code>FirstOrDefaultAsync()</code>, or
+<code>Count()</code>. Once triggered, the pipeline processes the query
+through several phases:</p>
+<ol type="1">
+<li><strong>Query Cache Lookup:</strong> Parsing expression trees is
+computationally expensive. EF Core computes a hash of the expression
+tree structure to see if the corresponding SQL has already been
+generated. If cached, it skips the translation phase and runs the
+parameterized command directly.</li>
+<li><strong>Preprocessing:</strong> EF Core visits the nodes in the
+expression tree to normalize the structure, evaluate subqueries, and
+evaluate constants (such as local variables).</li>
+<li><strong>Translation to Relational Expressions:</strong> EF Core
+replaces generic C# operations with database-specific abstractions using
+metadata defined in your <code>DbContext</code> (tables, column names,
+relationships, foreign keys). For instance, an access to property
+<code>b.Price</code> maps to the database column
+<code>[p].[Price]</code>.</li>
+<li><strong>SQL Generation:</strong> The database provider (such as
+Microsoft.EntityFrameworkCore.SqlServer, Npgsql, or Pomelo.MySQL)
+receives the relational expression tree. The provider's SQL generator
+visits each node and outputs a raw SQL string conforming to the dialect
+of the target database engine.</li>
+</ol>
+<h3 id="method-mapping-examples">Method Mapping Examples</h3>
+<p>Common LINQ methods map directly to standard SQL constructs during
+the translation phase:</p>
+<ul>
+<li><code>.Where(...)</code> translates to the SQL <code>WHERE</code>
+clause.</li>
+<li><code>.Select(...)</code> translates to the column projection list
+in <code>SELECT</code>.</li>
+<li><code>.OrderBy(...)</code> and <code>.ThenBy(...)</code> translate
+to <code>ORDER BY ... ASC/DESC</code>.</li>
+<li><code>.Take(n)</code> and <code>.Skip(n)</code> translate to paging
+mechanics like <code>OFFSET n ROWS FETCH NEXT n ROWS ONLY</code> (SQL
+Server) or <code>LIMIT n OFFSET n</code> (PostgreSQL/SQLite).</li>
+<li><code>.Include(...)</code> or navigation joins translate into
+<code>LEFT JOIN</code> or <code>INNER JOIN</code> statements, depending
+on whether the relationship is optional or required.</li>
+<li><code>.GroupBy(...)</code> translates to <code>GROUP BY</code>,
+often with aggregate functions like <code>SUM</code>,
+<code>COUNT</code>, or <code>AVG</code>.</li>
+</ul>
+<p>EF Core also contains scalar function translators that map standard
+.NET methods to SQL equivalents. For example,
+<code>string.StartsWith("A")</code> translates to
+<code>LIKE 'A%'</code>, and <code>DateTime.Now.Year</code> translates to
+<code>DATEPART(year, ...)</code> or
+<code>EXTRACT(YEAR FROM ...)</code>.</p>
+<h3 id="server-vs-client-evaluation">Server vs. Client Evaluation</h3>
+<p>EF Core attempts to translate as much of the LINQ query to the
+database server as possible. However, certain .NET methods or custom
+functions cannot be translated into SQL.</p>
+<p>In modern EF Core (version 3.0 and later), any logic within the
+filtering or grouping pipeline (such as <code>.Where()</code>) that
+cannot be translated into SQL causes a runtime exception
+(<code>InvalidOperationException</code>) instead of silently pulling the
+entire table into memory. Client evaluation is only permitted in the
+final top-level <code>.Select()</code> projection, allowing you to
+format data using custom C# methods after the filtered result set has
+been returned from the database.</p>
+<h3 id="command-execution-and-materialization">Command Execution and
+Materialization</h3>
+<p>Once the provider generates the SQL text and binds parameters, EF
+Core passes the command to the underlying ADO.NET layer
+(<code>DbCommand</code>).</p>
+<ol type="1">
+<li>The SQL query is sent over the network to the database engine.</li>
+<li>The database executes the query and returns a tabular result
+set.</li>
+<li>EF Core reads the data via a <code>DbDataReader</code>.</li>
+<li>The <strong>materializer</strong> takes the row data, casts database
+types to C# types, creates entity instances, and attaches them to the
+<code>ChangeTracker</code> (unless configured with
+<code>.AsNoTracking()</code>).</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/linq-to-sql-translation-in-ef-core-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

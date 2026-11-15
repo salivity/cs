@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Delegates: Type-Safe Function Pointers Explained - cs</title>
+    <meta name="description" content="This article explores delegates in C#, explaining their fundamental role as managed, type-safe function pointers within the .NET ecosystem. You will learn what delegates are, how they contrast with traditional C/C++ function pointers by enforcing strict c">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-delegates-type-safe-function-pointers-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Delegates: Type-Safe Function Pointers Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-delegates-type-safe-function-pointers-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores delegates in C#, explaining their fundamental role as managed, type-safe function pointers within the .NET ecosystem. You will learn what delegates are, how they contrast with traditional C/C++ function pointers by enforcing strict c" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-delegates-type-safe-function-pointers-explained">C# Delegates:
+Type-Safe Function Pointers Explained</h1>
+<p>This article explores delegates in C#, explaining their fundamental
+role as managed, type-safe function pointers within the .NET ecosystem.
+You will learn what delegates are, how they contrast with traditional
+C/C++ function pointers by enforcing strict compile-time signature
+checks, and how to define and execute them efficiently in your
+applications.</p>
+<h2 id="what-is-a-delegate-in-c">What Is a Delegate in C#?</h2>
+<p>A delegate in C# is a reference type that encapsulates a method with
+a specific signature and return type. Rather than holding data, a
+delegate holds a reference to one or more methods. Once instantiated, a
+delegate can invoke its referenced method as if it were called directly,
+allowing methods to be passed as arguments, stored in variables, and
+executed dynamically.</p>
+<h2 id="how-delegates-act-as-function-pointers">How Delegates Act as
+Function Pointers</h2>
+<p>In unmanaged languages like C and C++, function pointers store raw
+memory addresses pointing to executable code. While powerful,
+traditional function pointers are inherently unsafe: they do not
+guarantee that the target function matches the expected parameters or
+return type, which can lead to memory corruption, stack imbalance, and
+runtime crashes.</p>
+<p>A C# delegate provides the same core capability—decoupling the caller
+from the target method—while executing under the control of the Common
+Language Runtime (CLR). Instead of pointing to arbitrary memory
+locations, a delegate is an object derived from
+<code>System.MulticastDelegate</code>. It maintains metadata about the
+method it targets, including a reference to the method and the object
+instance on which the method should be invoked.</p>
+<h2 id="the-meaning-of-type-safe">The Meaning of "Type-Safe"</h2>
+<p>The term "type-safe" signifies that the C# compiler and runtime
+rigorously verify that the signature of the target method matches the
+signature defined by the delegate declaration.</p>
+<p>Type safety is enforced in several ways:</p>
+<ul>
+<li><strong>Return Type Verification:</strong> The method assigned to
+the delegate must return the exact type (or a compatible type via
+covariance) specified by the delegate.</li>
+<li><strong>Parameter Matching:</strong> The number, order, and data
+types (including modifiers like <code>ref</code> and <code>out</code>)
+of the parameters must strictly align with the delegate's
+definition.</li>
+<li><strong>Compile-Time Validation:</strong> If an attempt is made to
+assign an incompatible method to a delegate, the compiler throws an
+error immediately, preventing invalid method calls before the code ever
+runs.</li>
+</ul>
+<h2 id="declaring-and-using-a-delegate">Declaring and Using a
+Delegate</h2>
+<p>Using a custom delegate involves three primary steps: declaration,
+instantiation, and invocation.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Declare a delegate type with a specific signature</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">delegate</span> <span class="dt">void</span> <span class="fu">LogMessage</span><span class="op">(</span><span class="dt">string</span> message<span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 2. Instantiate the delegate pointing to a compatible method</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        LogMessage logger <span class="op">=</span> ConsoleLogger<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 3. Invoke the method through the delegate</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="fu">logger</span><span class="op">(</span><span class="st">&quot;Execution started.&quot;</span><span class="op">);</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">ConsoleLogger</span><span class="op">(</span><span class="dt">string</span> text<span class="op">)</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;[LOG]: {text}&quot;</span><span class="op">);</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If <code>ConsoleLogger</code> took an <code>int</code> instead of a
+<code>string</code>, or returned a <code>bool</code> instead of
+<code>void</code>, the compiler would reject the assignment.</p>
+<h2 id="modern-c-alternatives-action-and-func">Modern C# Alternatives:
+Action and Func</h2>
+<p>While custom delegates can be defined using the <code>delegate</code>
+keyword, modern C# development frequently utilizes the built-in generic
+delegate types provided in the <code>System</code> namespace:</p>
+<ul>
+<li><strong><code>Action&lt;...&gt;</code>:</strong> Represents a method
+that takes zero or more parameters and does not return a value
+(<code>void</code>).</li>
+<li><strong><code>Func&lt;..., TResult&gt;</code>:</strong> Represents a
+method that takes zero or more parameters and returns a value of type
+<code>TResult</code>.</li>
+<li><strong><code>Predicate&lt;T&gt;</code>:</strong> Represents a
+method that takes an object of type <code>T</code> and returns a
+<code>bool</code>.</li>
+</ul>
+<p>These built-in types maintain the exact same type-safety and
+function-pointer behavior while eliminating the boilerplate code
+required to declare custom delegate types.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-delegates-type-safe-function-pointers-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

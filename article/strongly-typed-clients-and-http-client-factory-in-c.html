@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strongly Typed Clients and HttpClientFactory in C# - cs</title>
+    <meta name="description" content="This article explores the implementation and benefits of using strongly typed clients alongside the IHttpClientFactory pattern in C#. You will learn how the factory pattern resolves resource issues like socket exhaustion and outdated DNS records, compare">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/strongly-typed-clients-and-http-client-factory-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Strongly Typed Clients and HttpClientFactory in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/strongly-typed-clients-and-http-client-factory-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the implementation and benefits of using strongly typed clients alongside the IHttpClientFactory pattern in C#. You will learn how the factory pattern resolves resource issues like socket exhaustion and outdated DNS records, compare" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="strongly-typed-clients-and-httpclientfactory-in-c">Strongly
+Typed Clients and HttpClientFactory in C</h1>
+<p>This article explores the implementation and benefits of using
+strongly typed clients alongside the <code>IHttpClientFactory</code>
+pattern in C#. You will learn how the factory pattern resolves resource
+issues like socket exhaustion and outdated DNS records, compare the
+different consumption approaches, and understand how to build
+maintainable, strongly typed HTTP abstractions in modern .NET
+applications.</p>
+<h2 id="the-problem-with-traditional-httpclient-usage">The Problem with
+Traditional HttpClient Usage</h2>
+<p>In early .NET development, developers commonly instantiated
+<code>HttpClient</code> directly using a <code>using</code> statement or
+kept a single static instance. Both approaches introduce severe
+network-level issues:</p>
+<ul>
+<li><strong>Socket Exhaustion:</strong> Disposing of
+<code>HttpClient</code> instances does not immediately release the
+underlying socket. Sockets remain in a <code>TIME_WAIT</code> state,
+leading to socket exhaustion under heavy load.</li>
+<li><strong>Stale DNS Records:</strong> Maintaining a single static or
+singleton <code>HttpClient</code> avoids socket exhaustion, but it keeps
+connections open indefinitely, failing to detect DNS updates or
+infrastructure changes.</li>
+</ul>
+<h2 id="the-ihttpclientfactory-pattern">The IHttpClientFactory
+Pattern</h2>
+<p>Introduced in .NET Core 2.1, <code>IHttpClientFactory</code> solves
+these issues by managing the lifecycle of the underlying
+<code>HttpMessageHandler</code> instances via a pool.</p>
+<p>Instead of caching the <code>HttpClient</code> itself, the factory
+pools and reuses the <code>HttpMessageHandler</code> (specifically
+<code>SocketsHttpHandler</code> or <code>HttpClientHandler</code>). By
+default, handlers are recycled every two minutes. This architecture
+prevents socket exhaustion by reusing existing connections while
+periodically rotating connections to respect DNS updates.</p>
+<p><code>IHttpClientFactory</code> supports three primary usage
+patterns:</p>
+<ol type="1">
+<li><strong>Basic Usage:</strong> Requesting an ad-hoc client via
+<code>_httpClientFactory.CreateClient()</code>.</li>
+<li><strong>Named Clients:</strong> Registering preconfigured clients
+identified by a string key via
+<code>services.AddHttpClient("GitHub", ...)</code>.</li>
+<li><strong>Typed Clients:</strong> Encapsulating the client
+configuration and communication logic within dedicated classes.</li>
+</ol>
+<h2 id="what-are-strongly-typed-clients">What Are Strongly Typed
+Clients?</h2>
+<p>A strongly typed client is a standard C# class that accepts an
+<code>HttpClient</code> via constructor injection. It acts as an
+abstraction layer over an external HTTP service, encapsulating
+endpoints, serialization logic, authorization headers, and error
+handling.</p>
+<p>Key benefits of strongly typed clients include:</p>
+<ul>
+<li><strong>Separation of Concerns:</strong> Business logic communicates
+with a domain-specific interface rather than raw HTTP primitives.</li>
+<li><strong>Compile-Time Safety:</strong> API interactions return
+strongly typed models instead of raw strings or JSON streams.</li>
+<li><strong>Dependency Injection Integration:</strong> Typed clients
+integrate naturally with the .NET dependency injection (DI) container
+and can be resolved directly into controllers, minimal APIs, or
+services.</li>
+<li><strong>Testability:</strong> The custom client can be paired with
+an interface, simplifying unit testing through mocking without needing
+to mock <code>HttpMessageHandler</code>.</li>
+</ul>
+<h2 id="implementing-a-strongly-typed-client">Implementing a Strongly
+Typed Client</h2>
+<h3 id="1-define-the-client-class">1. Define the Client Class</h3>
+<p>Create a class that accepts <code>HttpClient</code> in its
+constructor and exposes domain-specific methods:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">UserProfile</span><span class="op">(</span><span class="dt">int</span> Id<span class="op">,</span> <span class="dt">string</span> Username<span class="op">,</span> <span class="dt">string</span> Email<span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> UserService</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> HttpClient _httpClient<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">UserService</span><span class="op">(</span>HttpClient httpClient<span class="op">)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        _httpClient <span class="op">=</span> httpClient<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task<span class="op">&lt;</span>UserProfile<span class="op">?&gt;</span> <span class="fu">GetUserByIdAsync</span><span class="op">(</span><span class="dt">int</span> id<span class="op">,</span> CancellationToken cancellationToken <span class="op">=</span> <span class="kw">default</span><span class="op">)</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> await _httpClient<span class="op">.</span><span class="fu">GetFromJsonAsync</span><span class="op">&lt;</span>UserProfile<span class="op">&gt;(</span>$<span class="st">&quot;users/{id}&quot;</span><span class="op">,</span> cancellationToken<span class="op">);</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-register-the-client-in-dependency-injection">2. Register the
+Client in Dependency Injection</h3>
+<p>In <code>Program.cs</code>, use the
+<code>AddHttpClient&lt;TClient&gt;</code> extension method to register
+the client and configure its default settings, such as base addresses
+and timeout limits:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddHttpClient</span><span class="op">&lt;</span>UserService<span class="op">&gt;(</span>client <span class="op">=&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    client<span class="op">.</span><span class="fu">BaseAddress</span> <span class="op">=</span> <span class="kw">new</span> <span class="fu">Uri</span><span class="op">(</span><span class="st">&quot;https://api.example.com/&quot;</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    client<span class="op">.</span><span class="fu">DefaultRequestHeaders</span><span class="op">.</span><span class="fu">Add</span><span class="op">(</span><span class="st">&quot;Accept&quot;</span><span class="op">,</span> <span class="st">&quot;application/json&quot;</span><span class="op">);</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    client<span class="op">.</span><span class="fu">Timeout</span> <span class="op">=</span> TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">30</span><span class="op">);</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span></code></pre></div>
+<p>When using <code>AddHttpClient&lt;UserService&gt;</code>, the
+framework registers <code>UserService</code> with a
+<strong>transient</strong> lifetime. Every time <code>UserService</code>
+is resolved, the factory provisions a short-lived
+<code>HttpClient</code> instance backed by a pooled, long-lived
+<code>HttpMessageHandler</code>.</p>
+<h3 id="3-consume-the-typed-client">3. Consume the Typed Client</h3>
+<p>Inject the typed client directly into consumers, such as Minimal API
+endpoints, controllers, or background services:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapGet</span><span class="op">(</span><span class="st">&quot;/api/users/{id:int}&quot;</span><span class="op">,</span> <span class="fu">async</span> <span class="op">(</span><span class="dt">int</span> id<span class="op">,</span> UserService userService<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> user <span class="op">=</span> await userService<span class="op">.</span><span class="fu">GetUserByIdAsync</span><span class="op">(</span>id<span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> user <span class="kw">is</span> not <span class="kw">null</span> <span class="op">?</span> Results<span class="op">.</span><span class="fu">Ok</span><span class="op">(</span>user<span class="op">)</span> <span class="op">:</span> Results<span class="op">.</span><span class="fu">NotFound</span><span class="op">();</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">Run</span><span class="op">();</span></span></code></pre></div>
+<p>By decoupling raw HTTP operations from application logic and
+delegating socket management to <code>IHttpClientFactory</code>,
+strongly typed clients ensure high performance, testability, and
+resilience in .NET network communication.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/strongly-typed-clients-and-http-client-factory-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

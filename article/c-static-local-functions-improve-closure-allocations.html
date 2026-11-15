@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Static Local Functions: Improve Closure Allocations - cs</title>
+    <meta name="description" content="This article explores how static local functions in C# enhance application performance by preventing unnecessary memory allocations caused by closures. By examining how the C# compiler transforms variable captures into heap-allocated objects, we analyze h">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-static-local-functions-improve-closure-allocations">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Static Local Functions: Improve Closure Allocations - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-static-local-functions-improve-closure-allocations" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how static local functions in C# enhance application performance by preventing unnecessary memory allocations caused by closures. By examining how the C# compiler transforms variable captures into heap-allocated objects, we analyze h" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-static-local-functions-improve-closure-allocations">C# Static
+Local Functions: Improve Closure Allocations</h1>
+<p>This article explores how static local functions in C# enhance
+application performance by preventing unnecessary memory allocations
+caused by closures. By examining how the C# compiler transforms variable
+captures into heap-allocated objects, we analyze how applying the
+<code>static</code> modifier acts as a compile-time safeguard that
+eliminates hidden display classes, reduces Garbage Collection (GC)
+overhead, and ensures stack-based memory efficiency.</p>
+<h3 id="the-cost-of-standard-closures">The Cost of Standard
+Closures</h3>
+<p>In C#, regular local functions and lambda expressions can reference
+variables defined in the enclosing method. When this occurs, the
+compiler creates a "closure." To ensure the captured variables outlive
+the method execution if necessary, the compiler automatically generates
+a hidden display class behind the scenes, instantiates it on the managed
+heap, and copies the referenced variables into its fields.</p>
+<p>Even when a local function executes immediately and synchronously,
+this heap allocation still takes place. In high-throughput systems,
+asynchronous state machines, or tight loops, thousands of these
+short-lived closure objects can be allocated, rapidly triggering garbage
+collection cycles and degrading overall runtime throughput.</p>
+<h3 id="how-static-local-functions-eliminate-closures">How Static Local
+Functions Eliminate Closures</h3>
+<p>Introduced in C# 8.0, static local functions guarantee that a nested
+function cannot capture local variables, method parameters, or the
+enclosing instance pointer (<code>this</code>).</p>
+<p>When you mark a local function with the <code>static</code> keyword,
+the compiler completely disallows access to outer scope variables. If an
+attempt is made to read or modify an external local variable inside the
+static local function, the compiler raises an error (CS8429).</p>
+<p>Because outer variables cannot be accessed implicitly:</p>
+<ol type="1">
+<li><strong>No Display Class is Created:</strong> The compiler has no
+need to generate an underlying heap-allocated class to bridge
+scopes.</li>
+<li><strong>Deterministic Stack Execution:</strong> All data required by
+the static local function must be passed explicitly as arguments,
+meaning values remain on the call stack rather than escaping to the
+heap.</li>
+<li><strong>No Hidden Delegate Overhead:</strong> Static local functions
+can be converted to delegates or used in contexts where function
+pointers or static delegates are cached, avoiding repeated delegate
+instantiations.</li>
+</ol>
+<h3 id="practical-example">Practical Example</h3>
+<p>Consider a scenario where an array is filtered inside a method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessData</span><span class="op">(</span><span class="dt">int</span><span class="op">[]</span> numbers<span class="op">,</span> <span class="dt">int</span> threshold<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Non-static: Captures &#39;threshold&#39;, causing a heap allocation for the closure</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bool</span> <span class="fu">IsAboveThreshold</span><span class="op">(</span><span class="dt">int</span> x<span class="op">)</span> <span class="op">=&gt;</span> x <span class="op">&gt;</span> threshold<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> numbers<span class="op">.</span><span class="fu">Length</span><span class="op">;</span> i<span class="op">++)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span><span class="fu">IsAboveThreshold</span><span class="op">(</span>numbers<span class="op">[</span>i<span class="op">]))</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Process number</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>By applying the <code>static</code> keyword, the closure is made
+impossible, and the threshold must be passed explicitly:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessData</span><span class="op">(</span><span class="dt">int</span><span class="op">[]</span> numbers<span class="op">,</span> <span class="dt">int</span> threshold<span class="op">)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Static: Cannot capture &#39;threshold&#39;; no heap allocation occurs</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">bool</span> <span class="fu">IsAboveThreshold</span><span class="op">(</span><span class="dt">int</span> x<span class="op">,</span> <span class="dt">int</span> limit<span class="op">)</span> <span class="op">=&gt;</span> x <span class="op">&gt;</span> limit<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> numbers<span class="op">.</span><span class="fu">Length</span><span class="op">;</span> i<span class="op">++)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span><span class="fu">IsAboveThreshold</span><span class="op">(</span>numbers<span class="op">[</span>i<span class="op">],</span> threshold<span class="op">))</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Process number</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="performance-benefits">Performance Benefits</h3>
+<p>Static local functions provide a zero-cost abstraction for code
+organization. Developers gain the architectural benefits of
+encapsulating logic within the only method that requires it, while
+strictly avoiding accidental heap allocations. In performance-critical
+pathways, switching to static local functions and passing required
+values directly—often combined with <code>in</code> or <code>ref</code>
+modifiers—ensures optimal memory utilization and minimizes CPU overhead
+dedicated to garbage collection.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-static-local-functions-improve-closure-allocations';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

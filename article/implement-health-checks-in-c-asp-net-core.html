@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implement Health Checks in C# ASP.NET Core - cs</title>
+    <meta name="description" content="This guide demonstrates how to implement health checks in C# using ASP.NET Core to monitor application availability, uptime, and system dependencies. You will learn how to enable built-in diagnostic endpoints, create custom checks for external services li">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/implement-health-checks-in-c-asp-net-core">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Implement Health Checks in C# ASP.NET Core - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/implement-health-checks-in-c-asp-net-core" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide demonstrates how to implement health checks in C# using ASP.NET Core to monitor application availability, uptime, and system dependencies. You will learn how to enable built-in diagnostic endpoints, create custom checks for external services li" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="implement-health-checks-in-c-aspnet-core">Implement Health
+Checks in C# ASP.NET Core</h1>
+<p>This guide demonstrates how to implement health checks in C# using
+ASP.NET Core to monitor application availability, uptime, and system
+dependencies. You will learn how to enable built-in diagnostic
+endpoints, create custom checks for external services like databases or
+third-party APIs, separate readiness from liveness probes, and format
+the output for automated monitoring systems.</p>
+<h2 id="1-setting-up-basic-health-checks">1. Setting Up Basic Health
+Checks</h2>
+<p>ASP.NET Core includes native middleware for health monitoring. To get
+started, register the health check services in the dependency injection
+container and map the endpoint in your <code>Program.cs</code> file.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Register health check services</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddHealthChecks</span><span class="op">();</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Map the health check route</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapHealthChecks</span><span class="op">(</span><span class="st">&quot;/health&quot;</span><span class="op">);</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">Run</span><span class="op">();</span></span></code></pre></div>
+<p>Running the application and navigating to <code>/health</code>
+returns a plain-text response of <code>Healthy</code> with an HTTP
+status code <code>200 OK</code>. If a check fails, it returns
+<code>Unhealthy</code> with an HTTP status code
+<code>503 Service Unavailable</code>.</p>
+<h2 id="2-creating-custom-health-checks">2. Creating Custom Health
+Checks</h2>
+<p>To monitor application dependencies such as databases, caches, or
+remote HTTP services, implement the <code>IHealthCheck</code>
+interface.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">Extensions</span><span class="op">.</span><span class="fu">Diagnostics</span><span class="op">.</span><span class="fu">HealthChecks</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DatabaseHealthCheck <span class="op">:</span> IHealthCheck</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task<span class="op">&lt;</span>HealthCheckResult<span class="op">&gt;</span> <span class="fu">CheckHealthAsync</span><span class="op">(</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        HealthCheckContext context<span class="op">,</span> </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        CancellationToken cancellationToken <span class="op">=</span> <span class="kw">default</span><span class="op">)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Simulate a database ping or connection test</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>            <span class="dt">bool</span> isDatabaseConnected <span class="op">=</span> await <span class="fu">CheckDatabaseConnectionAsync</span><span class="op">(</span>cancellationToken<span class="op">);</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(</span>isDatabaseConnected<span class="op">)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>                <span class="kw">return</span> HealthCheckResult<span class="op">.</span><span class="fu">Healthy</span><span class="op">(</span><span class="st">&quot;Database connection is operational.&quot;</span><span class="op">);</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> HealthCheckResult<span class="op">.</span><span class="fu">Degraded</span><span class="op">(</span><span class="st">&quot;Database response latency is higher than expected.&quot;</span><span class="op">);</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">catch</span> <span class="op">(</span>Exception ex<span class="op">)</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> HealthCheckResult<span class="op">.</span><span class="fu">Unhealthy</span><span class="op">(</span><span class="st">&quot;Database connection failed.&quot;</span><span class="op">,</span> ex<span class="op">);</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> Task<span class="op">&lt;</span><span class="dt">bool</span><span class="op">&gt;</span> <span class="fu">CheckDatabaseConnectionAsync</span><span class="op">(</span>CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Replace with actual database ping logic</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> Task<span class="op">.</span><span class="fu">FromResult</span><span class="op">(</span><span class="kw">true</span><span class="op">);</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Register the custom health check in <code>Program.cs</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddHealthChecks</span><span class="op">()</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddCheck</span><span class="op">&lt;</span>DatabaseHealthCheck<span class="op">&gt;(</span><span class="st">&quot;database_check&quot;</span><span class="op">,</span> tags<span class="op">:</span> <span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="st">&quot;ready&quot;</span><span class="op">,</span> <span class="st">&quot;db&quot;</span> <span class="op">});</span></span></code></pre></div>
+<h2 id="3-configuring-liveness-and-readiness-probes">3. Configuring
+Liveness and Readiness Probes</h2>
+<p>Container orchestrators like Kubernetes distinguish between whether
+an application process is alive (Liveness) and whether it is ready to
+accept incoming traffic (Readiness). You can implement this separation
+using tags.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Register checks with specific tags</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddHealthChecks</span><span class="op">()</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddCheck</span><span class="op">(</span><span class="st">&quot;self&quot;</span><span class="op">,</span> <span class="op">()</span> <span class="op">=&gt;</span> HealthCheckResult<span class="op">.</span><span class="fu">Healthy</span><span class="op">(),</span> tags<span class="op">:</span> <span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="st">&quot;live&quot;</span> <span class="op">})</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddCheck</span><span class="op">&lt;</span>DatabaseHealthCheck<span class="op">&gt;(</span><span class="st">&quot;database&quot;</span><span class="op">,</span> tags<span class="op">:</span> <span class="kw">new</span><span class="op">[]</span> <span class="op">{</span> <span class="st">&quot;ready&quot;</span> <span class="op">});</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Liveness probe: returns 200 if the process is alive</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapHealthChecks</span><span class="op">(</span><span class="st">&quot;/health/live&quot;</span><span class="op">,</span> <span class="kw">new</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Diagnostics</span><span class="op">.</span><span class="fu">HealthChecks</span><span class="op">.</span><span class="fu">HealthCheckOptions</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    Predicate <span class="op">=</span> check <span class="op">=&gt;</span> check<span class="op">.</span><span class="fu">Tags</span><span class="op">.</span><span class="fu">Contains</span><span class="op">(</span><span class="st">&quot;live&quot;</span><span class="op">)</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Readiness probe: returns 200 only if all required dependencies are healthy</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapHealthChecks</span><span class="op">(</span><span class="st">&quot;/health/ready&quot;</span><span class="op">,</span> <span class="kw">new</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Diagnostics</span><span class="op">.</span><span class="fu">HealthChecks</span><span class="op">.</span><span class="fu">HealthCheckOptions</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    Predicate <span class="op">=</span> check <span class="op">=&gt;</span> check<span class="op">.</span><span class="fu">Tags</span><span class="op">.</span><span class="fu">Contains</span><span class="op">(</span><span class="st">&quot;ready&quot;</span><span class="op">)</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<h2 id="4-formatting-health-check-responses-as-json">4. Formatting
+Health Check Responses as JSON</h2>
+<p>By default, ASP.NET Core returns a plain-text status string. To
+integrate with logging pipelines and monitoring dashboards, customize
+the response to output structured JSON:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Text</span><span class="op">.</span><span class="fu">Json</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Diagnostics</span><span class="op">.</span><span class="fu">HealthChecks</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapHealthChecks</span><span class="op">(</span><span class="st">&quot;/health/details&quot;</span><span class="op">,</span> <span class="kw">new</span> HealthCheckOptions</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    ResponseWriter <span class="op">=</span> <span class="fu">async</span> <span class="op">(</span>context<span class="op">,</span> report<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        context<span class="op">.</span><span class="fu">Response</span><span class="op">.</span><span class="fu">ContentType</span> <span class="op">=</span> <span class="st">&quot;application/json&quot;</span><span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> response <span class="op">=</span> <span class="kw">new</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>            Status <span class="op">=</span> report<span class="op">.</span><span class="fu">Status</span><span class="op">.</span><span class="fu">ToString</span><span class="op">(),</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>            TotalDuration <span class="op">=</span> report<span class="op">.</span><span class="fu">TotalDuration</span><span class="op">.</span><span class="fu">TotalMilliseconds</span><span class="op">,</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>            Checks <span class="op">=</span> report<span class="op">.</span><span class="fu">Entries</span><span class="op">.</span><span class="fu">Select</span><span class="op">(</span>entry <span class="op">=&gt;</span> <span class="kw">new</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>                Component <span class="op">=</span> entry<span class="op">.</span><span class="fu">Key</span><span class="op">,</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>                Status <span class="op">=</span> entry<span class="op">.</span><span class="fu">Value</span><span class="op">.</span><span class="fu">Status</span><span class="op">.</span><span class="fu">ToString</span><span class="op">(),</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>                Description <span class="op">=</span> entry<span class="op">.</span><span class="fu">Value</span><span class="op">.</span><span class="fu">Description</span><span class="op">,</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>                Duration <span class="op">=</span> entry<span class="op">.</span><span class="fu">Value</span><span class="op">.</span><span class="fu">Duration</span><span class="op">.</span><span class="fu">TotalMilliseconds</span><span class="op">,</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>                Error <span class="op">=</span> entry<span class="op">.</span><span class="fu">Value</span><span class="op">.</span><span class="fu">Exception</span><span class="op">?.</span><span class="fu">Message</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>            <span class="op">})</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>        await context<span class="op">.</span><span class="fu">Response</span><span class="op">.</span><span class="fu">WriteAsync</span><span class="op">(</span>JsonSerializer<span class="op">.</span><span class="fu">Serialize</span><span class="op">(</span>response<span class="op">,</span> <span class="kw">new</span> JsonSerializerOptions </span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span> </span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>            WriteIndented <span class="op">=</span> <span class="kw">true</span> </span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}));</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<p>This endpoint returns a comprehensive snapshot of all registered
+checks, enabling automated platforms to detect partial degradations or
+specific component failures instantly.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/implement-health-checks-in-c-asp-net-core';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

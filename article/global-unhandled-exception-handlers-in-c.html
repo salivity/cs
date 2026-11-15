@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Unhandled Exception Handlers in C# - cs</title>
+    <meta name="description" content="This article explores the critical role of global unhandled exception handlers in C# and .NET development. It explains how these mechanisms act as an application&#39;s ultimate safety net, highlighting their primary functions in centralized diagnostics, syste">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/global-unhandled-exception-handlers-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Global Unhandled Exception Handlers in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/global-unhandled-exception-handlers-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the critical role of global unhandled exception handlers in C# and .NET development. It explains how these mechanisms act as an application&#39;s ultimate safety net, highlighting their primary functions in centralized diagnostics, syste" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="global-unhandled-exception-handlers-in-c">Global Unhandled
+Exception Handlers in C</h1>
+<p>This article explores the critical role of global unhandled exception
+handlers in C# and .NET development. It explains how these mechanisms
+act as an application's ultimate safety net, highlighting their primary
+functions in centralized diagnostics, system stability, and user
+experience preservation. Additionally, it details common implementation
+strategies across different .NET application models, from desktop
+systems to web APIs.</p>
+<h2 id="the-purpose-of-global-exception-handling">The Purpose of Global
+Exception Handling</h2>
+<p>In C#, local exceptions are routinely managed using
+<code>try-catch</code> blocks. However, unanticipated errors often
+escape local handling and bubble up through the call stack. When an
+exception is not caught, it becomes an unhandled exception.</p>
+<p>Global unhandled exception handlers serve as the application-level
+"last line of defense." Their primary responsibility is not necessarily
+to recover from errors, but to intercept them before the operating
+system or runtime abruptly terminates the process.</p>
+<h2 id="core-roles-and-responsibilities">Core Roles and
+Responsibilities</h2>
+<h3 id="1-centralized-logging-and-observability">1. Centralized Logging
+and Observability</h3>
+<p>The most critical role of a global handler is telemetry and
+diagnostic collection. When an unhandled error occurs, the global
+handler captures the complete context, including:</p>
+<ul>
+<li>The full exception message and stack trace.</li>
+<li>Inner exceptions and aggregate exception details.</li>
+<li>Contextual runtime data, such as active thread IDs, timestamps, or
+authenticated user identifiers.</li>
+</ul>
+<p>By routing these errors to central logging sinks (such as Serilog,
+Application Insights, or local event logs), development teams can detect
+bugs in production without relying on end-user bug reports.</p>
+<h3 id="2-preventing-data-corruption-and-ensuring-graceful-shutdown">2.
+Preventing Data Corruption and Ensuring Graceful Shutdown</h3>
+<p>Attempting to force an application to keep running after an unhandled
+exception is dangerous. Unhandled exceptions frequently leave the
+process in an undefined, corrupted state—such as broken database
+transactions, half-written files, or invalid memory references.</p>
+<p>A global handler provides an opportunity to perform critical cleanup
+operations before the process exits:</p>
+<ul>
+<li>Aborting or rolling back pending transactions.</li>
+<li>Flushing file buffers and closing open network sockets.</li>
+<li>Persisting emergency recovery data to prevent user work loss.</li>
+<li>Terminating the process cleanly using explicit exit codes.</li>
+</ul>
+<h3 id="3-preserving-user-experience">3. Preserving User Experience</h3>
+<p>Raw runtime crashes offer a poor user experience. On the desktop, the
+operating system might show a generic crash dialog, while on the web, a
+server might return a raw 500 error leaking sensitive stack trace
+details.</p>
+<p>Global handlers intercept these failures to present user-friendly
+feedback:</p>
+<ul>
+<li><strong>Web APIs:</strong> Return standardized error responses (such
+as the RFC 7807 Problem Details format) without exposing implementation
+details.</li>
+<li><strong>Desktop/Mobile Apps:</strong> Present clean dialogs
+explaining that an unexpected error occurred, optionally prompting the
+user to send an automated error report.</li>
+</ul>
+<h2 id="implementation-across-net-application-types">Implementation
+Across .NET Application Types</h2>
+<p>Because .NET supports varied platforms, the exact implementation of a
+global unhandled exception handler depends on the runtime
+environment:</p>
+<h3 id="general-net-runtime-appdomain">General .NET Runtime
+(AppDomain)</h3>
+<p>For console applications and background services, the
+<code>AppDomain</code> provides the base-level hook for unhandled
+exceptions across all threads:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>AppDomain<span class="op">.</span><span class="fu">CurrentDomain</span><span class="op">.</span><span class="fu">UnhandledException</span> <span class="op">+=</span> <span class="op">(</span>sender<span class="op">,</span> eventArgs<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    Exception ex <span class="op">=</span> <span class="op">(</span>Exception<span class="op">)</span>eventArgs<span class="op">.</span><span class="fu">ExceptionObject</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Fatal error: {ex.Message}&quot;</span><span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Log exception and clean up resources</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<h3 id="aspnet-core">ASP.NET Core</h3>
+<p>In web applications, global exception handling is implemented via
+middleware. This ensures that the web server remains running to handle
+other requests while generating a proper HTTP response for the failed
+request:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">UseExceptionHandler</span><span class="op">(</span>exceptionHandlerApp <span class="op">=&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    exceptionHandlerApp<span class="op">.</span><span class="fu">Run</span><span class="op">(</span>async context <span class="op">=&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        context<span class="op">.</span><span class="fu">Response</span><span class="op">.</span><span class="fu">StatusCode</span> <span class="op">=</span> StatusCodes<span class="op">.</span><span class="fu">Status500InternalServerError</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        context<span class="op">.</span><span class="fu">Response</span><span class="op">.</span><span class="fu">ContentType</span> <span class="op">=</span> <span class="st">&quot;application/problem+json&quot;</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Log error and return formatted response</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">});</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">});</span></span></code></pre></div>
+<h3 id="desktop-applications-wpf-and-windows-forms">Desktop Applications
+(WPF and Windows Forms)</h3>
+<p>Desktop applications must handle exceptions that occur on UI threads
+differently from those on background threads:</p>
+<ul>
+<li><strong>WPF:</strong>
+<code>Application.Current.DispatcherUnhandledException</code> intercepts
+UI thread exceptions, while
+<code>TaskScheduler.UnobservedTaskException</code> catches unawaited
+asynchronous tasks.</li>
+<li><strong>Windows Forms:</strong>
+<code>Application.ThreadException</code> handles UI thread errors,
+paired with <code>AppDomain.CurrentDomain.UnhandledException</code> for
+worker threads.</li>
+</ul>
+<h2 id="best-practices-and-limitations">Best Practices and
+Limitations</h2>
+<ul>
+<li><strong>Avoid Resuming Corrupted States:</strong> Do not use global
+handlers to simply "swallow" fatal errors and continue normal execution.
+If the state is unstable, log the incident and let the application
+restart.</li>
+<li><strong>Keep Handlers Simple:</strong> Global handlers must be
+minimal and robust. If code inside a global exception handler throws an
+exception, the application will terminate immediately without logging
+the original error.</li>
+<li><strong>Flush Logs Synchronously:</strong> Because the process may
+terminate immediately after the handler executes, ensure that logging
+providers write and flush their buffers synchronously.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/global-unhandled-exception-handlers-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Try-Catch-Finally Works in C# - cs</title>
+    <meta name="description" content="In C#, robust error handling relies on try, catch, and finally blocks to detect runtime errors, recover from unexpected failures, and safely release critical system resources. This article provides a straightforward breakdown of how each block operates in">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-try-catch-finally-works-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Try-Catch-Finally Works in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-try-catch-finally-works-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, robust error handling relies on try, catch, and finally blocks to detect runtime errors, recover from unexpected failures, and safely release critical system resources. This article provides a straightforward breakdown of how each block operates in" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-try-catch-finally-works-in-c">How Try-Catch-Finally Works in
+C</h1>
+<p>In C#, robust error handling relies on <code>try</code>,
+<code>catch</code>, and <code>finally</code> blocks to detect runtime
+errors, recover from unexpected failures, and safely release critical
+system resources. This article provides a straightforward breakdown of
+how each block operates individually, how they work together to control
+program execution during an error, and the core rules for implementing
+them effectively in your C# applications.</p>
+<h3 id="the-try-block">The <code>try</code> Block</h3>
+<p>The <code>try</code> block contains the code that could potentially
+throw an exception during execution. When code inside a <code>try</code>
+block executes normally without errors, program flow moves directly past
+any associated <code>catch</code> blocks and enters the
+<code>finally</code> block (if present). If an error occurs, execution
+inside the <code>try</code> block halts immediately at the line that
+caused the error, and the runtime searches for a matching
+<code>catch</code> block.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> divisor <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> result <span class="op">=</span> <span class="dv">10</span> <span class="op">/</span> divisor<span class="op">;</span> <span class="co">// Throws DivideByZeroException</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="the-catch-block">The <code>catch</code> Block</h3>
+<p>A <code>catch</code> block defines the error-handling logic when a
+specific exception occurs within the <code>try</code> block. You can
+define multiple <code>catch</code> blocks to handle different types of
+exceptions differently. C# evaluates <code>catch</code> blocks from top
+to bottom, so more specific exceptions must appear before general
+exceptions like <code>System.Exception</code>.</p>
+<p>C# also supports exception filters using the <code>when</code>
+keyword, allowing you to catch exceptions only under certain runtime
+conditions:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">string</span> content <span class="op">=</span> File<span class="op">.</span><span class="fu">ReadAllText</span><span class="op">(</span><span class="st">&quot;data.txt&quot;</span><span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>FileNotFoundException ex<span class="op">)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;File missing: {ex.Message}&quot;</span><span class="op">);</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>IOException ex<span class="op">)</span> <span class="fu">when</span> <span class="op">(</span>ex<span class="op">.</span><span class="fu">HResult</span> <span class="op">==</span> <span class="op">-</span><span class="dv">2147024864</span><span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;File is locked by another process.&quot;</span><span class="op">);</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>Exception ex<span class="op">)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;An unexpected error occurred: {ex.Message}&quot;</span><span class="op">);</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If no matching <code>catch</code> block is found, the exception
+bubbles up the call stack to the calling method. If left unhandled, the
+application terminates.</p>
+<h3 id="the-finally-block">The <code>finally</code> Block</h3>
+<p>The <code>finally</code> block contains code that always runs,
+regardless of whether an exception was thrown, caught, or completely
+unhandled. It executes even if the <code>try</code> or
+<code>catch</code> block contains a <code>return</code>,
+<code>break</code>, or <code>continue</code> statement.</p>
+<p>Because of this guaranteed execution, <code>finally</code> blocks are
+primarily used for resource cleanup, such as closing file handles,
+database connections, or network sockets.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>FileStream file <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">try</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    file <span class="op">=</span> File<span class="op">.</span><span class="fu">Open</span><span class="op">(</span><span class="st">&quot;log.txt&quot;</span><span class="op">,</span> FileMode<span class="op">.</span><span class="fu">Open</span><span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Perform operations on the file</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">catch</span> <span class="op">(</span>IOException ex<span class="op">)</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;IO Error: {ex.Message}&quot;</span><span class="op">);</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="kw">finally</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>file <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        file<span class="op">.</span><span class="fu">Close</span><span class="op">();</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;File stream successfully closed.&quot;</span><span class="op">);</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><em>Note: For types that implement <code>IDisposable</code>, the C#
+<code>using</code> statement or <code>using</code> declaration provides
+a cleaner shorthand that translates into a <code>try-finally</code>
+block under the hood.</em></p>
+<h3 id="execution-order-summary">Execution Order Summary</h3>
+<ol type="1">
+<li><strong><code>try</code> begins</strong>: Code runs line-by-line
+until completion or an exception is thrown.</li>
+<li><strong>Exception occurs</strong>: Execution immediately jumps to
+the first matching <code>catch</code> block.</li>
+<li><strong><code>catch</code> executes</strong>: The error is handled,
+logged, or re-thrown using the <code>throw;</code> statement.</li>
+<li><strong><code>finally</code> executes</strong>: Cleanup code runs
+regardless of whether an exception occurred or was handled.</li>
+<li><strong>Program continues</strong>: Normal execution resumes after
+the entire structure, unless an unhandled exception or an explicit
+<code>throw</code> terminates the thread.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-try-catch-finally-works-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

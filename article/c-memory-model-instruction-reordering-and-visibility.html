@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Memory Model: Instruction Reordering and Visibility - cs</title>
+    <meta name="description" content="The C# memory model defines the boundaries within which the compiler, the Common Language Runtime (CLR) Just-In-Time (JIT) compiler, and the underlying CPU architecture can reorder memory operations, as well as when changes made by one thread become visib">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-memory-model-instruction-reordering-and-visibility">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Memory Model: Instruction Reordering and Visibility - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-memory-model-instruction-reordering-and-visibility" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The C# memory model defines the boundaries within which the compiler, the Common Language Runtime (CLR) Just-In-Time (JIT) compiler, and the underlying CPU architecture can reorder memory operations, as well as when changes made by one thread become visib" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-memory-model-instruction-reordering-and-visibility">C# Memory
+Model: Instruction Reordering and Visibility</h1>
+<p>The C# memory model defines the boundaries within which the compiler,
+the Common Language Runtime (CLR) Just-In-Time (JIT) compiler, and the
+underlying CPU architecture can reorder memory operations, as well as
+when changes made by one thread become visible to another. Understanding
+this specification is essential for writing correct, lock-free, and
+high-performance multithreaded code, as it dictates how reads and writes
+to shared memory interact across different execution threads without
+introducing race conditions or stale data.</p>
+<h3 id="theoretical-vs-practical-memory-models">Theoretical vs.
+Practical Memory Models</h3>
+<p>When working with C#, two specifications govern memory behavior: the
+abstract ECMA CLI specification (ECMA-335) and the actual Microsoft .NET
+CLR implementation.</p>
+<p>The ECMA specification defines a relatively weak memory model. It
+permits extensive instruction reordering to allow aggressive compiler
+and CPU optimizations, stipulating primarily that single-threaded
+execution semantics must be preserved (the "as-if" rule). Under the ECMA
+model, read and write operations can move past each other unless
+explicit memory barriers are inserted.</p>
+<p>In practice, the standard Microsoft .NET implementation provides a
+significantly stronger memory model than what ECMA strictly requires.
+For example, the .NET JIT compiler will not reorder a write followed by
+another write, nor will it move a read before an earlier read from the
+same memory location. Furthermore, on x86 and x64 hardware, the
+processor enforces strong hardware ordering (Total Store Order), where
+writes are not reordered with other writes, and reads are not reordered
+with other reads. However, on weaker architectures such as ARM, the
+hardware may freely reorder instructions unless explicitly instructed
+otherwise.</p>
+<h3 id="instruction-reordering">Instruction Reordering</h3>
+<p>Instruction reordering occurs at two levels: compile time (by the
+Roslyn compiler and the JIT compiler) and runtime (by the processor's
+out-of-order execution pipeline). Reordering is applied to eliminate
+redundant memory access, optimize register allocation, and maximize CPU
+instruction pipelining.</p>
+<p>The fundamental rule of reordering is that single-threaded
+correctness is never compromised. However, in a multithreaded context
+without synchronization, threads observe side effects without guarantees
+of sequential consistency. Specifically:</p>
+<ul>
+<li><strong>Store-Load Reordering:</strong> A write followed by a read
+to a different memory location can be reordered. This is the most common
+form of hardware reordering on both x86/x64 and ARM processors due to
+CPU store buffers.</li>
+<li><strong>Load-Load and Store-Store Reordering:</strong> Permitted by
+the ECMA specification and performed on weak hardware (like ARM), though
+typically prevented by x86/x64 hardware and the Microsoft .NET 2.0+ JIT
+compiler.</li>
+<li><strong>Load-Store Reordering:</strong> A read can be reordered
+after a subsequent write to a different location on weaker
+architectures.</li>
+</ul>
+<h3 id="memory-visibility-and-caching">Memory Visibility and
+Caching</h3>
+<p>Visibility dictates when a write made by one thread becomes readable
+by another. Modern CPUs use multi-level cache hierarchies (L1, L2, L3)
+and store buffers. When a thread modifies a variable, the update is
+often held in a local store buffer or CPU cache before being flushed to
+shared cache or main memory.</p>
+<p>Without explicit memory fences or synchronization primitives, there
+is no guarantee regarding when a core's local cache updates become
+visible to other cores. As a result, one thread can loop indefinitely
+reading a stale cached value of a field, even if another thread has
+updated that field in memory.</p>
+<h3 id="controlling-order-and-visibility-in-c">Controlling Order and
+Visibility in C</h3>
+<p>To control reordering and ensure immediate visibility across threads,
+C# provides several language constructs and runtime primitives that
+establish memory barriers (fences):</p>
+<ol type="1">
+<li><p><strong>The <code>volatile</code> Keyword:</strong> Applying
+<code>volatile</code> to a field enforces acquire-release semantics:</p>
+<ul>
+<li><strong>Volatile Read (Acquire Semantics):</strong> A read from a
+volatile field ensures that no subsequent memory operations (reads or
+writes) can be reordered before this read.</li>
+<li><strong>Volatile Write (Release Semantics):</strong> A write to a
+volatile field ensures that no preceding memory operations (reads or
+writes) can be reordered after this write. Additionally,
+<code>volatile</code> prevents the compiler from caching the value in a
+CPU register, forcing an access to memory or cache on every read and
+write.</li>
+</ul></li>
+<li><p><strong>Full Memory Barriers:</strong> Calling
+<code>Thread.MemoryBarrier()</code> or
+<code>Interlocked.MemoryBarrier()</code> inserts a full two-way memory
+fence. This prevents any reads or writes from moving across the boundary
+in either direction, flushing store buffers and ensuring global
+visibility up to that execution point.</p></li>
+<li><p><strong>Interlocked Operations:</strong> Methods within the
+<code>System.Threading.Interlocked</code> class (such as
+<code>Increment</code>, <code>Exchange</code>, and
+<code>CompareExchange</code>) are atomic and provide full fence
+semantics on both entry and exit.</p></li>
+<li><p><strong>Locks and Monitors:</strong> The <code>lock</code>
+statement (built on <code>Monitor.Enter</code> and
+<code>Monitor.Exit</code>) establishes an acquire boundary upon entering
+the block and a release boundary upon exiting. Any memory modifications
+performed inside the lock are guaranteed to be visible to any thread
+that subsequently enters the same lock.</p></li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-memory-model-instruction-reordering-and-visibility';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

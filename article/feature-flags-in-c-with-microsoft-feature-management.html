@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feature Flags in C# with Microsoft Feature Management - cs</title>
+    <meta name="description" content="Feature flagging is a software development technique that allows teams to enable or disable application features at runtime without deploying new code. This article explains the fundamentals of feature flagging and demonstrates how to implement dynamic fe">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/feature-flags-in-c-with-microsoft-feature-management">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Feature Flags in C# with Microsoft Feature Management - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/feature-flags-in-c-with-microsoft-feature-management" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Feature flagging is a software development technique that allows teams to enable or disable application features at runtime without deploying new code. This article explains the fundamentals of feature flagging and demonstrates how to implement dynamic fe" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="feature-flags-in-c-with-microsoft-feature-management">Feature
+Flags in C# with Microsoft Feature Management</h1>
+<p>Feature flagging is a software development technique that allows
+teams to enable or disable application features at runtime without
+deploying new code. This article explains the fundamentals of feature
+flagging and demonstrates how to implement dynamic feature toggles in C#
+using Microsoft's official <code>Microsoft.FeatureManagement</code>
+library, covering configuration, dependency injection, endpoint gating,
+and dynamic filters.</p>
+<h2 id="what-is-feature-flagging">What Is Feature Flagging?</h2>
+<p>Feature flagging (also known as feature toggling) separates code
+deployment from feature release. By wrapping new or experimental code
+paths in conditional statements evaluated by a flag, developers can
+continuously integrate and deploy code to production while keeping
+incomplete features hidden from end users.</p>
+<p>Key use cases include:</p>
+<ul>
+<li><strong>Trunk-Based Development:</strong> Merging unfinished
+features into the main branch safely.</li>
+<li><strong>Canary Releases and Gradual Rollouts:</strong> Exposing
+features to a small percentage of users before a full release.</li>
+<li><strong>Kill Switches:</strong> Instantly turning off a degraded
+feature without rolling back the entire application.</li>
+<li><strong>A/B Testing:</strong> Providing different experiences to
+different user segments to measure engagement.</li>
+</ul>
+<h2 id="setting-up-microsoft-feature-management-in-net">Setting Up
+Microsoft Feature Management in .NET</h2>
+<p>Microsoft provides first-class support for feature flags in .NET via
+the <code>Microsoft.FeatureManagement.AspNetCore</code> NuGet
+package.</p>
+<h3 id="1-install-the-package">1. Install the Package</h3>
+<p>Run the following command in the .NET CLI:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> add package Microsoft.FeatureManagement.AspNetCore</span></code></pre></div>
+<h3 id="2-define-flags-in-configuration">2. Define Flags in
+Configuration</h3>
+<p>By default, the library reads from the standard .NET configuration
+system under the <code>FeatureManagement</code> section. Add your flags
+to <code>appsettings.json</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;Logging&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;LogLevel&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;Default&quot;</span><span class="fu">:</span> <span class="st">&quot;Information&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;FeatureManagement&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;BetaDashboard&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;NewPaymentGateway&quot;</span><span class="fu">:</span> <span class="kw">false</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Because .NET automatically reloads <code>appsettings.json</code> on
+change, updating a boolean value in this file dynamically toggles the
+feature in real time without restarting the application.</p>
+<h3 id="3-register-the-service">3. Register the Service</h3>
+<p>Register the feature management services in
+<code>Program.cs</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">FeatureManagement</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> builder <span class="op">=</span> WebApplication<span class="op">.</span><span class="fu">CreateBuilder</span><span class="op">(</span>args<span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Register Feature Management</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddFeatureManagement</span><span class="op">();</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddControllers</span><span class="op">();</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> app <span class="op">=</span> builder<span class="op">.</span><span class="fu">Build</span><span class="op">();</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">UseRouting</span><span class="op">();</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">MapControllers</span><span class="op">();</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">Run</span><span class="op">();</span></span></code></pre></div>
+<h2 id="consuming-feature-flags-in-c">Consuming Feature Flags in C</h2>
+<p>You can evaluate feature flags programmatically or declaratively
+using routing attributes.</p>
+<h3 id="programmatic-check-using-ifeaturemanager">Programmatic Check
+Using <code>IFeatureManager</code></h3>
+<p>Inject the <code>IFeatureManager</code> interface into your
+controllers or services to check feature status asynchronously:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Mvc</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">FeatureManagement</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>ApiController<span class="op">]</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">Route</span><span class="op">(</span><span class="st">&quot;api/[controller]&quot;</span><span class="op">)]</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> OrdersController <span class="op">:</span> ControllerBase</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IFeatureManager _featureManager<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">OrdersController</span><span class="op">(</span>IFeatureManager featureManager<span class="op">)</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        _featureManager <span class="op">=</span> featureManager<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">HttpPost</span><span class="op">(</span><span class="st">&quot;checkout&quot;</span><span class="op">)]</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task<span class="op">&lt;</span>IActionResult<span class="op">&gt;</span> <span class="fu">Checkout</span><span class="op">()</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>await _featureManager<span class="op">.</span><span class="fu">IsEnabledAsync</span><span class="op">(</span><span class="st">&quot;NewPaymentGateway&quot;</span><span class="op">))</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Code path for the new payment provider</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> <span class="fu">Ok</span><span class="op">(</span><span class="st">&quot;Processed via New Payment Gateway&quot;</span><span class="op">);</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Fallback to legacy payment provider</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="fu">Ok</span><span class="op">(</span><span class="st">&quot;Processed via Legacy Gateway&quot;</span><span class="op">);</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="declarative-checks-using-featuregate">Declarative Checks Using
+<code>[FeatureGate]</code></h3>
+<p>To restrict entire controllers or specific action methods based on a
+flag, use the <code>[FeatureGate]</code> attribute. If the flag is
+disabled, the framework automatically returns a
+<code>404 Not Found</code>.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Mvc</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">FeatureManagement</span><span class="op">.</span><span class="fu">Mvc</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>ApiController<span class="op">]</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">Route</span><span class="op">(</span><span class="st">&quot;api/[controller]&quot;</span><span class="op">)]</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> BetaController <span class="op">:</span> ControllerBase</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">FeatureGate</span><span class="op">(</span><span class="st">&quot;BetaDashboard&quot;</span><span class="op">)]</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">HttpGet</span><span class="op">(</span><span class="st">&quot;dashboard&quot;</span><span class="op">)]</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IActionResult <span class="fu">GetDashboard</span><span class="op">()</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="fu">Ok</span><span class="op">(</span><span class="kw">new</span> <span class="op">{</span> Data <span class="op">=</span> <span class="st">&quot;Beta metrics and analytics&quot;</span> <span class="op">});</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="implementing-dynamic-feature-filters">Implementing Dynamic
+Feature Filters</h2>
+<p>Beyond static boolean switches,
+<code>Microsoft.FeatureManagement</code> supports dynamic evaluation
+using <strong>Feature Filters</strong>, allowing you to toggle features
+based on context, time windows, or percentages.</p>
+<h3 id="built-in-percentage-filter">Built-in Percentage Filter</h3>
+<p>To roll out a feature gradually to a random percentage of requests,
+register the built-in filter:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddFeatureManagement</span><span class="op">()</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">AddFeatureFilter</span><span class="op">&lt;</span>PercentageFilter<span class="op">&gt;();</span></span></code></pre></div>
+<p>Then configure the filter in <code>appsettings.json</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;FeatureManagement&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;BetaDashboard&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;RequirementType&quot;</span><span class="fu">:</span> <span class="st">&quot;Any&quot;</span><span class="fu">,</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;EnabledFor&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">{</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>          <span class="dt">&quot;Name&quot;</span><span class="fu">:</span> <span class="st">&quot;Percentage&quot;</span><span class="fu">,</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>          <span class="dt">&quot;Parameters&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>            <span class="dt">&quot;Value&quot;</span><span class="fu">:</span> <span class="dv">25</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>          <span class="fu">}</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      <span class="ot">]</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>With this configuration,
+<code>await _featureManager.IsEnabledAsync("BetaDashboard")</code> will
+dynamically evaluate to <code>true</code> roughly 25% of the time.</p>
+<h2 id="centralizing-flags-for-distributed-systems">Centralizing Flags
+for Distributed Systems</h2>
+<p>While <code>appsettings.json</code> works for single-instance
+applications, microservices and scaled web apps require centralized flag
+management. <code>Microsoft.FeatureManagement</code> integrates natively
+with <strong>Azure App Configuration</strong>. By chaining
+<code>.AddAzureAppConfiguration()</code> into the .NET configuration
+pipeline, flags can be toggled via the Azure portal or CLI and pushed
+across all running instances dynamically without service downtime.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/feature-flags-in-c-with-microsoft-feature-management';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

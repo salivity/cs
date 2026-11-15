@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Diagnose and Prevent Deadlocks in C# - cs</title>
+    <meta name="description" content="A deadlock in C# occurs when two or more concurrent execution paths are permanently blocked, each waiting for a resource held by another. This article defines the mechanics behind deadlocks in .NET applications, outlines practical diagnosis techniques usi">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-to-diagnose-and-prevent-deadlocks-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Diagnose and Prevent Deadlocks in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-to-diagnose-and-prevent-deadlocks-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="A deadlock in C# occurs when two or more concurrent execution paths are permanently blocked, each waiting for a resource held by another. This article defines the mechanics behind deadlocks in .NET applications, outlines practical diagnosis techniques usi" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-diagnose-and-prevent-deadlocks-in-c">How to Diagnose and
+Prevent Deadlocks in C</h1>
+<p>A deadlock in C# occurs when two or more concurrent execution paths
+are permanently blocked, each waiting for a resource held by another.
+This article defines the mechanics behind deadlocks in .NET
+applications, outlines practical diagnosis techniques using debugging
+tools and memory dumps, and details effective prevention strategies—from
+establishing strict lock hierarchies to eliminating common async/await
+anti-patterns.</p>
+<hr />
+<h3 id="what-is-a-deadlock">What is a Deadlock?</h3>
+<p>A deadlock is a condition in concurrent programming where a set of
+threads cannot proceed because each thread is holding a resource and
+waiting for another resource held by another thread in the same set.</p>
+<p>In C#, deadlocks commonly manifest in two primary ways:</p>
+<ol type="1">
+<li><strong>Lock-Order Inversion (Traditional Threading):</strong>
+Thread A acquires Lock 1 and requests Lock 2. Concurrently, Thread B
+acquires Lock 2 and requests Lock 1. Neither thread can proceed,
+freezing the involved threads indefinitely.</li>
+<li><strong>SynchronizationContext Blocking (Async/Await):</strong> A
+synchronous blocking call (such as <code>.Result</code> or
+<code>.Wait()</code>) is used on an asynchronous method that needs to
+resume on the original context (such as a UI thread or legacy ASP.NET
+request context). The thread waits for the task to finish, while the
+task waits for the thread to become available to resume execution.</li>
+</ol>
+<hr />
+<h3 id="diagnosing-deadlocks-in-c">Diagnosing Deadlocks in C</h3>
+<p>When an application hangs due to a deadlock, traditional logging
+often stops providing value. Diagnosing the issue requires inspecting
+thread states and lock ownership.</p>
+<h4 id="1-visual-studio-concurrency-tools">1. Visual Studio Concurrency
+Tools</h4>
+<ul>
+<li><strong>Parallel Stacks Window:</strong> Navigate to <strong>Debug
+&gt; Windows &gt; Parallel Stacks</strong>. Switch the view to
+<strong>Threads</strong> or <strong>Tasks</strong> to see call stacks
+grouped together. If multiple threads are halted at synchronization
+primitives like <code>Monitor.Enter</code> or
+<code>SemaphoreSlim.Wait</code>, you can quickly spot circular
+dependencies.</li>
+<li><strong>Threads Window:</strong> Check the status and location of
+all running threads to identify which threads are in a
+<code>Wait</code>, <code>Sleep</code>, or <code>Join</code> state.</li>
+</ul>
+<h4 id="2-analyzing-crash-and-memory-dumps">2. Analyzing Crash and
+Memory Dumps</h4>
+<p>In production environments where interactive debugging is
+unavailable, collect a memory dump when the application hangs:</p>
+<ul>
+<li>Generate a dump using tools like <code>dotnet-dump</code>
+(<code>dotnet-dump collect -p &lt;PID&gt;</code>).</li>
+<li>Analyze the dump using <code>dotnet-dump analyze</code> or
+<strong>WinDbg</strong> with the SOS debugging extension.</li>
+<li>Run the command <code>!syncblk</code> to inspect the synchronization
+blocks. This command lists which threads own specific monitors and which
+threads are waiting for them.</li>
+<li>Use <code>!threads</code> to identify active threads and switch
+between them (<code>~&lt;thread_num&gt;s</code>) followed by
+<code>!clrstack</code> to pinpoint the exact line where each thread is
+blocked.</li>
+</ul>
+<hr />
+<h3 id="preventing-deadlocks-in-c">Preventing Deadlocks in C</h3>
+<p>Deadlock prevention relies on disciplined resource access, modern
+asynchronous patterns, and bounded waiting periods.</p>
+<h4 id="1-avoid-synchronous-blocking-on-async-code">1. Avoid Synchronous
+Blocking on Async Code</h4>
+<p>Never block on asynchronous tasks using <code>.Result</code>,
+<code>.Wait()</code>, or <code>.GetAwaiter().GetResult()</code>.
+Maintain asynchronous execution all the way up the call stack:</p>
+<ul>
+<li><strong>Use <code>await</code> consistently:</strong> Allow the
+underlying state machine to handle task continuations naturally.</li>
+<li><strong>Use <code>ConfigureAwait(false)</code>:</strong> When
+authoring non-UI libraries or background workers, append
+<code>ConfigureAwait(false)</code> to awaited tasks to prevent the
+continuation from attempting to marshal back to the captured
+<code>SynchronizationContext</code>.</li>
+</ul>
+<h4 id="2-establish-a-strict-lock-hierarchy">2. Establish a Strict Lock
+Hierarchy</h4>
+<p>If an operation requires acquiring multiple locks, enforce a global,
+deterministic order in which those locks must be obtained:</p>
+<ul>
+<li>Assign an implicit or explicit order to locks (e.g., always acquire
+<code>LockA</code> before <code>LockB</code>).</li>
+<li>Ensure every component of the system follows this acquisition
+sequence without exception to eliminate circular wait conditions.</li>
+</ul>
+<h4 id="3-use-timeouts-with-synchronization-primitives">3. Use Timeouts
+with Synchronization Primitives</h4>
+<p>Avoid infinite wait states by using APIs that accept timeouts:</p>
+<ul>
+<li><p>Instead of <code>lock(syncObject)</code> (which maps to
+<code>Monitor.Enter</code> without a timeout), use
+<code>Monitor.TryEnter</code> with a specified duration:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>Monitor<span class="op">.</span><span class="fu">TryEnter</span><span class="op">(</span>syncObject<span class="op">,</span> TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">5</span><span class="op">)))</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">try</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Critical section</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">finally</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        Monitor<span class="op">.</span><span class="fu">Exit</span><span class="op">(</span>syncObject<span class="op">);</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">else</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Handle lock acquisition timeout (log, retry, or fail gracefully)</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+<li><p>For asynchronous synchronization, utilize
+<code>SemaphoreSlim.WaitAsync(TimeSpan)</code> to enforce timeouts on
+shared resources.</p></li>
+</ul>
+<h4 id="4-minimize-lock-scope-and-avoid-external-calls">4. Minimize Lock
+Scope and Avoid External Calls</h4>
+<p>Keep the critical section of code protected by a lock as brief as
+possible:</p>
+<ul>
+<li>Do not perform heavy computations, I/O operations, or network calls
+inside a lock.</li>
+<li>Never invoke events, delegates, or virtual methods from within a
+locked block; unknown consumer implementations may attempt to acquire
+other locks, introducing unexpected cycles.</li>
+</ul>
+<h4 id="5-favor-higher-level-concurrency-constructs">5. Favor
+Higher-Level Concurrency Constructs</h4>
+<p>Replace manual synchronization blocks with built-in .NET abstractions
+designed for thread safety:</p>
+<ul>
+<li>Use thread-safe collections in
+<code>System.Collections.Concurrent</code> (e.g.,
+<code>ConcurrentDictionary&lt;TKey, TValue&gt;</code>) instead of
+manually locking standard generic collections.</li>
+<li>Leverage immutable types and pure functions to reduce the need for
+shared mutable state altogether.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-to-diagnose-and-prevent-deadlocks-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

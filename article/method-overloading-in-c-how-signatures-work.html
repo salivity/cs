@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Method Overloading in C#: How Signatures Work - cs</title>
+    <meta name="description" content="Method overloading in C# enables a class to define multiple methods with the exact same name, as long as each method possesses a distinct signature. At compile time, the C# compiler evaluates the arguments provided during a method call to determine and bi">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/method-overloading-in-c-how-signatures-work">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Method Overloading in C#: How Signatures Work - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/method-overloading-in-c-how-signatures-work" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Method overloading in C# enables a class to define multiple methods with the exact same name, as long as each method possesses a distinct signature. At compile time, the C# compiler evaluates the arguments provided during a method call to determine and bi" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="method-overloading-in-c-how-signatures-work">Method Overloading
+in C#: How Signatures Work</h1>
+<p>Method overloading in C# enables a class to define multiple methods
+with the exact same name, as long as each method possesses a distinct
+signature. At compile time, the C# compiler evaluates the arguments
+provided during a method call to determine and bind the execution to the
+most specific matching version. This guide covers the precise mechanics
+of method signatures, what variations the compiler accepts, and the
+common pitfalls that cause ambiguity or compilation errors.</p>
+<h3 id="what-constitutes-a-method-signature">What Constitutes a Method
+Signature?</h3>
+<p>In C#, a method signature consists exclusively of:</p>
+<ol type="1">
+<li>The method name.</li>
+<li>The number (arity) of parameters.</li>
+<li>The data types of the parameters.</li>
+<li>The order of the parameter types.</li>
+<li>Parameter modifiers (specifically <code>ref</code>,
+<code>out</code>, and <code>in</code>).</li>
+</ol>
+<p>Elements such as the return type, parameter names, and access
+modifiers (<code>public</code>, <code>private</code>, etc.) are
+<strong>not</strong> part of the method signature.</p>
+<h3 id="valid-signature-differences">Valid Signature Differences</h3>
+<p>To successfully overload a method, the parameter list must differ in
+at least one of the following ways:</p>
+<h4 id="1-number-of-parameters">1. Number of Parameters</h4>
+<p>The simplest way to overload is by varying the parameter count.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Calculator</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> <span class="fu">Add</span><span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">)</span> <span class="op">=&gt;</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> <span class="fu">Add</span><span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">,</span> <span class="dt">int</span> c<span class="op">)</span> <span class="op">=&gt;</span> a <span class="op">+</span> b <span class="op">+</span> c<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="2-types-of-parameters">2. Types of Parameters</h4>
+<p>Methods can accept the same number of arguments, provided their data
+types differ.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Printer</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Print</span><span class="op">(</span><span class="dt">string</span> message<span class="op">)</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>message<span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Print</span><span class="op">(</span><span class="dt">int</span> number<span class="op">)</span> <span class="op">=&gt;</span> Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>number<span class="op">);</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="3-order-of-parameter-types">3. Order of Parameter Types</h4>
+<p>If two methods share the same parameter types, varying the sequence
+creates distinct signatures.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Display</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Render</span><span class="op">(</span><span class="dt">string</span> label<span class="op">,</span> <span class="dt">int</span> count<span class="op">)</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Render</span><span class="op">(</span><span class="dt">int</span> count<span class="op">,</span> <span class="dt">string</span> label<span class="op">)</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="4-parameter-modifiers-ref-out-in-vs-value">4. Parameter
+Modifiers (<code>ref</code>, <code>out</code>, <code>in</code> vs.
+Value)</h4>
+<p>The compiler treats pass-by-reference modifiers as distinct from
+standard pass-by-value parameters.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Processor</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Process</span><span class="op">(</span><span class="dt">int</span> data<span class="op">)</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Process</span><span class="op">(</span><span class="kw">ref</span> <span class="dt">int</span> data<span class="op">)</span> <span class="op">{</span> <span class="op">}</span> <span class="co">// Valid overload</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="invalid-signature-differences">Invalid Signature
+Differences</h3>
+<p>Attempting to overload methods based solely on the following factors
+will cause a compile-time error:</p>
+<ul>
+<li><p><strong>Return Types:</strong> You cannot overload a method based
+exclusively on what it returns. The signature does not include the
+return type because a caller can execute a method without capturing its
+return value, leaving the compiler unable to determine which method to
+invoke.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Compiler Error: CS0111</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">int</span> <span class="fu">GetData</span><span class="op">()</span> <span class="op">=&gt;</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">string</span> <span class="fu">GetData</span><span class="op">()</span> <span class="op">=&gt;</span> <span class="st">&quot;42&quot;</span><span class="op">;</span></span></code></pre></div></li>
+<li><p><strong>Parameter Names:</strong> Renaming parameters without
+changing their types does not alter the signature.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Compiler Error: CS0111</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">Log</span><span class="op">(</span><span class="dt">string</span> message<span class="op">)</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">Log</span><span class="op">(</span><span class="dt">string</span> text<span class="op">)</span> <span class="op">{</span> <span class="op">}</span></span></code></pre></div></li>
+<li><p><strong><code>ref</code> vs. <code>out</code>:</strong> While
+value vs. reference is a valid distinction, you cannot overload a method
+where the only difference between two signatures is <code>ref</code>
+versus <code>out</code> (or <code>in</code>). The runtime treats both
+internally as managed pointers.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Compiler Error: CS0663</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">Update</span><span class="op">(</span><span class="kw">ref</span> <span class="dt">int</span> value<span class="op">)</span> <span class="op">{</span> <span class="op">}</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">Update</span><span class="op">(</span><span class="kw">out</span> <span class="dt">int</span> value<span class="op">)</span> <span class="op">{</span> value <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> <span class="op">}</span></span></code></pre></div></li>
+</ul>
+<h3 id="compile-time-resolution-and-ambiguity">Compile-Time Resolution
+and Ambiguity</h3>
+<p>Method overloading is an implementation of compile-time (static)
+polymorphism. When a call occurs, the compiler uses overload resolution
+to pick the best candidate:</p>
+<ol type="1">
+<li><strong>Exact Match:</strong> The compiler searches for a method
+whose parameter types match the argument types exactly.</li>
+<li><strong>Implicit Conversions:</strong> If an exact match is missing,
+the compiler evaluates candidates that accept arguments via implicit
+type conversion (e.g., passing an <code>int</code> to a parameter typed
+as <code>double</code>).</li>
+<li><strong>Ambiguity Errors:</strong> If two or more methods are
+equally viable after implicit conversions—or when optional parameters
+overlap with existing signatures—the compiler throws a CS0121 error (the
+call is ambiguous). In these cases, explicit casting at the call site is
+required to specify the intended overload.</li>
+</ol></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/method-overloading-in-c-how-signatures-work';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

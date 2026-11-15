@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Working with ZipFile and GZipStream in C# - cs</title>
+    <meta name="description" content="Handling data compression in .NET is primarily managed through the System.IO.Compression namespace. This article provides a practical guide on how to work with compressed archives in C# using both ZipFile and GZipStream. You will learn when to choose each">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/working-with-zip-file-and-g-zip-stream-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Working with ZipFile and GZipStream in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/working-with-zip-file-and-g-zip-stream-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Handling data compression in .NET is primarily managed through the System.IO.Compression namespace. This article provides a practical guide on how to work with compressed archives in C# using both ZipFile and GZipStream. You will learn when to choose each" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="working-with-zipfile-and-gzipstream-in-c">Working with ZipFile
+and GZipStream in C</h1>
+<p>Handling data compression in .NET is primarily managed through the
+<code>System.IO.Compression</code> namespace. This article provides a
+practical guide on how to work with compressed archives in C# using both
+<code>ZipFile</code> and <code>GZipStream</code>. You will learn when to
+choose each approach, how to create and extract multi-file ZIP archives
+using <code>ZipFile</code>, and how to compress and decompress single
+files or memory streams using <code>GZipStream</code>.</p>
+<h2 id="understanding-zipfile-vs-gzipstream">Understanding ZipFile vs.
+GZipStream</h2>
+<p>While both classes compress data, they serve different purposes:</p>
+<ul>
+<li><strong><code>ZipFile</code> (and <code>ZipArchive</code>)</strong>:
+Designed to work with standard <code>.zip</code> files containing
+multiple files and nested directories. It manages file metadata, paths,
+and directory structures.</li>
+<li><strong><code>GZipStream</code></strong>: Designed to compress a
+single stream of raw bytes using the GZIP format (<code>.gz</code>). It
+does not store directory structures or multiple files natively unless
+paired with a container format like TAR.</li>
+</ul>
+<hr />
+<h2 id="working-with-zipfile">Working with ZipFile</h2>
+<p>The static <code>ZipFile</code> class provides straightforward
+methods for creating, extracting, and opening <code>.zip</code> archives
+on disk.</p>
+<h3 id="1-creating-a-zip-archive-from-a-directory">1. Creating a ZIP
+Archive from a Directory</h3>
+<p>You can compress an entire directory into a <code>.zip</code> file
+using <code>ZipFile.CreateFromDirectory</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">.</span><span class="fu">Compression</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> sourceDirectory <span class="op">=</span> @<span class="st">&quot;C:\data</span><span class="sc">\r</span><span class="st">eports&quot;</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> destinationZip <span class="op">=</span> @<span class="st">&quot;C:\data</span><span class="sc">\r</span><span class="st">eports.zip&quot;</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Compresses the folder and includes the base directory structure</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        ZipFile<span class="op">.</span><span class="fu">CreateFromDirectory</span><span class="op">(</span>sourceDirectory<span class="op">,</span> destinationZip<span class="op">,</span> CompressionLevel<span class="op">.</span><span class="fu">Optimal</span><span class="op">,</span> includeBaseDirectory<span class="op">:</span> <span class="kw">false</span><span class="op">);</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;ZIP archive created successfully.&quot;</span><span class="op">);</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-extracting-a-zip-archive-to-a-directory">2. Extracting a ZIP
+Archive to a Directory</h3>
+<p>To unpack a <code>.zip</code> archive to a target folder, use
+<code>ZipFile.ExtractToDirectory</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">.</span><span class="fu">Compression</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> zipPath <span class="op">=</span> @<span class="st">&quot;C:\data</span><span class="sc">\r</span><span class="st">eports.zip&quot;</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> extractPath <span class="op">=</span> @<span class="st">&quot;C:\data</span><span class="sc">\e</span><span class="st">xtracted_reports&quot;</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Extracts all entries; overwriteFiles can be set to true if needed</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        ZipFile<span class="op">.</span><span class="fu">ExtractToDirectory</span><span class="op">(</span>zipPath<span class="op">,</span> extractPath<span class="op">,</span> overwriteFiles<span class="op">:</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;ZIP archive extracted successfully.&quot;</span><span class="op">);</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-adding-or-reading-individual-entries-with-ziparchive">3.
+Adding or Reading Individual Entries with ZipArchive</h3>
+<p>If you need finer control over archive contents without extracting
+everything to disk, use <code>ZipArchive</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">.</span><span class="fu">Compression</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> zipPath <span class="op">=</span> @<span class="st">&quot;C:\data</span><span class="sc">\r</span><span class="st">eports.zip&quot;</span><span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Open an existing archive to add a new file</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>FileStream zipToOpen <span class="op">=</span> <span class="kw">new</span> <span class="fu">FileStream</span><span class="op">(</span>zipPath<span class="op">,</span> FileMode<span class="op">.</span><span class="fu">Open</span><span class="op">))</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>ZipArchive archive <span class="op">=</span> <span class="kw">new</span> <span class="fu">ZipArchive</span><span class="op">(</span>zipToOpen<span class="op">,</span> ZipArchiveMode<span class="op">.</span><span class="fu">Update</span><span class="op">))</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            ZipArchiveEntry entry <span class="op">=</span> archive<span class="op">.</span><span class="fu">CreateEntry</span><span class="op">(</span><span class="st">&quot;notes.txt&quot;</span><span class="op">);</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            <span class="kw">using</span> <span class="op">(</span>StreamWriter writer <span class="op">=</span> <span class="kw">new</span> <span class="fu">StreamWriter</span><span class="op">(</span>entry<span class="op">.</span><span class="fu">Open</span><span class="op">()))</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>                writer<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Archive created on: &quot;</span> <span class="op">+</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">);</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Reading entries from an archive</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>ZipArchive archive <span class="op">=</span> ZipFile<span class="op">.</span><span class="fu">OpenRead</span><span class="op">(</span>zipPath<span class="op">))</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>            <span class="kw">foreach</span> <span class="op">(</span>ZipArchiveEntry entry <span class="kw">in</span> archive<span class="op">.</span><span class="fu">Entries</span><span class="op">)</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>                Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;File: {entry.FullName}, Compressed Size: {entry.CompressedLength} bytes&quot;</span><span class="op">);</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<hr />
+<h2 id="working-with-gzipstream">Working with GZipStream</h2>
+<p><code>GZipStream</code> wraps an underlying stream to compress or
+decompress data on the fly. It is commonly used for network transfers,
+caching, or single-file compression.</p>
+<h3 id="1-compressing-a-file-with-gzipstream">1. Compressing a File with
+GZipStream</h3>
+<p>To compress a file into <code>.gz</code> format, read the source file
+into a stream and pipe it through a <code>GZipStream</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">.</span><span class="fu">Compression</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> sourceFile <span class="op">=</span> @<span class="st">&quot;C:\data\large_log.txt&quot;</span><span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> compressedFile <span class="op">=</span> @<span class="st">&quot;C:\data\large_log.txt.gz&quot;</span><span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>FileStream sourceStream <span class="op">=</span> File<span class="op">.</span><span class="fu">OpenRead</span><span class="op">(</span>sourceFile<span class="op">))</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>FileStream targetStream <span class="op">=</span> File<span class="op">.</span><span class="fu">Create</span><span class="op">(</span>compressedFile<span class="op">))</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>GZipStream compressionStream <span class="op">=</span> <span class="kw">new</span> <span class="fu">GZipStream</span><span class="op">(</span>targetStream<span class="op">,</span> CompressionLevel<span class="op">.</span><span class="fu">Optimal</span><span class="op">))</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>            sourceStream<span class="op">.</span><span class="fu">CopyTo</span><span class="op">(</span>compressionStream<span class="op">);</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;File compressed with GZip.&quot;</span><span class="op">);</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-decompressing-a-file-with-gzipstream">2. Decompressing a File
+with GZipStream</h3>
+<p>To decompress a <code>.gz</code> file back to its original state,
+wrap the compressed file stream in a <code>GZipStream</code> set to
+<code>CompressionMode.Decompress</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">.</span><span class="fu">Compression</span><span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> compressedFile <span class="op">=</span> @<span class="st">&quot;C:\data\large_log.txt.gz&quot;</span><span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> decompressedFile <span class="op">=</span> @<span class="st">&quot;C:\data</span><span class="sc">\r</span><span class="st">estored_log.txt&quot;</span><span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>FileStream sourceStream <span class="op">=</span> File<span class="op">.</span><span class="fu">OpenRead</span><span class="op">(</span>compressedFile<span class="op">))</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>FileStream targetStream <span class="op">=</span> File<span class="op">.</span><span class="fu">Create</span><span class="op">(</span>decompressedFile<span class="op">))</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>GZipStream decompressionStream <span class="op">=</span> <span class="kw">new</span> <span class="fu">GZipStream</span><span class="op">(</span>sourceStream<span class="op">,</span> CompressionMode<span class="op">.</span><span class="fu">Decompress</span><span class="op">))</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            decompressionStream<span class="op">.</span><span class="fu">CopyTo</span><span class="op">(</span>targetStream<span class="op">);</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;File decompressed successfully.&quot;</span><span class="op">);</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-compressing-in-memory-byte-arrays">3. Compressing In-Memory
+Byte Arrays</h3>
+<p>You can also use <code>GZipStream</code> with
+<code>MemoryStream</code> to compress payloads in memory before storing
+them in a database or sending them across a network:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">IO</span><span class="op">.</span><span class="fu">Compression</span><span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Text</span><span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">byte</span><span class="op">[]</span> <span class="fu">CompressBytes</span><span class="op">(</span><span class="dt">byte</span><span class="op">[]</span> rawData<span class="op">)</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>MemoryStream memoryStream <span class="op">=</span> <span class="kw">new</span> <span class="fu">MemoryStream</span><span class="op">())</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>            <span class="kw">using</span> <span class="op">(</span>GZipStream gzip <span class="op">=</span> <span class="kw">new</span> <span class="fu">GZipStream</span><span class="op">(</span>memoryStream<span class="op">,</span> CompressionLevel<span class="op">.</span><span class="fu">Fastest</span><span class="op">))</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>                gzip<span class="op">.</span><span class="fu">Write</span><span class="op">(</span>rawData<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> rawData<span class="op">.</span><span class="fu">Length</span><span class="op">);</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> memoryStream<span class="op">.</span><span class="fu">ToArray</span><span class="op">();</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">byte</span><span class="op">[]</span> <span class="fu">DecompressBytes</span><span class="op">(</span><span class="dt">byte</span><span class="op">[]</span> compressedData<span class="op">)</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>MemoryStream sourceStream <span class="op">=</span> <span class="kw">new</span> <span class="fu">MemoryStream</span><span class="op">(</span>compressedData<span class="op">))</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>MemoryStream outputStream <span class="op">=</span> <span class="kw">new</span> <span class="fu">MemoryStream</span><span class="op">())</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="op">(</span>GZipStream gzip <span class="op">=</span> <span class="kw">new</span> <span class="fu">GZipStream</span><span class="op">(</span>sourceStream<span class="op">,</span> CompressionMode<span class="op">.</span><span class="fu">Decompress</span><span class="op">))</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>            gzip<span class="op">.</span><span class="fu">CopyTo</span><span class="op">(</span>outputStream<span class="op">);</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> outputStream<span class="op">.</span><span class="fu">ToArray</span><span class="op">();</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> text <span class="op">=</span> <span class="st">&quot;Repeated text data designed for compression demonstration.&quot;</span><span class="op">;</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>        <span class="dt">byte</span><span class="op">[]</span> raw <span class="op">=</span> Encoding<span class="op">.</span><span class="fu">UTF8</span><span class="op">.</span><span class="fu">GetBytes</span><span class="op">(</span>text<span class="op">);</span></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>        <span class="dt">byte</span><span class="op">[]</span> compressed <span class="op">=</span> <span class="fu">CompressBytes</span><span class="op">(</span>raw<span class="op">);</span></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>        <span class="dt">byte</span><span class="op">[]</span> decompressed <span class="op">=</span> <span class="fu">DecompressBytes</span><span class="op">(</span>compressed<span class="op">);</span></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Original: {raw.Length} bytes&quot;</span><span class="op">);</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Compressed: {compressed.Length} bytes&quot;</span><span class="op">);</span></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Restored String: {Encoding.UTF8.GetString(decompressed)}&quot;</span><span class="op">);</span></span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="summary-of-best-practices">Summary of Best Practices</h2>
+<ul>
+<li><strong>Always Dispose Streams</strong>: Ensure that
+<code>GZipStream</code> and <code>ZipArchive</code> instances are
+wrapped in <code>using</code> statements. Compression buffers are often
+flushed only upon disposal.</li>
+<li><strong>Select the Right CompressionLevel</strong>:
+<ul>
+<li><code>CompressionLevel.Optimal</code>: Maximum compression, higher
+CPU usage.</li>
+<li><code>CompressionLevel.Fastest</code>: Faster compression, slightly
+larger output.</li>
+<li><code>CompressionLevel.NoCompression</code>: Useful only when
+wrapping files into a container format without size reduction.</li>
+</ul></li>
+<li><strong>Path Traversal Protection</strong>: When extracting entries
+via <code>ZipArchiveEntry</code>, validate that
+<code>entry.FullName</code> does not resolve outside the target
+directory to prevent zip-slip vulnerabilities.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/working-with-zip-file-and-g-zip-stream-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

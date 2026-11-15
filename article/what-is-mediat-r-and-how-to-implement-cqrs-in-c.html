@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Is MediatR and How to Implement CQRS in C# - cs</title>
+    <meta name="description" content="This article explores MediatR, a popular open-source .NET library that simplifies in-process messaging by implementing the Mediator design pattern. It explains the core concepts behind Command Query Responsibility Segregation (CQRS) and provides a clear,">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/what-is-mediat-r-and-how-to-implement-cqrs-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Is MediatR and How to Implement CQRS in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/what-is-mediat-r-and-how-to-implement-cqrs-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores MediatR, a popular open-source .NET library that simplifies in-process messaging by implementing the Mediator design pattern. It explains the core concepts behind Command Query Responsibility Segregation (CQRS) and provides a clear," />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-is-mediatr-and-how-to-implement-cqrs-in-c">What Is MediatR
+and How to Implement CQRS in C</h1>
+<p>This article explores MediatR, a popular open-source .NET library
+that simplifies in-process messaging by implementing the Mediator design
+pattern. It explains the core concepts behind Command Query
+Responsibility Segregation (CQRS) and provides a clear, step-by-step
+technical guide demonstrating how MediatR bridges requests and handlers
+to enforce clean architecture in C# applications.</p>
+<h2 id="what-is-mediatr">What Is MediatR?</h2>
+<p>MediatR is an in-process messaging library built for .NET by Jimmy
+Bogard. It provides a simple mechanism for decoupling the sending of a
+message from the code that processes it. Instead of components directly
+referencing and invoking one another, they send messages through an
+instance of <code>IMediator</code>. MediatR matches each message to its
+corresponding handler and executes it, effectively decoupling the caller
+from business logic implementation details.</p>
+<h2 id="understanding-cqrs">Understanding CQRS</h2>
+<p>Command Query Responsibility Segregation (CQRS) is an architectural
+pattern that separates data modification operations from data retrieval
+operations:</p>
+<ul>
+<li><strong>Commands:</strong> Operations that change the state of an
+application (e.g., creating, updating, or deleting data). Commands
+should not return domain data, although they may return status
+indicators or generated identifiers.</li>
+<li><strong>Queries:</strong> Operations that retrieve data without
+altering system state. Queries should be side-effect-free and return
+tailored Data Transfer Objects (DTOs).</li>
+</ul>
+<p>By segregating reads and writes, applications can optimize data
+models, scale components independently, and maintain clearer boundaries
+around business logic.</p>
+<h2 id="how-mediatr-enables-cqrs">How MediatR Enables CQRS</h2>
+<p>MediatR naturally fits CQRS because it models every operation as a
+discrete request-response pair:</p>
+<ol type="1">
+<li><strong>Messages (<code>IRequest&lt;TResponse&gt;</code>):</strong>
+Represent either a Command or a Query.</li>
+<li><strong>Handlers
+(<code>IRequestHandler&lt;TRequest, TResponse&gt;</code>):</strong>
+Contain the execution logic for a specific Command or Query.</li>
+<li><strong>Mediator (<code>IMediator</code>):</strong> Acts as the
+dispatcher, taking a request from a caller (such as an API controller)
+and directing it to the registered handler.</li>
+</ol>
+<p>This architecture ensures that API endpoints remain thin, delegating
+all domain interactions to single-purpose handlers.</p>
+<h2 id="implementing-cqrs-with-mediatr-in-c">Implementing CQRS with
+MediatR in C</h2>
+<h3 id="1-installation-and-setup">1. Installation and Setup</h3>
+<p>Install the MediatR package via the NuGet Package Manager:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> add package MediatR</span></code></pre></div>
+<p>In your application's startup configuration (e.g.,
+<code>Program.cs</code>), register MediatR with the dependency injection
+container:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddMediatR</span><span class="op">(</span>cfg <span class="op">=&gt;</span> </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    cfg<span class="op">.</span><span class="fu">RegisterServicesFromAssembly</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span>Program<span class="op">).</span><span class="fu">Assembly</span><span class="op">));</span></span></code></pre></div>
+<h3 id="2-creating-a-command">2. Creating a Command</h3>
+<p>A command represents an action that alters state. Define the command
+data structure and its associated handler:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> MediatR<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// The Command</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">CreateUserCommand</span><span class="op">(</span><span class="dt">string</span> Name<span class="op">,</span> <span class="dt">string</span> Email<span class="op">)</span> <span class="op">:</span> IRequest<span class="op">&lt;</span>Guid<span class="op">&gt;;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// The Handler</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> CreateUserCommandHandler <span class="op">:</span> IRequestHandler<span class="op">&lt;</span>CreateUserCommand<span class="op">,</span> Guid<span class="op">&gt;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task<span class="op">&lt;</span>Guid<span class="op">&gt;</span> <span class="fu">Handle</span><span class="op">(</span>CreateUserCommand request<span class="op">,</span> CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> userId <span class="op">=</span> Guid<span class="op">.</span><span class="fu">NewGuid</span><span class="op">();</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Persist the user to the database here</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> await Task<span class="op">.</span><span class="fu">FromResult</span><span class="op">(</span>userId<span class="op">);</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-creating-a-query">3. Creating a Query</h3>
+<p>A query represents an operation that only retrieves data:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> MediatR<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">// The DTO</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">UserDto</span><span class="op">(</span>Guid Id<span class="op">,</span> <span class="dt">string</span> Name<span class="op">,</span> <span class="dt">string</span> Email<span class="op">);</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// The Query</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> record <span class="fu">GetUserByIdQuery</span><span class="op">(</span>Guid Id<span class="op">)</span> <span class="op">:</span> IRequest<span class="op">&lt;</span>UserDto<span class="op">?&gt;;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">// The Handler</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> GetUserByIdQueryHandler <span class="op">:</span> IRequestHandler<span class="op">&lt;</span>GetUserByIdQuery<span class="op">,</span> UserDto<span class="op">?&gt;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task<span class="op">&lt;</span>UserDto<span class="op">?&gt;</span> <span class="fu">Handle</span><span class="op">(</span>GetUserByIdQuery request<span class="op">,</span> CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Fetch the user from the database here</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> user <span class="op">=</span> <span class="kw">new</span> <span class="fu">UserDto</span><span class="op">(</span>request<span class="op">.</span><span class="fu">Id</span><span class="op">,</span> <span class="st">&quot;Jane Doe&quot;</span><span class="op">,</span> <span class="st">&quot;jane@example.com&quot;</span><span class="op">);</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> await Task<span class="op">.</span><span class="fu">FromResult</span><span class="op">(</span>user<span class="op">);</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="4-dispatching-requests-from-an-api-controller">4. Dispatching
+Requests from an API Controller</h3>
+<p>Use <code>IMediator</code> to dispatch commands and queries directly
+from an API endpoint:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> MediatR<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Microsoft<span class="op">.</span><span class="fu">AspNetCore</span><span class="op">.</span><span class="fu">Mvc</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>ApiController<span class="op">]</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">Route</span><span class="op">(</span><span class="st">&quot;api/[controller]&quot;</span><span class="op">)]</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> UsersController <span class="op">:</span> ControllerBase</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IMediator _mediator<span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">UsersController</span><span class="op">(</span>IMediator mediator<span class="op">)</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        _mediator <span class="op">=</span> mediator<span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>HttpPost<span class="op">]</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task<span class="op">&lt;</span>IActionResult<span class="op">&gt;</span> <span class="fu">CreateUser</span><span class="op">([</span>FromBody<span class="op">]</span> CreateUserCommand command<span class="op">)</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> userId <span class="op">=</span> await _mediator<span class="op">.</span><span class="fu">Send</span><span class="op">(</span>command<span class="op">);</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="fu">CreatedAtAction</span><span class="op">(</span><span class="fu">nameof</span><span class="op">(</span>GetUserById<span class="op">),</span> <span class="kw">new</span> <span class="op">{</span> id <span class="op">=</span> userId <span class="op">},</span> userId<span class="op">);</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">HttpGet</span><span class="op">(</span><span class="st">&quot;{id:guid}&quot;</span><span class="op">)]</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task<span class="op">&lt;</span>IActionResult<span class="op">&gt;</span> <span class="fu">GetUserById</span><span class="op">(</span>Guid id<span class="op">)</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> user <span class="op">=</span> await _mediator<span class="op">.</span><span class="fu">Send</span><span class="op">(</span><span class="kw">new</span> <span class="fu">GetUserByIdQuery</span><span class="op">(</span>id<span class="op">));</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> user <span class="kw">is</span> not <span class="kw">null</span> <span class="op">?</span> <span class="fu">Ok</span><span class="op">(</span>user<span class="op">)</span> <span class="op">:</span> <span class="fu">NotFound</span><span class="op">();</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="adding-cross-cutting-concerns-with-pipeline-behaviors">Adding
+Cross-Cutting Concerns with Pipeline Behaviors</h2>
+<p>MediatR includes an interceptor concept called
+<code>IPipelineBehavior</code>. This feature works like middleware,
+allowing developers to handle cross-cutting concerns—such as logging,
+validation, and performance tracking—before and after request handlers
+execute.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> MediatR<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> LoggingBehavior<span class="op">&lt;</span>TRequest<span class="op">,</span> TResponse<span class="op">&gt;</span> <span class="op">:</span> IPipelineBehavior<span class="op">&lt;</span>TRequest<span class="op">,</span> TResponse<span class="op">&gt;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    where TRequest <span class="op">:</span> notnull</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> ILogger<span class="op">&lt;</span>LoggingBehavior<span class="op">&lt;</span>TRequest<span class="op">,</span> TResponse<span class="op">&gt;&gt;</span> _logger<span class="op">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">LoggingBehavior</span><span class="op">(</span>ILogger<span class="op">&lt;</span>LoggingBehavior<span class="op">&lt;</span>TRequest<span class="op">,</span> TResponse<span class="op">&gt;&gt;</span> logger<span class="op">)</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        _logger <span class="op">=</span> logger<span class="op">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> async Task<span class="op">&lt;</span>TResponse<span class="op">&gt;</span> <span class="fu">Handle</span><span class="op">(</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        TRequest request<span class="op">,</span> </span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        RequestHandlerDelegate<span class="op">&lt;</span>TResponse<span class="op">&gt;</span> next<span class="op">,</span> </span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        _logger<span class="op">.</span><span class="fu">LogInformation</span><span class="op">(</span><span class="st">&quot;Handling {RequestName}&quot;</span><span class="op">,</span> <span class="kw">typeof</span><span class="op">(</span>TRequest<span class="op">).</span><span class="fu">Name</span><span class="op">);</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> response <span class="op">=</span> await <span class="fu">next</span><span class="op">();</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>        _logger<span class="op">.</span><span class="fu">LogInformation</span><span class="op">(</span><span class="st">&quot;Handled {RequestName}&quot;</span><span class="op">,</span> <span class="kw">typeof</span><span class="op">(</span>TRequest<span class="op">).</span><span class="fu">Name</span><span class="op">);</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> response<span class="op">;</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Register the behavior in <code>Program.cs</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddTransient</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span>IPipelineBehavior<span class="op">&lt;,&gt;),</span> <span class="kw">typeof</span><span class="op">(</span>LoggingBehavior<span class="op">&lt;,&gt;));</span></span></code></pre></div>
+<h2 id="summary">Summary</h2>
+<p>MediatR provides a structured, maintainable way to implement CQRS in
+C#. By isolating commands, queries, and their processing logic into
+self-contained units, applications gain improved testability, clear
+boundaries of responsibility, and a decoupled architecture that is easy
+to extend over time.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/what-is-mediat-r-and-how-to-implement-cqrs-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Expression Trees: How to Inspect Code Dynamically - cs</title>
+    <meta name="description" content="Expression trees are powerful data structures in C# that represent code as an abstract syntax tree rather than executable instructions. This article explains what expression trees are, how they differ from standard delegates, and how you can traverse and">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-expression-trees-how-to-inspect-code-dynamically">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Expression Trees: How to Inspect Code Dynamically - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-expression-trees-how-to-inspect-code-dynamically" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Expression trees are powerful data structures in C# that represent code as an abstract syntax tree rather than executable instructions. This article explains what expression trees are, how they differ from standard delegates, and how you can traverse and" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-expression-trees-how-to-inspect-code-dynamically">C#
+Expression Trees: How to Inspect Code Dynamically</h1>
+<p>Expression trees are powerful data structures in C# that represent
+code as an abstract syntax tree rather than executable instructions.
+This article explains what expression trees are, how they differ from
+standard delegates, and how you can traverse and inspect them at runtime
+to analyze code dynamically. You will learn the core components of the
+<code>System.Linq.Expressions</code> namespace, see practical code
+examples for breaking down expressions, and understand how to implement
+custom expression visitors for dynamic analysis.</p>
+<h2 id="what-are-expression-trees">What Are Expression Trees?</h2>
+<p>In C#, an expression tree represents strongly typed code as a
+tree-like hierarchy of nodes. Each node in the tree is an expression—for
+example, a method call, a binary operation like addition, or a constant
+value.</p>
+<p>When you write a standard lambda expression assigned to a delegate,
+the C# compiler emits Intermediate Language (IL) that executes
+directly:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;</span> isPositive <span class="op">=</span> x <span class="op">=&gt;</span> x <span class="op">&gt;</span> <span class="dv">0</span><span class="op">;</span></span></code></pre></div>
+<p>When you assign the exact same lambda to an
+<code>Expression&lt;TDelegate&gt;</code> type, the compiler does not
+generate executable IL. Instead, it generates metadata that builds an
+expression tree representing the structure of that lambda:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Linq</span><span class="op">.</span><span class="fu">Expressions</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Expression<span class="op">&lt;</span>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;&gt;</span> isPositiveExpr <span class="op">=</span> x <span class="op">=&gt;</span> x <span class="op">&gt;</span> <span class="dv">0</span><span class="op">;</span></span></code></pre></div>
+<p>Because this code exists as data rather than compiled bytecode, your
+application can inspect, modify, or translate it at runtime. This
+mechanism is the foundational technology behind Object-Relational
+Mappers (ORMs) like Entity Framework Core, which parses C# expression
+trees into SQL queries.</p>
+<h2 id="anatomy-of-an-expression-tree">Anatomy of an Expression
+Tree</h2>
+<p>All nodes within an expression tree derive from the abstract base
+class <code>System.Linq.Expressions.Expression</code>. The most common
+derived node types include:</p>
+<ul>
+<li><strong><code>LambdaExpression</code></strong>: Represents the
+entire lambda function, containing parameters and a body.</li>
+<li><strong><code>ParameterExpression</code></strong>: Represents a
+variable or parameter within the expression (e.g., <code>x</code>).</li>
+<li><strong><code>BinaryExpression</code></strong>: Represents an
+operation with two operands, such as <code>+</code>, <code>-</code>,
+<code>*</code>, <code>==</code>, or <code>&gt;</code>.</li>
+<li><strong><code>ConstantExpression</code></strong>: Represents a
+hardcoded value (e.g., <code>0</code>, <code>"hello"</code>).</li>
+<li><strong><code>MethodCallExpression</code></strong>: Represents a
+call to a static or instance method.</li>
+<li><strong><code>MemberExpression</code></strong>: Represents accessing
+a field or property.</li>
+</ul>
+<p>Every <code>Expression</code> object exposes two fundamental
+properties for inspection:</p>
+<ul>
+<li><code>NodeType</code>: An enum (<code>ExpressionType</code>)
+defining the kind of operation (e.g., <code>GreaterThan</code>,
+<code>Add</code>, <code>Call</code>).</li>
+<li><code>Type</code>: The .NET <code>Type</code> of the value returned
+by evaluating the node.</li>
+</ul>
+<h2 id="inspecting-an-expression-tree-manually">Inspecting an Expression
+Tree Manually</h2>
+<p>You can inspect the components of an expression tree by decomposing
+its nodes into their specific derived types.</p>
+<p>Consider analyzing the condition <code>x =&gt; x &gt; 0</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Linq</span><span class="op">.</span><span class="fu">Expressions</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>Expression<span class="op">&lt;</span>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;&gt;</span> expr <span class="op">=</span> x <span class="op">=&gt;</span> x <span class="op">&gt;</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Inspect the root Lambda</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Lambda Return Type: {expr.ReturnType}&quot;</span><span class="op">);</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Parameter Count: {expr.Parameters.Count}&quot;</span><span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Parameter Name: {expr.Parameters[0].Name}&quot;</span><span class="op">);</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Inspect the Body (BinaryExpression: x &gt; 0)</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>expr<span class="op">.</span><span class="fu">Body</span> <span class="kw">is</span> BinaryExpression binaryBody<span class="op">)</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Operation: {binaryBody.NodeType}&quot;</span><span class="op">);</span> <span class="co">// GreaterThan</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Inspect the left side (Parameter: x)</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>binaryBody<span class="op">.</span><span class="fu">Left</span> <span class="kw">is</span> ParameterExpression leftParam<span class="op">)</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Left Operand: {leftParam.Name} (Type: {leftParam.Type.Name})&quot;</span><span class="op">);</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Inspect the right side (Constant: 0)</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>binaryBody<span class="op">.</span><span class="fu">Right</span> <span class="kw">is</span> ConstantExpression rightConst<span class="op">)</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Right Operand: {rightConst.Value} (Type: {rightConst.Type.Name})&quot;</span><span class="op">);</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Running this code breaks down the lambda without executing it,
+extracting the variable name, operator, and constant operand
+dynamically.</p>
+<h2 id="inspecting-trees-with-expressionvisitor">Inspecting Trees with
+ExpressionVisitor</h2>
+<p>Manually casting nodes becomes impractical for complex or nested
+expressions. The standard and most robust way to inspect or rewrite
+expression trees in C# is by subclassing
+<code>ExpressionVisitor</code>.</p>
+<p>The <code>ExpressionVisitor</code> class uses the visitor pattern. It
+recursively traverses every branch of the tree and provides specialized
+virtual methods for each node type (e.g., <code>VisitBinary</code>,
+<code>VisitMember</code>, <code>VisitConstant</code>).</p>
+<h3 id="example-building-a-dynamic-property-inspector">Example: Building
+a Dynamic Property Inspector</h3>
+<p>Below is a custom visitor that inspects an expression and logs every
+property access and constant value used in a query:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Linq</span><span class="op">.</span><span class="fu">Expressions</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> CodeInspectorVisitor <span class="op">:</span> ExpressionVisitor</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">override</span> Expression <span class="fu">VisitMember</span><span class="op">(</span>MemberExpression node<span class="op">)</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Inspected Property/Field: {node.Member.Name} on type {node.Member.DeclaringType?.Name}&quot;</span><span class="op">);</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">base</span><span class="op">.</span><span class="fu">VisitMember</span><span class="op">(</span>node<span class="op">);</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">override</span> Expression <span class="fu">VisitConstant</span><span class="op">(</span>ConstantExpression node<span class="op">)</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Inspected Constant: {node.Value}&quot;</span><span class="op">);</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">base</span><span class="op">.</span><span class="fu">VisitConstant</span><span class="op">(</span>node<span class="op">);</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">override</span> Expression <span class="fu">VisitBinary</span><span class="op">(</span>BinaryExpression node<span class="op">)</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Inspected Binary Operator: {node.NodeType}&quot;</span><span class="op">);</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">base</span><span class="op">.</span><span class="fu">VisitBinary</span><span class="op">(</span>node<span class="op">);</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>You can pass an expression to this visitor to inspect its entire
+structure automatically:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Person</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> <span class="dt">string</span><span class="op">.</span><span class="fu">Empty</span><span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Age <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Program</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static</span> <span class="dt">void</span> <span class="fu">Main</span><span class="op">()</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        Expression<span class="op">&lt;</span>Func<span class="op">&lt;</span>Person<span class="op">,</span> <span class="dt">bool</span><span class="op">&gt;&gt;</span> filter <span class="op">=</span> p <span class="op">=&gt;</span> p<span class="op">.</span><span class="fu">Age</span> <span class="op">&gt;=</span> <span class="dv">18</span> <span class="op">&amp;&amp;</span> p<span class="op">.</span><span class="fu">Name</span> <span class="op">==</span> <span class="st">&quot;Alice&quot;</span><span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> inspector <span class="op">=</span> <span class="kw">new</span> <span class="fu">CodeInspectorVisitor</span><span class="op">();</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        inspector<span class="op">.</span><span class="fu">Visit</span><span class="op">(</span>filter<span class="op">);</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The visitor recursively traverses down the tree from the root logical
+AND node, inspecting the operands, member accesses (<code>Age</code>,
+<code>Name</code>), comparison operators, and constant values
+(<code>18</code>, <code>"Alice"</code>).</p>
+<h2 id="dynamic-compilation-and-execution">Dynamic Compilation and
+Execution</h2>
+<p>After inspecting an expression tree, you may choose to execute it
+dynamically. The <code>Compile()</code> method compiles the data
+structure into an executable delegate at runtime via dynamic IL
+generation:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Expression<span class="op">&lt;</span>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;&gt;</span> addExpr <span class="op">=</span> <span class="op">(</span>a<span class="op">,</span> b<span class="op">)</span> <span class="op">=&gt;</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Inspect the operation</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Operation: {addExpr.Body.NodeType}&quot;</span><span class="op">);</span> <span class="co">// Add</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Compile the tree into executable code</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;</span> compiledAdd <span class="op">=</span> addExpr<span class="op">.</span><span class="fu">Compile</span><span class="op">();</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Execute</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> result <span class="op">=</span> <span class="fu">compiledAdd</span><span class="op">(</span><span class="dv">10</span><span class="op">,</span> <span class="dv">20</span><span class="op">);</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Result: {result}&quot;</span><span class="op">);</span> <span class="co">// 30</span></span></code></pre></div>
+<p>Expression trees provide a structured bridge between compile-time
+code definitions and runtime dynamic inspection, allowing C# developers
+to build rich querying engines, dynamic validators, and serialization
+frameworks.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-expression-trees-how-to-inspect-code-dynamically';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

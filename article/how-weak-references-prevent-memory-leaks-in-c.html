@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Weak References Prevent Memory Leaks in C# - cs</title>
+    <meta name="description" content="In C#, in-memory caching often leads to memory leaks when objects remain referenced by cache collections long after the rest of the application has stopped using them. This article explains how strong references cause unbounded memory growth, how the Weak">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/how-weak-references-prevent-memory-leaks-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Weak References Prevent Memory Leaks in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/how-weak-references-prevent-memory-leaks-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, in-memory caching often leads to memory leaks when objects remain referenced by cache collections long after the rest of the application has stopped using them. This article explains how strong references cause unbounded memory growth, how the Weak" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-weak-references-prevent-memory-leaks-in-c">How Weak
+References Prevent Memory Leaks in C</h1>
+<p>In C#, in-memory caching often leads to memory leaks when objects
+remain referenced by cache collections long after the rest of the
+application has stopped using them. This article explains how strong
+references cause unbounded memory growth, how the
+<code>WeakReference&lt;T&gt;</code> class allows the .NET Garbage
+Collector (GC) to reclaim memory automatically, and how to properly
+implement weak references to build memory-safe caches.</p>
+<h2 id="the-problem-strong-references-and-stale-cache-entries">The
+Problem: Strong References and Stale Cache Entries</h2>
+<p>By default, assigning an object to a variable, list, or dictionary in
+C# creates a strong reference. The .NET Garbage Collector determines an
+object's lifetime by tracing object graphs from application roots (such
+as static fields, local variables, and CPU registers). As long as a
+strong reference exists within an active cache:</p>
+<ul>
+<li>The GC considers the object actively in use.</li>
+<li>The memory occupied by the cached object cannot be freed.</li>
+<li>Memory consumption grows continuously unless an explicit eviction
+policy (like TTL or LRU) manually removes the entry.</li>
+</ul>
+<p>In high-throughput or long-running applications, failing to actively
+evict unneeded cache items results in memory leaks, degraded GC
+performance, and eventual <code>OutOfMemoryException</code> crashes.</p>
+<h2 id="how-weak-references-solve-the-problem">How Weak References Solve
+the Problem</h2>
+<p>A weak reference references an object while still allowing the
+Garbage Collector to collect it. In .NET, this is implemented using the
+<code>WeakReference&lt;T&gt;</code> class.</p>
+<p>When an object is only referenced through a
+<code>WeakReference&lt;T&gt;</code>:</p>
+<ol type="1">
+<li>It is not considered a root or a reachable object during a garbage
+collection cycle.</li>
+<li>If memory pressure arises or the GC initiates a collection for the
+generation the object resides in, the GC frees the object's memory.</li>
+<li>The internal pointer of the <code>WeakReference&lt;T&gt;</code> is
+automatically updated to track that the target has been collected.</li>
+</ol>
+<p>By storing weak references in a cache, the cache acts as an
+opportunist: it retains objects for fast retrieval as long as memory
+permits, but safely surrenders them to the GC without causing memory
+leaks.</p>
+<h2 id="retrieving-cached-objects-safely">Retrieving Cached Objects
+Safely</h2>
+<p>Because the GC can collect weakly referenced targets at any time, you
+cannot access the value directly as you would with a standard reference.
+Instead, you must attempt to re-establish a temporary strong reference
+using the <code>TryGetTarget</code> method.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> WeakCache<span class="op">&lt;</span>TKey<span class="op">,</span> TValue<span class="op">&gt;</span> where TValue <span class="op">:</span> <span class="kw">class</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> Dictionary<span class="op">&lt;</span>TKey<span class="op">,</span> WeakReference<span class="op">&lt;</span>TValue<span class="op">&gt;&gt;</span> _cache <span class="op">=</span> <span class="kw">new</span><span class="op">();</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Set</span><span class="op">(</span>TKey key<span class="op">,</span> TValue value<span class="op">)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        _cache<span class="op">[</span>key<span class="op">]</span> <span class="op">=</span> <span class="kw">new</span> WeakReference<span class="op">&lt;</span>TValue<span class="op">&gt;(</span>value<span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">bool</span> <span class="fu">TryGetValue</span><span class="op">(</span>TKey key<span class="op">,</span> <span class="kw">out</span> TValue<span class="op">?</span> value<span class="op">)</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>_cache<span class="op">.</span><span class="fu">TryGetValue</span><span class="op">(</span>key<span class="op">,</span> <span class="kw">out</span> <span class="dt">var</span> weakRef<span class="op">))</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>            <span class="co">// TryGetTarget creates a strong reference if the object is still alive</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(</span>weakRef<span class="op">.</span><span class="fu">TryGetTarget</span><span class="op">(</span><span class="kw">out</span> value<span class="op">))</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>                <span class="kw">return</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>            <span class="co">// The object was collected; remove the stale key</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            _cache<span class="op">.</span><span class="fu">Remove</span><span class="op">(</span>key<span class="op">);</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        value <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>When <code>TryGetTarget</code> succeeds, it assigns the object to a
+local variable (<code>value</code>), creating a strong reference that
+protects the object from GC collection for the duration of that
+variable's scope. Once the consumer finishes execution and the local
+reference leaves scope, the object becomes eligible for collection once
+again.</p>
+<h2 id="managing-cache-key-overhead">Managing Cache Key Overhead</h2>
+<p>While <code>WeakReference&lt;T&gt;</code> prevents the cached
+<em>values</em> from causing memory leaks, it does not automatically
+remove the <em>keys</em> or the wrapper instances from the underlying
+dictionary.</p>
+<p>If millions of unique keys are placed into a cache, the empty
+<code>WeakReference&lt;T&gt;</code> wrappers and key objects themselves
+will remain in memory. To address this:</p>
+<ul>
+<li><strong>Prune on Access:</strong> Remove dead entries when
+<code>TryGetTarget</code> returns <code>false</code> during
+lookups.</li>
+<li><strong>Periodic Cleanup:</strong> Run a background cleanup loop to
+scan the cache and remove keys whose targets have returned
+<code>false</code>.</li>
+<li><strong>Use
+<code>ConditionalWeakTable&lt;TKey, TValue&gt;</code>:</strong> For
+scenarios where keys are also reference types,
+<code>System.Runtime.CompilerServices.ConditionalWeakTable&lt;TKey, TValue&gt;</code>
+automatically removes both the key and the value once the key becomes
+unreachable, completely eliminating manual dictionary cleanup.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/how-weak-references-prevent-memory-leaks-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

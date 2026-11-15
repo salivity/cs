@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# 11 Raw String Literals for Multi-Line and JSON - cs</title>
+    <meta name="description" content="C# 11 introduced raw string literals, a feature designed to drastically simplify how developers write multi-line strings and embed text formats like JSON, XML, or SQL. By removing the need to escape special characters like quotation marks and backslashes,">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-11-raw-string-literals-for-multi-line-and-json">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# 11 Raw String Literals for Multi-Line and JSON - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-11-raw-string-literals-for-multi-line-and-json" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="C# 11 introduced raw string literals, a feature designed to drastically simplify how developers write multi-line strings and embed text formats like JSON, XML, or SQL. By removing the need to escape special characters like quotation marks and backslashes," />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-11-raw-string-literals-for-multi-line-and-json">C# 11 Raw
+String Literals for Multi-Line and JSON</h1>
+<p>C# 11 introduced raw string literals, a feature designed to
+drastically simplify how developers write multi-line strings and embed
+text formats like JSON, XML, or SQL. By removing the need to escape
+special characters like quotation marks and backslashes, raw string
+literals make code cleaner, more readable, and less error-prone. This
+article explores how raw string literals work, how they manage
+indentation, and how features like multi-dollar-sign interpolation
+streamline JSON handling in modern C# applications.</p>
+<h3 id="the-pain-point-of-traditional-strings">The Pain Point of
+Traditional Strings</h3>
+<p>Before C# 11, embedding JSON or multi-line strings required either
+traditional escape sequences or verbatim string literals
+(<code>@""</code>). Both approaches introduced friction:</p>
+<ul>
+<li><strong>Escape sequences</strong>: Embedding JSON required escaping
+every double quote (<code>"{\"name\": \"John\"}"</code>), destroying
+readability.</li>
+<li><strong>Verbatim strings</strong>: While verbatim strings support
+multi-lines, nested quotes required double escaping
+(<code>@"{ ""name"": ""John"" }"</code>), and leading whitespace was
+rigidly tied to the string's actual code indentation.</li>
+</ul>
+<h3 id="how-raw-string-literals-work">How Raw String Literals Work</h3>
+<p>Raw string literals begin and end with a sequence of at least three
+double-quote characters (<code>"""</code>). Any character inside this
+boundary is interpreted literally, meaning backslashes (<code>\</code>)
+and quotation marks (<code>"</code>) do not require escaping.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> simple <span class="op">=</span> <span class="st">&quot;&quot;&quot;This is a &quot;</span>raw<span class="st">&quot; string literal without escapes.&quot;&quot;&quot;</span><span class="op">;</span></span></code></pre></div>
+<p>For multi-line strings, the opening delimiter must be the last token
+on its line, and the closing delimiter must be the first token on its
+line:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> multiLine <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    Line <span class="dv">1</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    Line <span class="dv">2</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    Line <span class="dv">3</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;&quot;&quot;;</span></span></code></pre></div>
+<h3 id="automatic-indentation-stripping">Automatic Indentation
+Stripping</h3>
+<p>A major advantage of raw string literals is indentation management.
+The horizontal position of the closing delimiter (<code>"""</code>)
+defines the baseline margin for the entire string. Any whitespace to the
+left of the closing delimiter's column position is automatically trimmed
+from every line in the output. This allows you to indent strings
+naturally alongside your C# code without adding unwanted spaces to the
+resulting data.</p>
+<h3 id="simplifying-json-handling">Simplifying JSON Handling</h3>
+<p>Raw string literals eliminate the messy syntax traditionally
+associated with defining mock data, payloads, or schemas in code. You
+can paste standard JSON directly into a C# file without
+modification:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> jsonPayload <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;id&quot;</span><span class="op">:</span> <span class="dv">101</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;title&quot;</span><span class="op">:</span> <span class="st">&quot;Raw String Literals&quot;</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;status&quot;</span><span class="op">:</span> <span class="st">&quot;Published&quot;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;&quot;&quot;;</span></span></code></pre></div>
+<h3
+id="handling-interpolation-in-json-with-multiple--characters">Handling
+Interpolation in JSON with Multiple <code>$</code> Characters</h3>
+<p>A common problem when generating JSON dynamically is that JSON syntax
+relies heavily on curly braces (<code>{</code> and <code>}</code>),
+which conflict with C#'s standard string interpolation
+(<code>$""</code>).</p>
+<p>C# 11 solves this by allowing multiple dollar signs (<code>$$</code>,
+<code>$$$</code>, etc.) before the raw string literal. The number of
+dollar signs dictates how many consecutive braces are required to
+trigger interpolation:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> userId <span class="op">=</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> role <span class="op">=</span> <span class="st">&quot;Admin&quot;</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Two &#39;$&#39; symbols mean &#39;{{&#39; and &#39;}}&#39; are used for interpolation.</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Single &#39;{&#39; and &#39;}&#39; are treated as literal JSON braces.</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> dynamicJson <span class="op">=</span> $$<span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;userId&quot;</span><span class="op">:</span> <span class="op">{{</span>userId<span class="op">}},</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;role&quot;</span><span class="op">:</span> <span class="st">&quot;{{role}}&quot;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;&quot;&quot;;</span></span></code></pre></div>
+<p>By requiring matching brace counts for expressions, raw string
+literals eliminate the need to escape single braces (<code>{{</code> and
+<code>}}</code>) throughout entire JSON bodies.</p>
+<h3 id="key-takeaways">Key Takeaways</h3>
+<ul>
+<li><strong>No Escaping Needed</strong>: Quotation marks and backslashes
+are read as raw text.</li>
+<li><strong>Clean Formatting</strong>: Closing delimiter alignment
+controls multi-line indentation.</li>
+<li><strong>Seamless JSON Interpolation</strong>: Using multiple
+<code>$</code> symbols decouples C# expressions from JSON curly
+brackets, making inline payload generation clean and intuitive.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-11-raw-string-literals-for-multi-line-and-json';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

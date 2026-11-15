@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronous vs Asynchronous Delegates in Legacy C# - cs</title>
+    <meta name="description" content="In legacy C# (.NET Framework versions prior to modern .NET Core), developers handled method execution through delegates either synchronously using direct invocation or asynchronously using the Asynchronous Programming Model (APM). The fundamental differen">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/synchronous-vs-asynchronous-delegates-in-legacy-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Synchronous vs Asynchronous Delegates in Legacy C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/synchronous-vs-asynchronous-delegates-in-legacy-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In legacy C# (.NET Framework versions prior to modern .NET Core), developers handled method execution through delegates either synchronously using direct invocation or asynchronously using the Asynchronous Programming Model (APM). The fundamental differen" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="synchronous-vs-asynchronous-delegates-in-legacy-c">Synchronous
+vs Asynchronous Delegates in Legacy C</h1>
+<p>In legacy C# (.NET Framework versions prior to modern .NET Core),
+developers handled method execution through delegates either
+synchronously using direct invocation or asynchronously using the
+Asynchronous Programming Model (APM). The fundamental difference between
+the two approaches lies in thread management, responsiveness, and
+execution flow: synchronous invocation runs directly on the calling
+thread and blocks execution until the operation completes, whereas the
+legacy asynchronous pattern (<code>BeginInvoke</code> and
+<code>EndInvoke</code>) dispatches work to a ThreadPool thread to allow
+non-blocking, parallel operations.</p>
+<h3 id="synchronous-delegate-invocation">Synchronous Delegate
+Invocation</h3>
+<p>Synchronous delegate execution occurs when a delegate is invoked
+directly, either using standard method call syntax or explicitly via the
+<code>.Invoke()</code> method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;</span> add <span class="op">=</span> <span class="op">(</span>a<span class="op">,</span> b<span class="op">)</span> <span class="op">=&gt;</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> result <span class="op">=</span> <span class="fu">add</span><span class="op">(</span><span class="dv">5</span><span class="op">,</span> <span class="dv">10</span><span class="op">);</span> <span class="co">// Or add.Invoke(5, 10);</span></span></code></pre></div>
+<p>When invoked synchronously:</p>
+<ul>
+<li><strong>Thread Execution:</strong> The delegate executes on the
+exact thread that called it.</li>
+<li><strong>Blocking Behavior:</strong> The calling thread suspends
+execution until the delegate finishes its work. If the operation is
+I/O-heavy or computationally demanding, it halts UI responsiveness or
+stalls server request processing.</li>
+<li><strong>Exception Propagation:</strong> Any exceptions thrown within
+the target method propagate directly up the calling thread's call stack,
+making them catchable with a standard <code>try-catch</code> block
+enclosing the invocation.</li>
+</ul>
+<h3 id="legacy-asynchronous-pattern-begininvoke-and-endinvoke">Legacy
+Asynchronous Pattern (<code>BeginInvoke</code> and
+<code>EndInvoke</code>)</h3>
+<p>Before the introduction of the Task-based Asynchronous Pattern (TAP)
+and the <code>async</code>/<code>await</code> keywords in C# 5.0,
+delegates automatically provided built-in asynchronous methods generated
+by the compiler: <code>BeginInvoke</code> and
+<code>EndInvoke</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;</span> add <span class="op">=</span> <span class="op">(</span>a<span class="op">,</span> b<span class="op">)</span> <span class="op">=&gt;</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Initiates execution on a ThreadPool thread</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>IAsyncResult asyncResult <span class="op">=</span> add<span class="op">.</span><span class="fu">BeginInvoke</span><span class="op">(</span><span class="dv">5</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Do other work on the calling thread...</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Retrieves the return value and blocks if work is not yet finished</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> result <span class="op">=</span> add<span class="op">.</span><span class="fu">EndInvoke</span><span class="op">(</span>asyncResult<span class="op">);</span></span></code></pre></div>
+<p>When invoked asynchronously:</p>
+<ul>
+<li><strong>Thread Execution:</strong> <code>BeginInvoke</code>
+dispatches the method call to a worker thread managed by the CLR
+<code>ThreadPool</code>.</li>
+<li><strong>Non-Blocking Initiation:</strong> <code>BeginInvoke</code>
+returns immediately, providing an <code>IAsyncResult</code> token that
+tracks execution status. This leaves the calling thread free to continue
+processing other tasks.</li>
+<li><strong>Completion and Retrieval:</strong> The caller must call
+<code>EndInvoke</code> to retrieve return values, capture out/ref
+parameters, and clean up internal resources. If the worker thread has
+not finished when <code>EndInvoke</code> is called, the calling thread
+blocks at that point until completion.</li>
+<li><strong>Callback Support:</strong> <code>BeginInvoke</code> allowed
+passing an <code>AsyncCallback</code> delegate, which executed
+automatically on the worker thread once the task was complete,
+eliminating the need to poll or manually wait for the result.</li>
+<li><strong>Exception Handling:</strong> Exceptions thrown inside the
+delegate are not surfaced at the time of <code>BeginInvoke</code>.
+Instead, they are captured and re-thrown when the caller calls
+<code>EndInvoke</code>.</li>
+</ul>
+<h3 id="key-technical-differences">Key Technical Differences</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Synchronous Invocation
+(<code>Invoke</code>)</th>
+<th style="text-align: left;">Legacy Asynchronous
+(<code>BeginInvoke</code>/<code>EndInvoke</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Execution Context</strong></td>
+<td style="text-align: left;">Executes on the caller's thread</td>
+<td style="text-align: left;">Executes on a <code>ThreadPool</code>
+background thread</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Caller Blocking</strong></td>
+<td style="text-align: left;">Fully blocks the caller until
+completion</td>
+<td style="text-align: left;">Returns immediately; blocks only when
+<code>EndInvoke</code> is called</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Resource Overhead</strong></td>
+<td style="text-align: left;">Minimal; standard method-call
+overhead</td>
+<td style="text-align: left;">Higher; requires thread allocation,
+context switching, and state tracking via <code>IAsyncResult</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Exception Handling</strong></td>
+<td style="text-align: left;">Caught immediately at the point of
+call</td>
+<td style="text-align: left;">Stored internally and re-thrown only when
+calling <code>EndInvoke</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Completion
+Notification</strong></td>
+<td style="text-align: left;">Implicit upon return of the method</td>
+<td style="text-align: left;">Handled via polling, waiting on a
+<code>WaitHandle</code>, or an <code>AsyncCallback</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="obsolescence-in-modern-net">Obsolescence in Modern .NET</h3>
+<p>In modern .NET (.NET Core, .NET 5, and later), delegate-based
+<code>BeginInvoke</code> and <code>EndInvoke</code> are unsupported and
+throw a <code>PlatformNotSupportedException</code>. The runtime replaced
+this pattern with <code>Task</code>-based alternatives
+(<code>Task.Run</code> or native asynchronous I/O methods), which offer
+better performance, integration with cancellation tokens, and
+streamlined control flow through <code>async</code> and
+<code>await</code>.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/synchronous-vs-asynchronous-delegates-in-legacy-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

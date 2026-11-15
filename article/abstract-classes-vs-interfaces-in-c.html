@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abstract Classes vs Interfaces in C# - cs</title>
+    <meta name="description" content="In C#, both abstract classes and interfaces are fundamental tools used to achieve abstraction and polymorphism, yet they serve distinct architectural purposes. This article explores the core definitions of abstract classes and interfaces, contrasts their">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/abstract-classes-vs-interfaces-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Abstract Classes vs Interfaces in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/abstract-classes-vs-interfaces-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, both abstract classes and interfaces are fundamental tools used to achieve abstraction and polymorphism, yet they serve distinct architectural purposes. This article explores the core definitions of abstract classes and interfaces, contrasts their" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="abstract-classes-vs-interfaces-in-c">Abstract Classes vs
+Interfaces in C</h1>
+<p>In C#, both abstract classes and interfaces are fundamental tools
+used to achieve abstraction and polymorphism, yet they serve distinct
+architectural purposes. This article explores the core definitions of
+abstract classes and interfaces, contrasts their key technical
+differences—including inheritance capabilities, state management, and
+member implementations—and provides clear guidelines on when to use each
+in your application design.</p>
+<h2 id="core-definitions">Core Definitions</h2>
+<p>An <strong>abstract class</strong> is an incomplete class marked with
+the <code>abstract</code> keyword that cannot be instantiated directly.
+It serves as a blueprint for other classes, allowing you to define a
+common identity, maintain internal state, and provide both complete and
+incomplete (abstract) implementations of methods, properties, and
+events.</p>
+<p>An <strong>interface</strong> is a contractual specification defined
+with the <code>interface</code> keyword. It specifies a set of members
+that any implementing class or struct must provide. Rather than defining
+an object's identity, an interface defines a capability or behavior.</p>
+<h2 id="key-differences">Key Differences</h2>
+<h3 id="1-inheritance">1. Inheritance</h3>
+<ul>
+<li><strong>Abstract Classes:</strong> C# does not support multiple
+class inheritance. A class can inherit from only one abstract
+class.</li>
+<li><strong>Interfaces:</strong> A class or struct can implement
+multiple interfaces, allowing for flexible, decoupled system
+designs.</li>
+</ul>
+<h3 id="2-state-and-fields">2. State and Fields</h3>
+<ul>
+<li><strong>Abstract Classes:</strong> Can declare instance fields,
+constants, and constructors to initialize shared state across derived
+types.</li>
+<li><strong>Interfaces:</strong> Cannot declare instance fields or
+constructors. They define behaviors and contracts, not internal object
+state.</li>
+</ul>
+<h3 id="3-implementation-and-modern-c-features">3. Implementation and
+Modern C# Features</h3>
+<ul>
+<li><strong>Abstract Classes:</strong> Can contain both fully
+implemented concrete methods and abstract methods that force derived
+classes to provide their own implementation.</li>
+<li><strong>Interfaces:</strong> Traditionally contain only method
+signatures. Since C# 8.0, interfaces support Default Interface Methods
+(DIM), allowing default behavior without breaking existing
+implementations. However, interfaces still cannot maintain instance
+state to support these implementations.</li>
+</ul>
+<h3 id="4-access-modifiers">4. Access Modifiers</h3>
+<ul>
+<li><strong>Abstract Classes:</strong> Support all standard access
+modifiers (<code>public</code>, <code>protected</code>,
+<code>internal</code>, <code>private</code>) for methods, properties,
+and fields.</li>
+<li><strong>Interfaces:</strong> Members are public by default. While
+modern C# allows explicit access modifiers for default implementations,
+public API contracts remain the standard usage.</li>
+</ul>
+<h3 id="5-design-philosophy-is-a-vs-can-do">5. Design Philosophy: "Is-A"
+vs. "Can-Do"</h3>
+<ul>
+<li><strong>Abstract Classes represent an "is-a" relationship:</strong>
+For example, a <code>Dog</code> <em>is a</em> <code>Mammal</code>.
+Mammals share common physiological mechanisms, internal state, and
+behaviors.</li>
+<li><strong>Interfaces represent a "can-do" capability:</strong> For
+example, both a <code>Document</code> and a <code>Bitmap</code> can
+implement <code>IPrintable</code>. These two types share no common
+lineage, only the shared ability to be printed.</li>
+</ul>
+<h2 id="summary-of-differences">Summary of Differences</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Abstract Class</th>
+<th style="text-align: left;">Interface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Multiple Inheritance</strong></td>
+<td style="text-align: left;">No (single base class only)</td>
+<td style="text-align: left;">Yes (multiple interfaces allowed)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Instance Fields</strong></td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">No</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Constructors</strong></td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">No</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Access Modifiers</strong></td>
+<td style="text-align: left;">Full support (<code>public</code>,
+<code>protected</code>, etc.)</td>
+<td style="text-align: left;">Members public by default</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance</strong></td>
+<td style="text-align: left;">Faster method calls (standard vtable)</td>
+<td style="text-align: left;">Slightly slower due to interface dispatch
+lookup</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Relationship</strong></td>
+<td style="text-align: left;">"Is-a" (Identity)</td>
+<td style="text-align: left;">"Can-do" (Capability)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-to-choose-which">When to Choose Which</h2>
+<p><strong>Use an Abstract Class when:</strong></p>
+<ul>
+<li>You are building a closely related hierarchy of types sharing common
+logic and state.</li>
+<li>You need to provide protected internal helper methods to derived
+classes.</li>
+<li>You need constructors to enforce proper initialization of base
+state.</li>
+<li>You expect to evolve the base functionality over time within a
+self-contained library without breaking derived classes.</li>
+</ul>
+<p><strong>Use an Interface when:</strong></p>
+<ul>
+<li>You want to define a specific role or behavior for disparate,
+unrelated classes.</li>
+<li>You need to enable multiple inheritance of type definitions.</li>
+<li>You are building loosely coupled architectures, such as dependency
+injection in ASP.NET Core.</li>
+<li>You are defining contracts for structs, which cannot inherit from
+classes.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/abstract-classes-vs-interfaces-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

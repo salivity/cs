@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Difference Between Type.GetType and typeof in C# - cs</title>
+    <meta name="description" content="In C#, both typeof and Type.GetType are used to obtain a System.Type object that represents a specific data type, but they operate at fundamentally different stages of program execution. The typeof operator is evaluated at compile time and requires a comp">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/difference-between-type-get-type-and-typeof-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Difference Between Type.GetType and typeof in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/difference-between-type-get-type-and-typeof-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, both typeof and Type.GetType are used to obtain a System.Type object that represents a specific data type, but they operate at fundamentally different stages of program execution. The typeof operator is evaluated at compile time and requires a comp" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="difference-between-typegettype-and-typeof-in-c">Difference
+Between Type.GetType and typeof in C</h1>
+<p>In C#, both <code>typeof</code> and <code>Type.GetType</code> are
+used to obtain a <code>System.Type</code> object that represents a
+specific data type, but they operate at fundamentally different stages
+of program execution. The <code>typeof</code> operator is evaluated at
+compile time and requires a compile-time type identifier, while
+<code>Type.GetType</code> is a static method evaluated at runtime that
+resolves a type from a string name. Understanding the differences
+between these two approaches is essential for writing efficient,
+type-safe, and dynamically extensible .NET applications.</p>
+<h2 id="1-compile-time-vs-runtime-resolution">1. Compile-Time vs.
+Runtime Resolution</h2>
+<ul>
+<li><strong><code>typeof</code> (Compile-Time):</strong> The
+<code>typeof</code> keyword is an operator built directly into the C#
+language. It takes a type name directly (not an instance or a string)
+and resolves the <code>Type</code> metadata at compile time. Because the
+compiler validates the type, any misspelling or missing reference
+results in an immediate build error.</li>
+<li><strong><code>Type.GetType</code> (Runtime):</strong>
+<code>Type.GetType</code> is a method provided by the
+<code>System.Type</code> class in the .NET Base Class Library. It
+accepts a <code>string</code> parameter and searches for the
+corresponding type dynamically during execution. If the string is
+malformed or the type does not exist, the failure only surfaces while
+the application is running.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Compile-time resolution</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Type compileTimeType <span class="op">=</span> <span class="kw">typeof</span><span class="op">(</span>System<span class="op">.</span><span class="fu">String</span><span class="op">);</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Runtime resolution</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>Type runtimeType <span class="op">=</span> Type<span class="op">.</span><span class="fu">GetType</span><span class="op">(</span><span class="st">&quot;System.String&quot;</span><span class="op">);</span></span></code></pre></div>
+<h2 id="2-input-requirements-and-flexibility">2. Input Requirements and
+Flexibility</h2>
+<ul>
+<li><strong><code>typeof</code>:</strong> Requires the type to be
+referenced by the project at compile time. You cannot pass a variable, a
+string, or an expression to <code>typeof</code>.</li>
+<li><strong><code>Type.GetType</code>:</strong> Accepts strings,
+enabling dynamic behaviors such as reading type names from configuration
+files, user input, or external databases. It also accepts Assembly
+Qualified Names (AQN), allowing it to locate types in assemblies that
+were not referenced when the application was compiled.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Type.GetType using an Assembly Qualified Name</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> typeName <span class="op">=</span> <span class="st">&quot;MyNamespace.PluginClass, MyPluginAssembly, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null&quot;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Type dynamicType <span class="op">=</span> Type<span class="op">.</span><span class="fu">GetType</span><span class="op">(</span>typeName<span class="op">);</span></span></code></pre></div>
+<h2 id="3-performance-differences">3. Performance Differences</h2>
+<ul>
+<li><strong><code>typeof</code>:</strong> Highly optimized. The compiler
+emits a <code>ldtoken</code> (load token) Intermediate Language (IL)
+instruction followed by a call to <code>Type.GetTypeFromHandle</code>.
+The CLR handles this with minimal overhead, making <code>typeof</code>
+virtually instantaneous.</li>
+<li><strong><code>Type.GetType</code>:</strong> Considerably slower. It
+requires parsing the input string, scanning loaded assemblies, and
+potentially loading new assemblies from disk via reflection. While
+results may be cached internally by the CLR, the overhead remains
+substantially higher than using <code>typeof</code>.</li>
+</ul>
+<h2 id="4-error-handling-and-nullability">4. Error Handling and
+Nullability</h2>
+<ul>
+<li><strong><code>typeof</code>:</strong> Safe against null and missing
+types at runtime. Because it is checked by the compiler,
+<code>typeof(T)</code> will never return <code>null</code>.</li>
+<li><strong><code>Type.GetType</code>:</strong> By default, if the
+specified type cannot be found, <code>Type.GetType</code> returns
+<code>null</code> instead of throwing an exception. However, it provides
+overloads that allow you to control this behavior:</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Returns null if not found</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>Type t1 <span class="op">=</span> Type<span class="op">.</span><span class="fu">GetType</span><span class="op">(</span><span class="st">&quot;NonExistentNamespace.FakeType&quot;</span><span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Throws a TypeLoadException if not found, with case-sensitivity set to false</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>Type t2 <span class="op">=</span> Type<span class="op">.</span><span class="fu">GetType</span><span class="op">(</span><span class="st">&quot;system.string&quot;</span><span class="op">,</span> throwOnError<span class="op">:</span> <span class="kw">true</span><span class="op">,</span> ignoreCase<span class="op">:</span> <span class="kw">true</span><span class="op">);</span></span></code></pre></div>
+<h2 id="summary-when-to-use-which">Summary: When to Use Which</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>typeof</code></th>
+<th style="text-align: left;"><code>Type.GetType</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Execution Point</strong></td>
+<td style="text-align: left;">Compile time</td>
+<td style="text-align: left;">Runtime</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Input</strong></td>
+<td style="text-align: left;">Type identifier (e.g., <code>int</code>,
+<code>MyClass</code>)</td>
+<td style="text-align: left;">String name (e.g.,
+<code>"System.Int32"</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Type Safety</strong></td>
+<td style="text-align: left;">High (checked at compile time)</td>
+<td style="text-align: left;">Low (can fail or return <code>null</code>
+at runtime)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Assembly Dependency</strong></td>
+<td style="text-align: left;">Must be referenced at compile time</td>
+<td style="text-align: left;">Can be dynamically resolved at
+runtime</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance</strong></td>
+<td style="text-align: left;">Extremely fast</td>
+<td style="text-align: left;">Slower due to reflection and string
+parsing</td>
+</tr>
+</tbody>
+</table>
+<p>Use <strong><code>typeof</code></strong> whenever you know the target
+type during development, as it guarantees type safety and maximum
+performance. Reserve <strong><code>Type.GetType</code></strong> for
+dynamic scenarios such as plugin architectures, dependency injection
+containers, and serialization systems where type names are supplied as
+text at runtime.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/difference-between-type-get-type-and-typeof-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding the in Parameter Modifier in C# - cs</title>
+    <meta name="description" content="In C#, the in keyword is a parameter modifier used to pass arguments by reference rather than by value, while explicitly enforcing read-only access within the called method. This article covers the fundamental role of the in modifier, how it differs from">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/understanding-the-in-parameter-modifier-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding the in Parameter Modifier in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/understanding-the-in-parameter-modifier-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, the in keyword is a parameter modifier used to pass arguments by reference rather than by value, while explicitly enforcing read-only access within the called method. This article covers the fundamental role of the in modifier, how it differs from" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-the-in-parameter-modifier-in-c">Understanding the
+in Parameter Modifier in C</h1>
+<p>In C#, the <code>in</code> keyword is a parameter modifier used to
+pass arguments by reference rather than by value, while explicitly
+enforcing read-only access within the called method. This article covers
+the fundamental role of the <code>in</code> modifier, how it differs
+from <code>ref</code> and <code>out</code>, its performance benefits
+when handling large value types, and key considerations like defensive
+copies to avoid unintended overhead.</p>
+<h2 id="what-is-the-in-modifier">What Is the <code>in</code>
+Modifier?</h2>
+<p>Introduced in C# 7.2, the <code>in</code> parameter modifier
+instructs the compiler to pass an argument by reference while preventing
+the called method from modifying its value. It combines the performance
+advantage of pass-by-reference with the safety of pass-by-value
+immutability.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">DisplayPoint</span><span class="op">(</span><span class="kw">in</span> GeoPoint point<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// point.X = 10; // Compile-time error: Cannot assign to variable because it is a readonly variable</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Lat: {point.Latitude}, Long: {point.Longitude}&quot;</span><span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="primary-roles-and-benefits">Primary Roles and Benefits</h2>
+<h3 id="1-performance-optimization-for-large-structs">1. Performance
+Optimization for Large Structs</h3>
+<p>When value types (such as <code>struct</code>) are passed to methods
+by default, the runtime creates a complete copy of the data on the
+stack. For small primitives (like <code>int</code> or
+<code>bool</code>), this copy is negligible. However, for large custom
+structs, copying consumes CPU cycles and increases stack memory
+usage.</p>
+<p>Using <code>in</code> passes a reference (pointer) to the existing
+memory location instead of copying the struct, dramatically reducing
+overhead in performance-critical code paths.</p>
+<h3 id="2-enforcing-immutability">2. Enforcing Immutability</h3>
+<p>Unlike the <code>ref</code> modifier, which allows the invoked method
+to alter the original data, an <code>in</code> parameter is strictly
+read-only. Any attempt to reassign the parameter or modify its fields
+causes a compile-time error. This clearly communicates the method's
+design intent: the data is strictly an input.</p>
+<h2 id="key-rules-and-usage-characteristics">Key Rules and Usage
+Characteristics</h2>
+<ul>
+<li><p><strong>Must Be Initialized:</strong> Unlike <code>out</code>
+parameters, any variable passed with the <code>in</code> modifier must
+be fully initialized before passing it to the method.</p></li>
+<li><p><strong>Optional Call-Site Modifier:</strong> At the call site,
+specifying <code>in</code> is usually optional. The compiler resolves
+the overload automatically unless ambiguity exists.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>GeoPoint p <span class="op">=</span> <span class="kw">new</span> <span class="fu">GeoPoint</span><span class="op">(</span><span class="fl">45.0</span><span class="op">,</span> <span class="fl">90.0</span><span class="op">);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">DisplayPoint</span><span class="op">(</span>p<span class="op">);</span>      <span class="co">// Valid</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">DisplayPoint</span><span class="op">(</span><span class="kw">in</span> p<span class="op">);</span>   <span class="co">// Also valid and explicit</span></span></code></pre></div></li>
+<li><p><strong>Overloading Restrictions:</strong> You cannot overload
+methods where the only difference is between <code>in</code>,
+<code>out</code>, and <code>ref</code>. However, you can overload a
+method where one version takes a standard by-value parameter and the
+other uses <code>in</code>.</p></li>
+</ul>
+<h2 id="the-defensive-copy-pitfall">The "Defensive Copy" Pitfall</h2>
+<p>When passing a standard mutable <code>struct</code> using
+<code>in</code>, the C# compiler prioritizes immutability over
+performance. If you invoke a method or property on that struct, the
+compiler cannot guarantee that the member does not mutate internal
+state. To safeguard immutability, the compiler creates a temporary
+"defensive copy" of the struct before running the member.</p>
+<p>This defensive copying can negate the performance benefits of passing
+by reference.</p>
+<h3 id="how-to-prevent-defensive-copies">How to Prevent Defensive
+Copies</h3>
+<p>To avoid this issue, declare the struct as
+<code>readonly struct</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">readonly</span> <span class="kw">struct</span> GeoPoint</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> Latitude <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">double</span> Longitude <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">GeoPoint</span><span class="op">(</span><span class="dt">double</span> lat<span class="op">,</span> <span class="dt">double</span> lon<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        Latitude <span class="op">=</span> lat<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        Longitude <span class="op">=</span> lon<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>When a struct is marked as <code>readonly</code>, the compiler
+guarantees that no internal member can mutate state, completely
+eliminating the need for defensive copies when accessed via
+<code>in</code>.</p>
+<h2 id="comparison-in-vs-ref-vs-out">Comparison: <code>in</code> vs.
+<code>ref</code> vs. <code>out</code></h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Modifier</th>
+<th style="text-align: left;">Passed By</th>
+<th style="text-align: left;">Caller Must Initialize?</th>
+<th style="text-align: left;">Method Can Modify?</th>
+<th style="text-align: left;">Call-Site Keyword Required?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong><code>in</code></strong></td>
+<td style="text-align: left;">Reference</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">No (Read-Only)</td>
+<td style="text-align: left;">Optional</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>ref</code></strong></td>
+<td style="text-align: left;">Reference</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes (Read/Write)</td>
+<td style="text-align: left;">Required</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>out</code></strong></td>
+<td style="text-align: left;">Reference</td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (Must Assign)</td>
+<td style="text-align: left;">Required</td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-to-use-in">When to Use <code>in</code></h2>
+<ul>
+<li>When passing value types larger than <code>IntPtr.Size * 2</code>
+(typically larger than 16 bytes) in performance-sensitive or
+high-throughput scenarios.</li>
+<li>When pairing the modifier with <code>readonly struct</code>
+definitions to ensure zero-overhead reference passing.</li>
+<li>Avoid using <code>in</code> for reference types (classes) or basic
+primitives (<code>int</code>, <code>float</code>, <code>enum</code>), as
+passing a reference to a reference type or a small value type adds
+indirection without providing any performance advantage.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/understanding-the-in-parameter-modifier-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

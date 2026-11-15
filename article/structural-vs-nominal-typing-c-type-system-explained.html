@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structural vs Nominal Typing: C# Type System Explained - cs</title>
+    <meta name="description" content="Type systems govern how programming languages classify values and enforce rules around data operations. The two foundational approaches to type compatibility are nominal typing, which relies on explicit names and declarations, and structural typing, which">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/structural-vs-nominal-typing-c-type-system-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Structural vs Nominal Typing: C# Type System Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/structural-vs-nominal-typing-c-type-system-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Type systems govern how programming languages classify values and enforce rules around data operations. The two foundational approaches to type compatibility are nominal typing, which relies on explicit names and declarations, and structural typing, which" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="structural-vs-nominal-typing-c-type-system-explained">Structural
+vs Nominal Typing: C# Type System Explained</h1>
+<p>Type systems govern how programming languages classify values and
+enforce rules around data operations. The two foundational approaches to
+type compatibility are nominal typing, which relies on explicit names
+and declarations, and structural typing, which evaluates compatibility
+based on the shape and contents of the data. This article explains the
+definitions and trade-offs of both systems and examines where C# falls
+on the spectrum between nominal and structural design.</p>
+<h3 id="understanding-nominal-typing">Understanding Nominal Typing</h3>
+<p>Nominal typing (also known as nominative typing) determines type
+equivalence and compatibility strictly through explicit declarations and
+names. Under this model, two types are not interchangeable simply
+because they share identical fields, properties, or methods; they must
+share an explicit lineage, such as inheriting from a common base class
+or implementing a common interface.</p>
+<p>Languages like Java, C++, and traditional C# rely primarily on
+nominal typing. If you define a class named <code>Point</code> with
+properties <code>X</code> and <code>Y</code>, and another class named
+<code>Vector</code> with identical properties <code>X</code> and
+<code>Y</code>, the compiler treats them as entirely distinct types. You
+cannot pass a <code>Vector</code> to a function expecting a
+<code>Point</code> unless an explicit conversion or relationship is
+defined.</p>
+<p>The primary advantage of nominal typing is safety and intentionality.
+It prevents unintentional domain overlap, ensuring that two functionally
+identical but semantically distinct types (such as <code>UserId</code>
+and <code>OrderId</code>, both containing a single integer) are never
+mixed up by accident.</p>
+<h3 id="understanding-structural-typing">Understanding Structural
+Typing</h3>
+<p>Structural typing determines type equivalence based on the actual
+structure, shape, and members of a type, rather than its name or formal
+declaration. Under a structural type system, Type A is compatible with
+Type B if Type A possesses all the members (with matching types) that
+Type B requires.</p>
+<p>Languages like TypeScript and Go are prominent examples of structural
+typing. In TypeScript, if an interface defines a contract requiring a
+method <code>log(): void</code>, any object possessing a
+<code>log(): void</code> method satisfies that contract automatically,
+without needing to explicitly state <code>implements Logger</code>.</p>
+<p>The main benefit of structural typing is flexibility and reduced
+coupling. Components can interact seamlessly without sharing a common
+dependency or inheriting from a centralized interface definition, making
+testing, mocking, and API composition straightforward. However, the risk
+is accidental compatibility, where two structurally identical types
+designed for completely different domain concepts can be substituted for
+one another.</p>
+<h3 id="where-c-stands">Where C# Stands</h3>
+<p>C# is fundamentally a statically typed, nominally typed language. At
+its core, classes, structs, records, and interfaces require explicit
+declarations to establish compatibility. If <code>ClassA</code> and
+<code>ClassB</code> have the exact same members, the C# compiler will
+still reject assigning an instance of <code>ClassA</code> to a variable
+of type <code>ClassB</code> unless an explicit conversion operator is
+provided.</p>
+<p>However, modern C# incorporates several structural and "duck-typed"
+features to enhance developer ergonomics:</p>
+<ul>
+<li><strong>Compiler Pattern-Based Operations:</strong> C# relies on
+structural conventions for certain language features rather than nominal
+interfaces. For example, a <code>foreach</code> loop does not strictly
+require an implementation of <code>IEnumerable</code>; it only requires
+the type to contain a public parameterless <code>GetEnumerator()</code>
+method that returns an object with a <code>MoveNext()</code> method and
+a <code>Current</code> property. Similar structural rules apply to the
+<code>await</code> keyword (which requires a <code>GetAwaiter()</code>
+method) and pattern-based <code>Dispose()</code> in
+<code>ref struct</code> types.</li>
+<li><strong>Tuple Types:</strong> C# tuples are structurally typed. A
+tuple <code>(int, string)</code> is completely equivalent to any other
+tuple of <code>(int, string)</code>, regardless of the names given to
+the elements.</li>
+<li><strong>Anonymous Types:</strong> Anonymous types within the same
+assembly share compatibility based on property names and types,
+evaluated structurally by the compiler.</li>
+<li><strong>Target-Typed Object Creation and Records:</strong> While
+records are nominally typed classes or structs under the hood, features
+like target typing and value-based equality provide a developer
+experience that closely mirrors structural data modeling.</li>
+</ul>
+<p>Ultimately, C# remains anchored in nominal typing for robust type
+safety and architecture, while selectively adopting structural typing
+patterns where flexibility and performance benefit the developer.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/structural-vs-nominal-typing-c-type-system-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

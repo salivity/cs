@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Protected vs Protected Internal in C# - cs</title>
+    <meta name="description" content="In C#, private protected and protected internal are compound access modifiers that control the visibility of class members across different assemblies and derived classes. The fundamental difference lies in their evaluation logic: protected internal uses">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/private-protected-vs-protected-internal-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Private Protected vs Protected Internal in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/private-protected-vs-protected-internal-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, private protected and protected internal are compound access modifiers that control the visibility of class members across different assemblies and derived classes. The fundamental difference lies in their evaluation logic: protected internal uses" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="private-protected-vs-protected-internal-in-c">Private Protected
+vs Protected Internal in C</h1>
+<p>In C#, <code>private protected</code> and
+<code>protected internal</code> are compound access modifiers that
+control the visibility of class members across different assemblies and
+derived classes. The fundamental difference lies in their evaluation
+logic: <code>protected internal</code> uses an "OR" relationship,
+granting access to code in the same assembly <em>or</em> any derived
+class, while <code>private protected</code> uses an "AND" relationship,
+restricting access strictly to derived classes <em>within</em> the same
+assembly.</p>
+<h3 id="protected-internal-union--or-logic">Protected Internal (Union /
+OR Logic)</h3>
+<p>A member declared with the <code>protected internal</code> modifier
+is accessible to:</p>
+<ul>
+<li>Any code inside the same assembly (functioning like
+<code>internal</code>).</li>
+<li>Any derived class, even if that derived class resides in a
+completely different assembly (functioning like
+<code>protected</code>).</li>
+</ul>
+<p>This modifier is ideal when you want to allow internal utility
+classes in your library to access a member while simultaneously allowing
+external consumers of your library to extend and override that member
+through inheritance.</p>
+<h3 id="private-protected-intersection--and-logic">Private Protected
+(Intersection / AND Logic)</h3>
+<p>Introduced in C# 7.2, a member declared with the
+<code>private protected</code> modifier is accessible only to:</p>
+<ul>
+<li>Derived classes that are located within the same assembly.</li>
+</ul>
+<p>It prevents external assemblies from accessing the member, even if a
+class in that external assembly derives from the base class. It also
+prevents non-derived classes within the same assembly from accessing it.
+This modifier is best suited for internal framework architectures where
+base functionality should only be shared with internal subclasses.</p>
+<h3 id="summary-comparison-matrix">Summary Comparison Matrix</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Context</th>
+<th style="text-align: left;"><code>protected internal</code></th>
+<th style="text-align: left;"><code>private protected</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Same Assembly, Derived
+Class</strong></td>
+<td style="text-align: left;">Accessible</td>
+<td style="text-align: left;">Accessible</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Same Assembly, Non-Derived
+Class</strong></td>
+<td style="text-align: left;">Accessible</td>
+<td style="text-align: left;">Not Accessible</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Different Assembly, Derived
+Class</strong></td>
+<td style="text-align: left;">Accessible</td>
+<td style="text-align: left;">Not Accessible</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Different Assembly, Non-Derived
+Class</strong></td>
+<td style="text-align: left;">Not Accessible</td>
+<td style="text-align: left;">Not Accessible</td>
+</tr>
+</tbody>
+</table>
+<h3 id="code-example">Code Example</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Assembly A</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> BaseClass</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">internal</span> <span class="dt">int</span> ProtectedInternalField <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">protected</span> <span class="dt">int</span> PrivateProtectedField <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> SameAssemblyDerived <span class="op">:</span> BaseClass</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">AccessMembers</span><span class="op">()</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Both are accessible here</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> a <span class="op">=</span> ProtectedInternalField<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> b <span class="op">=</span> PrivateProtectedField<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> SameAssemblyNonDerived</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">AccessMembers</span><span class="op">(</span>BaseClass obj<span class="op">)</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Accessible because it behaves like &#39;internal&#39;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> a <span class="op">=</span> obj<span class="op">.</span><span class="fu">ProtectedInternalField</span><span class="op">;</span> </span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Compile Error: PrivateProtectedField is only accessible in derived classes</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="co">// int b = obj.PrivateProtectedField; </span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="co">// Assembly B (references Assembly A)</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ExternalAssemblyDerived <span class="op">:</span> BaseClass</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">AccessMembers</span><span class="op">()</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Accessible because it behaves like &#39;protected&#39;</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> a <span class="op">=</span> ProtectedInternalField<span class="op">;</span> </span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Compile Error: PrivateProtectedField cannot be accessed from another assembly</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        <span class="co">// int b = PrivateProtectedField; </span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/private-protected-vs-protected-internal-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

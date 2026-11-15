@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# 7 Pattern Matching and Tuples Guide - cs</title>
+    <meta name="description" content="C# 7 introduced significant enhancements to modern software development, most notably first-class support for tuples and foundational pattern matching features. These additions streamlined common programming tasks by simplifying how developers return mult">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-7-pattern-matching-and-tuples-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# 7 Pattern Matching and Tuples Guide - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-7-pattern-matching-and-tuples-guide" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="C# 7 introduced significant enhancements to modern software development, most notably first-class support for tuples and foundational pattern matching features. These additions streamlined common programming tasks by simplifying how developers return mult" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-7-pattern-matching-and-tuples-guide">C# 7 Pattern Matching and
+Tuples Guide</h1>
+<p>C# 7 introduced significant enhancements to modern software
+development, most notably first-class support for tuples and
+foundational pattern matching features. These additions streamlined
+common programming tasks by simplifying how developers return multiple
+values from methods, inspect types, and branch logic conditionally. This
+article outlines the specific features introduced for both tuples and
+pattern matching in C# 7, detailing their syntax, capabilities, and
+practical benefits.</p>
+<h3 id="tuples-in-c-7">Tuples in C# 7</h3>
+<p>Prior to C# 7, returning multiple values required using
+<code>out</code> parameters, custom classes/structs, or the
+allocate-heavy <code>System.Tuple</code>. C# 7 introduced built-in
+language support for tuples backed by the lightweight
+<code>System.ValueTuple</code> value type.</p>
+<h4 id="valuetuple-and-tuple-syntax">ValueTuple and Tuple Syntax</h4>
+<p>Tuples in C# 7 are value types, which avoids heap allocation and
+improves performance. Developers can create and return tuples using
+concise, parenthesis-based syntax:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">(</span><span class="dt">double</span> Latitude<span class="op">,</span> <span class="dt">double</span> Longitude<span class="op">)</span> <span class="fu">GetCoordinates</span><span class="op">()</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="op">(</span><span class="fl">37.7749</span><span class="op">,</span> <span class="op">-</span><span class="fl">122.4194</span><span class="op">);</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> coords <span class="op">=</span> <span class="fu">GetCoordinates</span><span class="op">();</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Lat: {coords.Latitude}, Long: {coords.Longitude}&quot;</span><span class="op">);</span></span></code></pre></div>
+<h4 id="tuple-deconstruction">Tuple Deconstruction</h4>
+<p>C# 7 allows consumers to unpack the elements of a tuple directly into
+individual variables:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="op">(</span>lat<span class="op">,</span> lon<span class="op">)</span> <span class="op">=</span> <span class="fu">GetCoordinates</span><span class="op">();</span></span></code></pre></div>
+<p>Developers can also define a <code>Deconstruct</code> method within
+any class or struct to enable tuple-like deconstruction syntax on custom
+types:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Person</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> FirstName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> LastName <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Deconstruct</span><span class="op">(</span><span class="kw">out</span> <span class="dt">string</span> first<span class="op">,</span> <span class="kw">out</span> <span class="dt">string</span> last<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        first <span class="op">=</span> FirstName<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        last <span class="op">=</span> LastName<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> person <span class="op">=</span> <span class="kw">new</span> Person <span class="op">{</span> FirstName <span class="op">=</span> <span class="st">&quot;Jane&quot;</span><span class="op">,</span> LastName <span class="op">=</span> <span class="st">&quot;Doe&quot;</span> <span class="op">};</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span> <span class="op">(</span>first<span class="op">,</span> last<span class="op">)</span> <span class="op">=</span> person<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="pattern-matching-in-c-7">Pattern Matching in C# 7</h3>
+<p>C# 7 introduced the first stage of pattern matching, allowing
+developers to test the shape and type of data cleanly without verbose
+casting.</p>
+<h4 id="type-patterns-with-the-is-expression">Type Patterns with the
+<code>is</code> Expression</h4>
+<p>The <code>is</code> expression was enhanced to test an expression's
+type and assign it to a new local variable simultaneously, removing the
+need for separate <code>as</code> casting and null checking:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">if</span> <span class="op">(</span>input <span class="kw">is</span> <span class="dt">string</span> text<span class="op">)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;String length: {text.Length}&quot;</span><span class="op">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If <code>input</code> is a <code>string</code>, <code>text</code> is
+scoped to the <code>if</code> block, strongly typed, and safe to
+use.</p>
+<h4 id="pattern-matching-in-switch-statements">Pattern Matching in
+<code>switch</code> Statements</h4>
+<p>The <code>switch</code> statement was expanded to support pattern
+matching across any data type, rather than being restricted to
+primitives and strings:</p>
+<ul>
+<li><strong>Type Patterns:</strong> Cases can match specific types and
+declare variables.</li>
+<li><strong>The <code>when</code> Clause:</strong> Cases can include
+boolean conditions (guards) to filter matches further.</li>
+<li><strong>Order-Dependent Evaluation:</strong> Unlike traditional
+switches, pattern-based <code>case</code> labels are evaluated
+sequentially, requiring more specific patterns to appear before broader
+ones.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">switch</span> <span class="op">(</span>shape<span class="op">)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">case</span> Circle c when c<span class="op">.</span><span class="fu">Radius</span> <span class="op">&gt;</span> <span class="dv">10</span><span class="op">:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Large circle with radius {c.Radius}&quot;</span><span class="op">);</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">case</span> Circle c<span class="op">:</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Small circle with radius {c.Radius}&quot;</span><span class="op">);</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">case</span> Rectangle r<span class="op">:</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Rectangle with area {r.Width * r.Height}&quot;</span><span class="op">);</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">case</span> <span class="kw">null</span><span class="op">:</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Shape is null&quot;</span><span class="op">);</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">default</span><span class="op">:</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>        Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">&quot;Unknown shape&quot;</span><span class="op">);</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="the-var-pattern">The <code>var</code> Pattern</h4>
+<p>C# 7 also introduced the <code>var</code> pattern, which matches any
+value (including <code>null</code>) and assigns it to a newly declared
+variable. This pattern is commonly used within <code>when</code> clauses
+to temporarily capture intermediate results.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-7-pattern-matching-and-tuples-guide';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

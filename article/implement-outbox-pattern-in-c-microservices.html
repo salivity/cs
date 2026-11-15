@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implement Outbox Pattern in C# Microservices - cs</title>
+    <meta name="description" content="This article provides a practical guide to implementing the transactional outbox pattern in C# microservices to ensure reliable message publishing. You will learn how this pattern resolves the distributed &quot;dual-write&quot; problem, how to capture domain events">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/implement-outbox-pattern-in-c-microservices">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Implement Outbox Pattern in C# Microservices - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/implement-outbox-pattern-in-c-microservices" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a practical guide to implementing the transactional outbox pattern in C# microservices to ensure reliable message publishing. You will learn how this pattern resolves the distributed &quot;dual-write&quot; problem, how to capture domain events" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="implement-outbox-pattern-in-c-microservices">Implement Outbox
+Pattern in C# Microservices</h1>
+<p>This article provides a practical guide to implementing the
+transactional outbox pattern in C# microservices to ensure reliable
+message publishing. You will learn how this pattern resolves the
+distributed "dual-write" problem, how to capture domain events within an
+Entity Framework Core database transaction, and how to reliably process
+and dispatch these messages to a message broker using a background
+worker.</p>
+<h2 id="the-dual-write-problem">The Dual-Write Problem</h2>
+<p>In a microservice architecture, a service often needs to update its
+local database and notify other services via a message broker (such as
+RabbitMQ or Azure Service Bus). If the database write succeeds but the
+network call to the broker fails, the system enters an inconsistent
+state. Conversely, if the message publishes first and the database
+transaction rolls back, external services act on phantom data.</p>
+<p>The Outbox Pattern resolves this by storing outgoing messages in a
+dedicated database table within the same ACID transaction as the
+business operation. A separate background process then reads unprocessed
+records from the outbox table and dispatches them to the message broker,
+guaranteeing at-least-once delivery.</p>
+<h2 id="step-1-define-the-outbox-message-entity">Step 1: Define the
+Outbox Message Entity</h2>
+<p>The outbox table needs enough metadata to track the message payload,
+event type, creation time, and processing status.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">sealed</span> <span class="kw">class</span> OutboxMessage</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> Guid Id <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Type <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> <span class="dt">string</span><span class="op">.</span><span class="fu">Empty</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Content <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span> <span class="op">=</span> <span class="dt">string</span><span class="op">.</span><span class="fu">Empty</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> DateTime OccurredOnUtc <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> DateTime<span class="op">?</span> ProcessedOnUtc <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span><span class="op">?</span> Error <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Configure the entity in your EF Core <code>DbContext</code>
+configuration, adding an index on <code>ProcessedOnUtc</code> to
+optimize polling queries:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">Configure</span><span class="op">(</span>EntityTypeBuilder<span class="op">&lt;</span>OutboxMessage<span class="op">&gt;</span> builder<span class="op">)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    builder<span class="op">.</span><span class="fu">ToTable</span><span class="op">(</span><span class="st">&quot;OutboxMessages&quot;</span><span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    builder<span class="op">.</span><span class="fu">HasKey</span><span class="op">(</span>m <span class="op">=&gt;</span> m<span class="op">.</span><span class="fu">Id</span><span class="op">);</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    builder<span class="op">.</span><span class="fu">HasIndex</span><span class="op">(</span>m <span class="op">=&gt;</span> m<span class="op">.</span><span class="fu">ProcessedOnUtc</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="step-2-persist-events-atomically">Step 2: Persist Events
+Atomically</h2>
+<p>Domain events should be serialized into JSON and saved to the outbox
+table inside the same transaction as the domain aggregate. You can
+achieve this automatically by intercepting <code>SaveChangesAsync</code>
+in EF Core:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">sealed</span> <span class="kw">class</span> OutboxInterceptor <span class="op">:</span> SaveChangesInterceptor</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">override</span> ValueTask<span class="op">&lt;</span>InterceptionResult<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;&gt;</span> <span class="fu">SavingChangesAsync</span><span class="op">(</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        DbContextEventData eventData<span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        InterceptionResult<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;</span> result<span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        CancellationToken cancellationToken <span class="op">=</span> <span class="kw">default</span><span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> dbContext <span class="op">=</span> eventData<span class="op">.</span><span class="fu">Context</span><span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span>dbContext <span class="kw">is</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            <span class="kw">return</span> <span class="kw">base</span><span class="op">.</span><span class="fu">SavingChangesAsync</span><span class="op">(</span>eventData<span class="op">,</span> result<span class="op">,</span> cancellationToken<span class="op">);</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> outboxMessages <span class="op">=</span> dbContext<span class="op">.</span><span class="fu">ChangeTracker</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Entries</span><span class="op">&lt;</span>IHasDomainEvents<span class="op">&gt;()</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Select</span><span class="op">(</span>entry <span class="op">=&gt;</span> entry<span class="op">.</span><span class="fu">Entity</span><span class="op">)</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">SelectMany</span><span class="op">(</span>entity <span class="op">=&gt;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>                <span class="dt">var</span> events <span class="op">=</span> entity<span class="op">.</span><span class="fu">GetDomainEvents</span><span class="op">();</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>                entity<span class="op">.</span><span class="fu">ClearDomainEvents</span><span class="op">();</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>                <span class="kw">return</span> events<span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>            <span class="op">})</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Select</span><span class="op">(</span>domainEvent <span class="op">=&gt;</span> <span class="kw">new</span> OutboxMessage</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>                Id <span class="op">=</span> Guid<span class="op">.</span><span class="fu">NewGuid</span><span class="op">(),</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>                OccurredOnUtc <span class="op">=</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">,</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>                Type <span class="op">=</span> domainEvent<span class="op">.</span><span class="fu">GetType</span><span class="op">().</span><span class="fu">Name</span><span class="op">,</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>                Content <span class="op">=</span> JsonSerializer<span class="op">.</span><span class="fu">Serialize</span><span class="op">(</span>domainEvent<span class="op">,</span> domainEvent<span class="op">.</span><span class="fu">GetType</span><span class="op">())</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>            <span class="op">})</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">ToList</span><span class="op">();</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>        dbContext<span class="op">.</span><span class="fu">Set</span><span class="op">&lt;</span>OutboxMessage<span class="op">&gt;().</span><span class="fu">AddRange</span><span class="op">(</span>outboxMessages<span class="op">);</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">base</span><span class="op">.</span><span class="fu">SavingChangesAsync</span><span class="op">(</span>eventData<span class="op">,</span> result<span class="op">,</span> cancellationToken<span class="op">);</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Register this interceptor in your dependency injection container when
+configuring the <code>DbContext</code>.</p>
+<h2 id="step-3-publish-messages-using-a-background-worker">Step 3:
+Publish Messages Using a Background Worker</h2>
+<p>A background processor regularly queries the outbox table for
+unprocessed messages, publishes them to the broker, and updates the
+timestamp upon success.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">sealed</span> <span class="kw">class</span> OutboxPublisherBackgroundService <span class="op">:</span> BackgroundService</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> IServiceScopeFactory _scopeFactory<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">readonly</span> ILogger<span class="op">&lt;</span>OutboxPublisherBackgroundService<span class="op">&gt;</span> _logger<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">OutboxPublisherBackgroundService</span><span class="op">(</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        IServiceScopeFactory scopeFactory<span class="op">,</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        ILogger<span class="op">&lt;</span>OutboxPublisherBackgroundService<span class="op">&gt;</span> logger<span class="op">)</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        _scopeFactory <span class="op">=</span> scopeFactory<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        _logger <span class="op">=</span> logger<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">override</span> async Task <span class="fu">ExecuteAsync</span><span class="op">(</span>CancellationToken stoppingToken<span class="op">)</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="kw">while</span> <span class="op">(!</span>stoppingToken<span class="op">.</span><span class="fu">IsCancellationRequested</span><span class="op">)</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>            <span class="kw">try</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>                await <span class="fu">ProcessOutboxMessagesAsync</span><span class="op">(</span>stoppingToken<span class="op">);</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>            <span class="kw">catch</span> <span class="op">(</span>Exception ex<span class="op">)</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>                _logger<span class="op">.</span><span class="fu">LogError</span><span class="op">(</span>ex<span class="op">,</span> <span class="st">&quot;An error occurred while processing outbox messages.&quot;</span><span class="op">);</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>            await Task<span class="op">.</span><span class="fu">Delay</span><span class="op">(</span>TimeSpan<span class="op">.</span><span class="fu">FromSeconds</span><span class="op">(</span><span class="dv">5</span><span class="op">),</span> stoppingToken<span class="op">);</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> async Task <span class="fu">ProcessOutboxMessagesAsync</span><span class="op">(</span>CancellationToken cancellationToken<span class="op">)</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> <span class="dt">var</span> scope <span class="op">=</span> _scopeFactory<span class="op">.</span><span class="fu">CreateScope</span><span class="op">();</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> dbContext <span class="op">=</span> scope<span class="op">.</span><span class="fu">ServiceProvider</span><span class="op">.</span><span class="fu">GetRequiredService</span><span class="op">&lt;</span>AppDbContext<span class="op">&gt;();</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> messagePublisher <span class="op">=</span> scope<span class="op">.</span><span class="fu">ServiceProvider</span><span class="op">.</span><span class="fu">GetRequiredService</span><span class="op">&lt;</span>IMessagePublisher<span class="op">&gt;();</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> messages <span class="op">=</span> await dbContext<span class="op">.</span><span class="fu">Set</span><span class="op">&lt;</span>OutboxMessage<span class="op">&gt;()</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Where</span><span class="op">(</span>m <span class="op">=&gt;</span> m<span class="op">.</span><span class="fu">ProcessedOnUtc</span> <span class="op">==</span> <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">OrderBy</span><span class="op">(</span>m <span class="op">=&gt;</span> m<span class="op">.</span><span class="fu">OccurredOnUtc</span><span class="op">)</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">Take</span><span class="op">(</span><span class="dv">20</span><span class="op">)</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span><span class="fu">ToListAsync</span><span class="op">(</span>cancellationToken<span class="op">);</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>        <span class="kw">foreach</span> <span class="op">(</span><span class="dt">var</span> message <span class="kw">in</span> messages<span class="op">)</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>            <span class="kw">try</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>                await messagePublisher<span class="op">.</span><span class="fu">PublishAsync</span><span class="op">(</span>message<span class="op">.</span><span class="fu">Type</span><span class="op">,</span> message<span class="op">.</span><span class="fu">Content</span><span class="op">,</span> cancellationToken<span class="op">);</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>                message<span class="op">.</span><span class="fu">ProcessedOnUtc</span> <span class="op">=</span> DateTime<span class="op">.</span><span class="fu">UtcNow</span><span class="op">;</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>            <span class="kw">catch</span> <span class="op">(</span>Exception ex<span class="op">)</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>                message<span class="op">.</span><span class="fu">Error</span> <span class="op">=</span> ex<span class="op">.</span><span class="fu">ToString</span><span class="op">();</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>                _logger<span class="op">.</span><span class="fu">LogError</span><span class="op">(</span>ex<span class="op">,</span> <span class="st">&quot;Failed to publish message {MessageId}&quot;</span><span class="op">,</span> message<span class="op">.</span><span class="fu">Id</span><span class="op">);</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>                <span class="kw">break</span><span class="op">;</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>        await dbContext<span class="op">.</span><span class="fu">SaveChangesAsync</span><span class="op">(</span>cancellationToken<span class="op">);</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Register the worker in <code>Program.cs</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>builder<span class="op">.</span><span class="fu">Services</span><span class="op">.</span><span class="fu">AddHostedService</span><span class="op">&lt;</span>OutboxPublisherBackgroundService<span class="op">&gt;();</span></span></code></pre></div>
+<h2 id="key-considerations-for-production">Key Considerations for
+Production</h2>
+<ul>
+<li><strong>At-Least-Once Delivery</strong>: The outbox pattern
+guarantees delivery, not deduplication. If the publisher sends a message
+but crashes before writing <code>ProcessedOnUtc</code>, the message will
+be republished. Consumers must implement the Idempotent Consumer
+pattern.</li>
+<li><strong>Concurrency and Scaling</strong>: If multiple instances of
+your microservice run concurrently, use row-locking mechanisms (such as
+<code>FOR UPDATE SKIP LOCKED</code> in PostgreSQL or
+<code>WITH (UPDLOCK, READPAST)</code> in SQL Server) to prevent
+duplicate processing by competing workers.</li>
+<li><strong>Table Maintenance</strong>: Regularly archive or purge
+processed records to keep table sizes manageable and prevent index
+fragmentation.</li>
+<li><strong>Production Libraries</strong>: For advanced features like
+automated retries, partition leasing, and native broker transports,
+consider utilizing established libraries such as MassTransit or
+Wolverine, both of which provide built-in, production-ready outbox
+implementations.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/implement-outbox-pattern-in-c-microservices';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

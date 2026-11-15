@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# Collection Initializers: Simplify Object Creation - cs</title>
+    <meta name="description" content="Collection initializers in C# provide a concise, readable syntax for instantiating collections and populating them with elements in a single step. Introduced in C# 3.0, this language feature eliminates the need for repetitive, boilerplate code that previo">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/c-collection-initializers-simplify-object-creation">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C# Collection Initializers: Simplify Object Creation - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/c-collection-initializers-simplify-object-creation" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Collection initializers in C# provide a concise, readable syntax for instantiating collections and populating them with elements in a single step. Introduced in C# 3.0, this language feature eliminates the need for repetitive, boilerplate code that previo" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-collection-initializers-simplify-object-creation">C#
+Collection Initializers: Simplify Object Creation</h1>
+<p>Collection initializers in C# provide a concise, readable syntax for
+instantiating collections and populating them with elements in a single
+step. Introduced in C# 3.0, this language feature eliminates the need
+for repetitive, boilerplate code that previously required creating an
+empty collection and manually calling insertion methods. By streamlining
+how lists, dictionaries, and custom collections are populated,
+collection initializers make codebases cleaner, easier to maintain, and
+more declarative.</p>
+<h2 id="the-problem-with-traditional-initialization">The Problem with
+Traditional Initialization</h2>
+<p>Before collection initializers, instantiating and populating a
+collection required separate statements. Developers first had to
+instantiate the collection object and then repeatedly call its
+<code>.Add()</code> method.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Traditional approach</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> fruits <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;();</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>fruits<span class="op">.</span><span class="fu">Add</span><span class="op">(</span><span class="st">&quot;Apple&quot;</span><span class="op">);</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>fruits<span class="op">.</span><span class="fu">Add</span><span class="op">(</span><span class="st">&quot;Banana&quot;</span><span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>fruits<span class="op">.</span><span class="fu">Add</span><span class="op">(</span><span class="st">&quot;Cherry&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>While functional, this approach is verbose and clutters the code,
+especially when dealing with nested collections or setting up test
+data.</p>
+<h2 id="the-collection-initializer-syntax">The Collection Initializer
+Syntax</h2>
+<p>Collection initializers streamline this workflow by allowing you to
+specify elements within enclosing braces <code>{}</code> directly after
+the constructor call.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Collection initializer approach</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> fruits <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;</span> <span class="op">{</span> <span class="st">&quot;Apple&quot;</span><span class="op">,</span> <span class="st">&quot;Banana&quot;</span><span class="op">,</span> <span class="st">&quot;Cherry&quot;</span> <span class="op">};</span></span></code></pre></div>
+<p>Under the hood, the C# compiler transforms this syntax into standard
+<code>.Add()</code> calls during compilation. The runtime performance
+remains identical to the traditional approach, but the source code
+becomes significantly more compact.</p>
+<h2 id="how-collection-initializers-work-under-the-hood">How Collection
+Initializers Work Under the Hood</h2>
+<p>For a class to support standard collection initializers, it must
+satisfy two requirements:</p>
+<ol type="1">
+<li>It must implement the <code>System.Collections.IEnumerable</code>
+interface.</li>
+<li>It must provide an accessible, non-static <code>Add</code> method
+(or, since C# 6, an accessible extension method named
+<code>Add</code>).</li>
+</ol>
+<p>Because of this mechanism, collection initializers also work
+seamlessly with complex objects:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> User</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> Name <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> Age <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="kw">set</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>List<span class="op">&lt;</span>User<span class="op">&gt;</span> users <span class="op">=</span> <span class="kw">new</span> List<span class="op">&lt;</span>User<span class="op">&gt;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> User <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Alice&quot;</span><span class="op">,</span> Age <span class="op">=</span> <span class="dv">30</span> <span class="op">},</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> User <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;Bob&quot;</span><span class="op">,</span> Age <span class="op">=</span> <span class="dv">25</span> <span class="op">}</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<h2
+id="initializing-dictionaries-and-key-value-collections">Initializing
+Dictionaries and Key-Value Collections</h2>
+<p>Collection initializers handle key-value pairs cleanly. C# offers two
+primary styles for dictionaries:</p>
+<h3 id="nested-braces-syntax">Nested Braces Syntax</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> scores <span class="op">=</span> <span class="kw">new</span> Dictionary<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span> <span class="st">&quot;Alice&quot;</span><span class="op">,</span> <span class="dv">95</span> <span class="op">},</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span> <span class="st">&quot;Bob&quot;</span><span class="op">,</span> <span class="dv">80</span> <span class="op">}</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<h3 id="index-initializer-syntax-c-6">Index Initializer Syntax (C#
+6+)</h3>
+<p>C# 6 introduced index initializers, which allow assigning values
+directly to keys using indexer notation:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> scores <span class="op">=</span> <span class="kw">new</span> Dictionary<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="st">&quot;Alice&quot;</span><span class="op">]</span> <span class="op">=</span> <span class="dv">95</span><span class="op">,</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="st">&quot;Bob&quot;</span><span class="op">]</span> <span class="op">=</span> <span class="dv">80</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<p>The index syntax uses the dictionary's indexer
+(<code>scores["Alice"] = 95</code>), which overwrites existing keys
+rather than throwing an exception if a duplicate key is introduced
+during initialization.</p>
+<h2 id="key-benefits">Key Benefits</h2>
+<ul>
+<li><strong>Improved Readability:</strong> Data definitions are
+declarative and clear, showing the collection's structure and contents
+immediately.</li>
+<li><strong>Inline Usability:</strong> Collections can be created and
+passed directly into method calls without needing temporary local
+variables.</li>
+<li><strong>Consistency:</strong> Combines seamlessly with object
+initializers to create deep, nested object graphs in a single, coherent
+statement.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/c-collection-initializers-simplify-object-creation';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

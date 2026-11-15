@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benchmarking C# Hot Paths to Eliminate Allocations - cs</title>
+    <meta name="description" content="Optimizing hot paths in high-throughput C# libraries requires precise measurement to eliminate performance bottlenecks and Garbage Collection (GC) overhead. This article explains how to configure BenchmarkDotNet to capture memory metrics, identify common">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/benchmarking-c-hot-paths-to-eliminate-allocations">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Benchmarking C# Hot Paths to Eliminate Allocations - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/benchmarking-c-hot-paths-to-eliminate-allocations" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Optimizing hot paths in high-throughput C# libraries requires precise measurement to eliminate performance bottlenecks and Garbage Collection (GC) overhead. This article explains how to configure BenchmarkDotNet to capture memory metrics, identify common" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="benchmarking-c-hot-paths-to-eliminate-allocations">Benchmarking
+C# Hot Paths to Eliminate Allocations</h1>
+<p>Optimizing hot paths in high-throughput C# libraries requires precise
+measurement to eliminate performance bottlenecks and Garbage Collection
+(GC) overhead. This article explains how to configure BenchmarkDotNet to
+capture memory metrics, identify common allocation sources in critical
+execution loops, and rewrite algorithms using modern .NET primitives
+like <code>Span&lt;T&gt;</code>, <code>ValueTask</code>, and array
+pooling.</p>
+<h2 id="measuring-allocations-with-benchmarkdotnet">Measuring
+Allocations with BenchmarkDotNet</h2>
+<p>Before attempting any optimization, you must establish an accurate
+baseline. BenchmarkDotNet is the standard framework for
+microbenchmarking in .NET. It isolates processes, warms up the runtime,
+and calculates statistical metrics while preventing Just-In-Time (JIT)
+compiler optimizations from skewing results.</p>
+<p>To measure memory pressure alongside execution time, apply the
+<code>[MemoryDiagnoser]</code> attribute to your benchmark class.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> BenchmarkDotNet<span class="op">.</span><span class="fu">Attributes</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> BenchmarkDotNet<span class="op">.</span><span class="fu">Running</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>MemoryDiagnoser<span class="op">]</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> StringParserBenchmark</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">const</span> <span class="dt">string</span> RawData <span class="op">=</span> <span class="st">&quot;User:10492;Status:Active;Role:Admin&quot;</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">Benchmark</span><span class="op">(</span>Baseline <span class="op">=</span> <span class="kw">true</span><span class="op">)]</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">string</span> <span class="fu">ParseSubstring</span><span class="op">()</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> start <span class="op">=</span> RawData<span class="op">.</span><span class="fu">IndexOf</span><span class="op">(</span><span class="st">&quot;Status:&quot;</span><span class="op">)</span> <span class="op">+</span> <span class="dv">7</span><span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> end <span class="op">=</span> RawData<span class="op">.</span><span class="fu">IndexOf</span><span class="op">(</span><span class="ch">&#39;;&#39;</span><span class="op">,</span> start<span class="op">);</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> RawData<span class="op">.</span><span class="fu">Substring</span><span class="op">(</span>start<span class="op">,</span> end <span class="op">-</span> start<span class="op">);</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Run benchmarks exclusively in <code>Release</code> mode using the
+command line:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotnet</span> run <span class="at">-c</span> Release</span></code></pre></div>
+<p>The resulting table reports execution time (<code>Mean</code>),
+Garbage Collection counts (<code>Gen0</code>, <code>Gen1</code>), and
+most importantly, <code>Allocated</code> bytes. Any value above
+<code>0 B</code> in a critical loop represents heap allocation that will
+eventually trigger GC pauses.</p>
+<h2 id="common-hidden-allocations-in-hot-paths">Common Hidden
+Allocations in Hot Paths</h2>
+<p>Hot paths often incur heap allocations through syntax that appears
+harmless:</p>
+<ol type="1">
+<li><strong>String Operations:</strong> Methods like
+<code>string.Substring</code>, <code>string.Split</code>, and string
+concatenation create brand new <code>System.String</code> instances on
+the managed heap.</li>
+<li><strong>Boxing:</strong> Casting value types to <code>object</code>
+or interfaces (such as passing an <code>int</code> or an
+<code>enum</code> to an unconstrained generic or logging method) wraps
+the struct inside a heap-allocated object.</li>
+<li><strong>Closures and Delegates:</strong> Passing lambdas that
+capture outer local variables allocates a compiler-generated display
+class to hold the captured state.</li>
+<li><strong>LINQ:</strong> Standard LINQ queries
+(<code>.Select()</code>, <code>.Where()</code>, <code>.ToList()</code>)
+instantiate enumerator classes and intermediate arrays or
+collections.</li>
+</ol>
+<h2 id="techniques-to-achieve-zero-allocation-paths">Techniques to
+Achieve Zero-Allocation Paths</h2>
+<h3 id="1-replace-substrings-with-spans">1. Replace Substrings with
+Spans</h3>
+<p><code>ReadOnlySpan&lt;T&gt;</code> provides a type-safe view of
+contiguous memory without allocating heap objects. When working with
+string data, use span-based slicing:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Benchmark<span class="op">]</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> ReadOnlySpan<span class="op">&lt;</span><span class="dt">char</span><span class="op">&gt;</span> <span class="fu">ParseSpan</span><span class="op">()</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    ReadOnlySpan<span class="op">&lt;</span><span class="dt">char</span><span class="op">&gt;</span> span <span class="op">=</span> RawData<span class="op">.</span><span class="fu">AsSpan</span><span class="op">();</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> start <span class="op">=</span> span<span class="op">.</span><span class="fu">IndexOf</span><span class="op">(</span><span class="st">&quot;Status:&quot;</span><span class="op">.</span><span class="fu">AsSpan</span><span class="op">())</span> <span class="op">+</span> <span class="dv">7</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    ReadOnlySpan<span class="op">&lt;</span><span class="dt">char</span><span class="op">&gt;</span> slice <span class="op">=</span> span<span class="op">.</span><span class="fu">Slice</span><span class="op">(</span>start<span class="op">);</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> end <span class="op">=</span> slice<span class="op">.</span><span class="fu">IndexOf</span><span class="op">(</span><span class="ch">&#39;;&#39;</span><span class="op">);</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> slice<span class="op">.</span><span class="fu">Slice</span><span class="op">(</span><span class="dv">0</span><span class="op">,</span> end<span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Because <code>ReadOnlySpan&lt;T&gt;</code> is a
+<code>ref struct</code>, it lives entirely on the stack and produces
+<code>0 B</code> in the <code>Allocated</code> column.</p>
+<h3 id="2-rent-buffers-instead-of-allocating-arrays">2. Rent Buffers
+Instead of Allocating Arrays</h3>
+<p>If your hot path requires a transient buffer to process data, avoid
+<code>new byte[size]</code>. Instead, rent temporary memory from
+<code>ArrayPool&lt;T&gt;.Shared</code> or use <code>stackalloc</code>
+for small, known boundaries:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Benchmark<span class="op">]</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessDataWithArrayPool</span><span class="op">()</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">byte</span><span class="op">[]</span> buffer <span class="op">=</span> System<span class="op">.</span><span class="fu">Buffers</span><span class="op">.</span><span class="fu">ArrayPool</span><span class="op">&lt;</span><span class="dt">byte</span><span class="op">&gt;.</span><span class="fu">Shared</span><span class="op">.</span><span class="fu">Rent</span><span class="op">(</span><span class="dv">256</span><span class="op">);</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">try</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Perform work on the rented buffer</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        buffer<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">finally</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        System<span class="op">.</span><span class="fu">Buffers</span><span class="op">.</span><span class="fu">ArrayPool</span><span class="op">&lt;</span><span class="dt">byte</span><span class="op">&gt;.</span><span class="fu">Shared</span><span class="op">.</span><span class="fu">Return</span><span class="op">(</span>buffer<span class="op">);</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-eliminate-closure-allocations">3. Eliminate Closure
+Allocations</h3>
+<p>When using callbacks or concurrent collections, pass contextual state
+through methods that accept an explicit <code>state</code> parameter
+rather than capturing variables:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Allocates a closure:</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> threshold <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>items<span class="op">.</span><span class="fu">RemoveAll</span><span class="op">(</span>x <span class="op">=&gt;</span> x <span class="op">&gt;</span> threshold<span class="op">);</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Optimized (custom iteration without lambda capture):</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> items<span class="op">.</span><span class="fu">Count</span> <span class="op">-</span> <span class="dv">1</span><span class="op">;</span> i <span class="op">&gt;=</span> <span class="dv">0</span><span class="op">;</span> i<span class="op">--)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span>items<span class="op">[</span>i<span class="op">]</span> <span class="op">&gt;</span> threshold<span class="op">)</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        items<span class="op">.</span><span class="fu">RemoveAt</span><span class="op">(</span>i<span class="op">);</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="4-use-valuetask-for-synchronous-completions">4. Use ValueTask
+for Synchronous Completions</h3>
+<p>Asynchronous methods on hot paths that frequently complete
+synchronously (such as reading from an in-memory cache) should return
+<code>ValueTask&lt;T&gt;</code> instead of <code>Task&lt;T&gt;</code>.
+While <code>Task&lt;T&gt;</code> always allocates an object reference,
+<code>ValueTask&lt;T&gt;</code> is a discriminated union struct that
+avoids heap allocation when the result is immediately available.</p>
+<h2 id="verifying-optimization-iterations">Verifying Optimization
+Iterations</h2>
+<p>After applying code changes, run the benchmark suite again to compare
+the baseline against optimized implementations. A successful hot path
+optimization should demonstrate:</p>
+<ul>
+<li><strong>Allocated Bytes:</strong> Reduced to <code>0 B</code> (or
+minimized significantly if an allocation is strictly unavoidable).</li>
+<li><strong>Gen0 Collections:</strong> Drop to <code>0.0000</code> per
+1,000 operations.</li>
+<li><strong>Execution Time:</strong> Lower <code>Mean</code> latency
+resulting from reduced GC pause frequency and improved CPU cache
+locality.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/benchmarking-c-hot-paths-to-eliminate-allocations';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

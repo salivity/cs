@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mocking in C# with Moq and NSubstitute - cs</title>
+    <meta name="description" content="Mocking is an essential technique in C# unit testing that isolates the code under test by replacing external dependencies with controlled, simulated objects. This guide explains the core concepts of mocking and provides practical, direct examples using tw">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/mocking-in-c-with-moq-and-n-substitute">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mocking in C# with Moq and NSubstitute - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/mocking-in-c-with-moq-and-n-substitute" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Mocking is an essential technique in C# unit testing that isolates the code under test by replacing external dependencies with controlled, simulated objects. This guide explains the core concepts of mocking and provides practical, direct examples using tw" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="mocking-in-c-with-moq-and-nsubstitute">Mocking in C# with Moq
+and NSubstitute</h1>
+<p>Mocking is an essential technique in C# unit testing that isolates
+the code under test by replacing external dependencies with controlled,
+simulated objects. This guide explains the core concepts of mocking and
+provides practical, direct examples using two of the most popular .NET
+mocking frameworks: Moq and NSubstitute. You will learn how to configure
+return values, verify interactions, and choose the right library for
+your test suite.</p>
+<hr />
+<h3 id="what-is-mocking">What is Mocking?</h3>
+<p>In unit testing, your classes often depend on external resources such
+as databases, web APIs, or file systems. Testing these dependencies
+directly introduces latency, instability, and side effects.</p>
+<p>Mocking solves this problem by creating lightweight, fake
+implementations of interfaces or abstract classes. A mock allows you
+to:</p>
+<ul>
+<li>Define predetermined return values for specific inputs
+(stubbing).</li>
+<li>Inspect whether specific methods were called, how many times, and
+with which arguments (verification).</li>
+<li>Isolate the System Under Test (SUT) to ensure that test failures
+point directly to logic errors in the class being tested.</li>
+</ul>
+<hr />
+<h3 id="using-moq">Using Moq</h3>
+<p>Moq is one of the most widely adopted mocking libraries in the .NET
+ecosystem. It relies heavily on LINQ expression trees and lambda
+expressions to configure behavior and assertions.</p>
+<h4 id="setup-and-return-values">Setup and Return Values</h4>
+<p>To mock an interface using Moq, instantiate
+<code>Mock&lt;T&gt;</code>, configure method behavior using
+<code>.Setup()</code>, and pass <code>mock.Object</code> to your
+class:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Moq<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Xunit<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IUserRepository</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    User <span class="fu">GetUserById</span><span class="op">(</span><span class="dt">int</span> id<span class="op">);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">Save</span><span class="op">(</span>User user<span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> UserServiceTests</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">GetUserName_WhenUserExists_ReturnsFullName</span><span class="op">()</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 1. Arrange</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> mockRepo <span class="op">=</span> <span class="kw">new</span> Mock<span class="op">&lt;</span>IUserRepository<span class="op">&gt;();</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        mockRepo<span class="op">.</span><span class="fu">Setup</span><span class="op">(</span>repo <span class="op">=&gt;</span> repo<span class="op">.</span><span class="fu">GetUserById</span><span class="op">(</span><span class="dv">1</span><span class="op">))</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span><span class="fu">Returns</span><span class="op">(</span><span class="kw">new</span> User <span class="op">{</span> Id <span class="op">=</span> <span class="dv">1</span><span class="op">,</span> Name <span class="op">=</span> <span class="st">&quot;Jane Doe&quot;</span> <span class="op">});</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> service <span class="op">=</span> <span class="kw">new</span> <span class="fu">UserService</span><span class="op">(</span>mockRepo<span class="op">.</span><span class="fu">Object</span><span class="op">);</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 2. Act</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> result <span class="op">=</span> service<span class="op">.</span><span class="fu">GetUserName</span><span class="op">(</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 3. Assert</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        Assert<span class="op">.</span><span class="fu">Equal</span><span class="op">(</span><span class="st">&quot;Jane Doe&quot;</span><span class="op">,</span> result<span class="op">);</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="verifying-method-execution">Verifying Method Execution</h4>
+<p>Moq provides the <code>.Verify()</code> method to confirm whether a
+dependency was invoked:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">RegisterUser_ValidUser_CallsSaveMethodOnce</span><span class="op">()</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Arrange</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> mockRepo <span class="op">=</span> <span class="kw">new</span> Mock<span class="op">&lt;</span>IUserRepository<span class="op">&gt;();</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> service <span class="op">=</span> <span class="kw">new</span> <span class="fu">UserService</span><span class="op">(</span>mockRepo<span class="op">.</span><span class="fu">Object</span><span class="op">);</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> newUser <span class="op">=</span> <span class="kw">new</span> User <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;John Smith&quot;</span> <span class="op">};</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Act</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    service<span class="op">.</span><span class="fu">RegisterUser</span><span class="op">(</span>newUser<span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Assert</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    mockRepo<span class="op">.</span><span class="fu">Verify</span><span class="op">(</span>repo <span class="op">=&gt;</span> repo<span class="op">.</span><span class="fu">Save</span><span class="op">(</span>It<span class="op">.</span><span class="fu">IsAny</span><span class="op">&lt;</span>User<span class="op">&gt;()),</span> Times<span class="op">.</span><span class="fu">Once</span><span class="op">);</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<hr />
+<h3 id="using-nsubstitute">Using NSubstitute</h3>
+<p>NSubstitute is designed to provide a cleaner, more fluent API. It
+minimizes the need for lambdas and wrapper classes by allowing you to
+call methods directly on the substituted instance.</p>
+<h4 id="setup-and-return-values-1">Setup and Return Values</h4>
+<p>Instead of instantiating a wrapper, you create a substitute directly
+via <code>Substitute.For&lt;T&gt;()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> NSubstitute<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> Xunit<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> UserServiceNSubstituteTests</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">GetUserName_WhenUserExists_ReturnsFullName</span><span class="op">()</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 1. Arrange</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> repo <span class="op">=</span> Substitute<span class="op">.</span><span class="fu">For</span><span class="op">&lt;</span>IUserRepository<span class="op">&gt;();</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        repo<span class="op">.</span><span class="fu">GetUserById</span><span class="op">(</span><span class="dv">1</span><span class="op">).</span><span class="fu">Returns</span><span class="op">(</span><span class="kw">new</span> User <span class="op">{</span> Id <span class="op">=</span> <span class="dv">1</span><span class="op">,</span> Name <span class="op">=</span> <span class="st">&quot;Jane Doe&quot;</span> <span class="op">});</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> service <span class="op">=</span> <span class="kw">new</span> <span class="fu">UserService</span><span class="op">(</span>repo<span class="op">);</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 2. Act</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> result <span class="op">=</span> service<span class="op">.</span><span class="fu">GetUserName</span><span class="op">(</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 3. Assert</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        Assert<span class="op">.</span><span class="fu">Equal</span><span class="op">(</span><span class="st">&quot;Jane Doe&quot;</span><span class="op">,</span> result<span class="op">);</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="verifying-method-execution-1">Verifying Method Execution</h4>
+<p>NSubstitute uses the <code>.Received()</code> extension method
+directly on the substitute object to verify calls:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>Fact<span class="op">]</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">RegisterUser_ValidUser_CallsSaveMethodOnce</span><span class="op">()</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Arrange</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> repo <span class="op">=</span> Substitute<span class="op">.</span><span class="fu">For</span><span class="op">&lt;</span>IUserRepository<span class="op">&gt;();</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> service <span class="op">=</span> <span class="kw">new</span> <span class="fu">UserService</span><span class="op">(</span>repo<span class="op">);</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> newUser <span class="op">=</span> <span class="kw">new</span> User <span class="op">{</span> Name <span class="op">=</span> <span class="st">&quot;John Smith&quot;</span> <span class="op">};</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Act</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    service<span class="op">.</span><span class="fu">RegisterUser</span><span class="op">(</span>newUser<span class="op">);</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Assert</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    repo<span class="op">.</span><span class="fu">Received</span><span class="op">(</span><span class="dv">1</span><span class="op">).</span><span class="fu">Save</span><span class="op">(</span>Arg<span class="op">.</span><span class="fu">Any</span><span class="op">&lt;</span>User<span class="op">&gt;());</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<hr />
+<h3 id="comparison-moq-vs-nsubstitute">Comparison: Moq vs.
+NSubstitute</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Moq</th>
+<th style="text-align: left;">NSubstitute</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Object Creation</strong></td>
+<td style="text-align: left;"><code>new Mock&lt;T&gt;()</code> (requires
+<code>.Object</code> access)</td>
+<td
+style="text-align: left;"><code>Substitute.For&lt;T&gt;()</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Method Configuration</strong></td>
+<td
+style="text-align: left;"><code>mock.Setup(x =&gt; x.Method()).Returns(val)</code></td>
+<td
+style="text-align: left;"><code>substitute.Method().Returns(val)</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Call Verification</strong></td>
+<td
+style="text-align: left;"><code>mock.Verify(x =&gt; x.Method(), Times.Once)</code></td>
+<td
+style="text-align: left;"><code>substitute.Received(1).Method()</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Design Style</strong></td>
+<td style="text-align: left;">Explicit, lambda-based</td>
+<td style="text-align: left;">Concise, fluent, natural syntax</td>
+</tr>
+</tbody>
+</table>
+<p>Both frameworks effectively isolate dependencies in .NET
+applications. Moq is a robust standard found in many enterprise
+codebases, while NSubstitute is often preferred for new projects due to
+its readable, concise syntax.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/mocking-in-c-with-moq-and-n-substitute';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

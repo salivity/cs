@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Difference Between var and dynamic in C# - cs</title>
+    <meta name="description" content="In C#, both var and dynamic allow developers to declare variables without explicitly naming their underlying types, but they operate on fundamentally different mechanisms. The var keyword introduces compile-time type inference, meaning the compiler detect">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/difference-between-var-and-dynamic-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Difference Between var and dynamic in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/difference-between-var-and-dynamic-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C#, both var and dynamic allow developers to declare variables without explicitly naming their underlying types, but they operate on fundamentally different mechanisms. The var keyword introduces compile-time type inference, meaning the compiler detect" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="difference-between-var-and-dynamic-in-c">Difference Between var
+and dynamic in C</h1>
+<p>In C#, both <code>var</code> and <code>dynamic</code> allow
+developers to declare variables without explicitly naming their
+underlying types, but they operate on fundamentally different
+mechanisms. The <code>var</code> keyword introduces compile-time type
+inference, meaning the compiler detects and locks in the type before
+your code runs. Conversely, the <code>dynamic</code> keyword defers all
+type checking and member resolution to runtime via the Dynamic Language
+Runtime (DLR). This article breaks down how each keyword functions,
+compares their key behaviors, and highlights when to use each in your
+applications.</p>
+<h3 id="understanding-the-var-keyword">Understanding the
+<code>var</code> Keyword</h3>
+<p>Introduced in C# 3.0, <code>var</code> provides implicit typing for
+local variables. When you declare a variable with <code>var</code>, the
+C# compiler evaluates the right-hand side of the assignment expression
+and determines the exact data type at compile time.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> number <span class="op">=</span> <span class="dv">42</span><span class="op">;</span>          <span class="co">// The compiler compiles this as: int number = 42;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> message <span class="op">=</span> <span class="st">&quot;Hello&quot;</span><span class="op">;</span>    <span class="co">// The compiler compiles this as: string message = &quot;Hello&quot;;</span></span></code></pre></div>
+<p>Because <code>var</code> is resolved during compilation:</p>
+<ul>
+<li><strong>It is strongly typed:</strong> Once initialized, the
+variable's type cannot change. Assigning a string to an integer declared
+with <code>var</code> results in a compilation error.</li>
+<li><strong>Mandatory initialization:</strong> You must initialize the
+variable immediately so the compiler can infer its type. You cannot
+write <code>var x;</code>.</li>
+<li><strong>Tooling support:</strong> Full IntelliSense and code
+refactoring features are preserved.</li>
+<li><strong>Scope limitation:</strong> It can only be used for local
+variables inside methods, loops, or using blocks. It cannot be used for
+class fields, method parameters, or return types.</li>
+</ul>
+<h3 id="understanding-the-dynamic-keyword">Understanding the
+<code>dynamic</code> Keyword</h3>
+<p>Introduced in C# 4.0, <code>dynamic</code> disables compile-time type
+checking. Instead, operations on dynamic variables are evaluated at
+runtime using the Dynamic Language Runtime (DLR).</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>dynamic value <span class="op">=</span> <span class="dv">42</span><span class="op">;</span>       <span class="co">// Type is resolved as System.Int32 at runtime</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>value <span class="op">=</span> <span class="st">&quot;Hello World&quot;</span><span class="op">;</span>   <span class="co">// Perfectly valid: type changes to System.String at runtime</span></span></code></pre></div>
+<p>Key characteristics of <code>dynamic</code> include:</p>
+<ul>
+<li><strong>Runtime binding:</strong> The compiler does not verify
+whether properties or methods exist on a dynamic object. If an invoked
+member does not exist, a <code>RuntimeBinderException</code> is thrown
+during execution.</li>
+<li><strong>Optional initialization:</strong> Dynamic variables do not
+need to be initialized at declaration.</li>
+<li><strong>Loss of compile-time tooling:</strong> Visual Studio cannot
+provide reliable IntelliSense, auto-completion, or static analysis for
+dynamic members.</li>
+<li><strong>Versatile scope:</strong> Unlike <code>var</code>,
+<code>dynamic</code> can be used as a method parameter, method return
+type, field, or property on a class.</li>
+</ul>
+<h3 id="key-differences-at-a-glance">Key Differences at a Glance</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>var</code></th>
+<th style="text-align: left;"><code>dynamic</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Type Resolution</strong></td>
+<td style="text-align: left;">Compile-time</td>
+<td style="text-align: left;">Runtime</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Type Safety</strong></td>
+<td style="text-align: left;">Fully static and strongly typed</td>
+<td style="text-align: left;">Bypasses static type checks</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Reassignable to Other
+Types</strong></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>IntelliSense Support</strong></td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">No</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance</strong></td>
+<td style="text-align: left;">Native execution speed; no overhead</td>
+<td style="text-align: left;">Minor overhead due to DLR lookup</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Usage Placement</strong></td>
+<td style="text-align: left;">Local variables only</td>
+<td style="text-align: left;">Locals, fields, parameters, and
+returns</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Initialization</strong></td>
+<td style="text-align: left;">Must be initialized at declaration</td>
+<td style="text-align: left;">Can be declared without
+initialization</td>
+</tr>
+</tbody>
+</table>
+<h3 id="when-to-use-var-vs-dynamic">When to Use <code>var</code> vs.
+<code>dynamic</code></h3>
+<p><strong>Use <code>var</code> when:</strong></p>
+<ul>
+<li>Working with complex types (e.g.,
+<code>Dictionary&lt;string, List&lt;Customer&gt;&gt;</code>) to improve
+code readability.</li>
+<li>Consuming LINQ queries and anonymous types where the type name is
+either long or unnamable.</li>
+<li>You still want full static type safety, performance, and
+compile-time error detection.</li>
+</ul>
+<p><strong>Use <code>dynamic</code> when:</strong></p>
+<ul>
+<li>Interoperating with COM APIs (such as Microsoft Office
+automation).</li>
+<li>Interacting with dynamic languages on the .NET framework (e.g.,
+IronPython).</li>
+<li>Handling loosely structured data payloads, such as dynamic JSON or
+XML documents, without defining strict C# models.</li>
+<li>Building advanced reflection wrappers where method names are
+determined during execution.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/difference-between-var-and-dynamic-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

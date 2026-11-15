@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File-Scoped Namespaces in C# 10 Explained - cs</title>
+    <meta name="description" content="In C# 10, Microsoft introduced file-scoped namespaces, a syntactic feature designed to reduce boilerplate and eliminate unnecessary horizontal clutter. This article explores what file-scoped namespaces are, contrasts them with traditional block-scoped dec">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/file-scoped-namespaces-in-c-10-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="File-Scoped Namespaces in C# 10 Explained - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/file-scoped-namespaces-in-c-10-explained" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In C# 10, Microsoft introduced file-scoped namespaces, a syntactic feature designed to reduce boilerplate and eliminate unnecessary horizontal clutter. This article explores what file-scoped namespaces are, contrasts them with traditional block-scoped dec" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="file-scoped-namespaces-in-c-10-explained">File-Scoped Namespaces
+in C# 10 Explained</h1>
+<p>In C# 10, Microsoft introduced file-scoped namespaces, a syntactic
+feature designed to reduce boilerplate and eliminate unnecessary
+horizontal clutter. This article explores what file-scoped namespaces
+are, contrasts them with traditional block-scoped declarations, and
+explains how they reduce code indentation to improve overall readability
+and maintainability.</p>
+<h3 id="the-problem-with-traditional-block-scoped-namespaces">The
+Problem with Traditional Block-Scoped Namespaces</h3>
+<p>Prior to C# 10, declaring a namespace required wrapping all contained
+types inside curly braces. A standard C# file typically looked like
+this:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> MyApp<span class="op">.</span><span class="fu">Services</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">class</span> CustomerService</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessOrder</span><span class="op">()</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Implementation logic</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Because virtually every C# file contains only a single namespace
+declaration, wrapping the entire file's contents in curly braces forced
+an extra level of indentation (typically four spaces) across every
+class, method, property, and field. In files with nested classes or deep
+control structures, this "namespace tax" wasted valuable horizontal
+screen space and contributed to excessive line wrapping.</p>
+<h3 id="what-are-file-scoped-namespaces">What Are File-Scoped
+Namespaces?</h3>
+<p>A file-scoped namespace allows you to declare a namespace for an
+entire file without using enclosing braces. Instead of opening a block
+with <code>{</code> and closing it with <code>}</code>, you define the
+namespace on a single line terminated by a semicolon:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> MyApp<span class="op">.</span><span class="fu">Services</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> CustomerService</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessOrder</span><span class="op">()</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Implementation logic</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Once declared, the namespace automatically applies to every type
+declared subsequently within that file.</p>
+<h3 id="how-they-reduce-indentation">How They Reduce Indentation</h3>
+<p>File-scoped namespaces eliminate the outer curly brace block
+entirely. By removing the requirement to nest types inside
+<code>{ ... }</code>, all root-level types—such as classes, records,
+structs, interfaces, and enums—shift four spaces to the left, aligning
+flush with the standard file indentation level.</p>
+<p>This structural shift provides several immediate benefits:</p>
+<ul>
+<li><strong>Reclaims Horizontal Space:</strong> Eliminating four spaces
+of indentation provides more room for method signatures, complex
+expressions, and inline comments, reducing the need for horizontal
+scrolling.</li>
+<li><strong>Flattens Nested Code:</strong> Deeply nested logic—such as
+loops, conditionals, and lambda expressions—starts closer to the left
+margin, preventing the code from drifting excessively to the right edge
+of the editor.</li>
+<li><strong>Reduces File Length:</strong> Omitting the opening and
+closing braces saves two lines of vertical space per file, trimming down
+visual noise.</li>
+<li><strong>Cleaner Git Diffs:</strong> Removing a layer of indentation
+prevents large, meaningless whitespace diffs when restructuring
+files.</li>
+</ul>
+<h3 id="rules-and-limitations">Rules and Limitations</h3>
+<p>To maintain code clarity, C# 10 enforces a few constraints on
+file-scoped namespaces:</p>
+<ol type="1">
+<li><strong>One Per File:</strong> You cannot declare multiple
+file-scoped namespaces within the same file.</li>
+<li><strong>No Mixing:</strong> You cannot mix file-scoped namespaces
+and block-scoped namespaces inside the same file.</li>
+<li><strong>Positioning:</strong> The file-scoped namespace declaration
+must appear before any type declarations in the file, though it
+typically follows file-level <code>using</code> directives.</li>
+</ol>
+<p>Most modern IDEs, including Visual Studio and JetBrains Rider, offer
+built-in refactoring actions to convert existing block-scoped namespaces
+to file-scoped namespaces across entire solutions automatically.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/file-scoped-namespaces-in-c-10-explained';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

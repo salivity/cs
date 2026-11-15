@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zero-Allocation Memory Slicing with Span in C# - cs</title>
+    <meta name="description" content="This article provides an overview of Span&lt;T&gt; and ReadOnlySpan&lt;T&gt; in C#, examining how these types represent contiguous regions of arbitrary memory and enable zero-allocation memory slicing. You will learn the structural differences between traditional hea">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/zero-allocation-memory-slicing-with-span-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Zero-Allocation Memory Slicing with Span in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/zero-allocation-memory-slicing-with-span-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of Span&lt;T&gt; and ReadOnlySpan&lt;T&gt; in C#, examining how these types represent contiguous regions of arbitrary memory and enable zero-allocation memory slicing. You will learn the structural differences between traditional hea" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="zero-allocation-memory-slicing-with-span-in-c">Zero-Allocation
+Memory Slicing with Span in C</h1>
+<p>This article provides an overview of <code>Span&lt;T&gt;</code> and
+<code>ReadOnlySpan&lt;T&gt;</code> in C#, examining how these types
+represent contiguous regions of arbitrary memory and enable
+zero-allocation memory slicing. You will learn the structural
+differences between traditional heap-allocated slicing and span-based
+slicing, how <code>Span&lt;T&gt;</code> works under the hood as a
+<code>ref struct</code>, and how to implement it to eliminate Garbage
+Collection (GC) overhead in performance-critical applications.</p>
+<h2 id="what-are-spant-and-readonlyspant">What Are Span&lt;T&gt; and
+ReadOnlySpan&lt;T&gt;?</h2>
+<p>Introduced in .NET Core 2.1 and C# 7.2, <code>Span&lt;T&gt;</code>
+and <code>ReadOnlySpan&lt;T&gt;</code> are value types that provide a
+type-safe, memory-safe representation of a contiguous region of
+arbitrary memory. Unlike arrays, which are always managed objects on the
+heap, a <code>Span&lt;T&gt;</code> can point to:</p>
+<ul>
+<li>Managed heap memory (such as a standard C# array)</li>
+<li>Stack-allocated memory (allocated via <code>stackalloc</code>)</li>
+<li>Unmanaged/native heap memory (allocated via native APIs or
+pointers)</li>
+</ul>
+<p><code>ReadOnlySpan&lt;T&gt;</code> provides the same capabilities as
+<code>Span&lt;T&gt;</code>, but enforces read-only semantics. This makes
+<code>ReadOnlySpan&lt;char&gt;</code> an ideal replacement for strings
+during parsing and text-processing tasks.</p>
+<h2 id="the-problem-with-traditional-memory-slicing">The Problem with
+Traditional Memory Slicing</h2>
+<p>In standard C#, extracting a subset of data typically requires
+allocating new memory on the managed heap:</p>
+<ul>
+<li>Calling <code>string.Substring()</code> creates a new
+<code>System.String</code> instance on the heap and copies the
+characters into it.</li>
+<li>Extracting a segment of an array typically requires creating a new
+array and using <code>Array.Copy</code> or LINQ's
+<code>.Skip().Take()</code>.</li>
+</ul>
+<p>In high-throughput scenarios—such as web servers, serialization
+pipelines, or file parsers—these repetitive allocations create
+significant pressure on the Garbage Collector (GC), leading to CPU
+spikes and latency pauses.</p>
+<h2 id="how-span-enables-zero-allocation-slicing">How Span Enables
+Zero-Allocation Slicing</h2>
+<p>Under the hood, <code>Span&lt;T&gt;</code> is defined as a
+<code>ref struct</code> that contains only two fields:</p>
+<ol type="1">
+<li>A managed pointer/reference (<code>ref T</code>) to the start of the
+memory block.</li>
+<li>An integer representing the length of the block.</li>
+</ol>
+<p>Because a span merely holds a reference and a length, "slicing" a
+span does not copy the underlying data. Instead, the
+<code>.Slice(int start, int length)</code> method calculates a new
+offset for the pointer and sets the new length, returning a new
+<code>Span&lt;T&gt;</code> that views the exact same memory.</p>
+<h3 id="traditional-slicing-vs-span-slicing-example">Traditional Slicing
+vs. Span Slicing Example</h3>
+<p>Consider parsing a date string formatted as
+<code>2026-03-30</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Traditional approach: Allocates three new strings on the heap</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> date <span class="op">=</span> <span class="st">&quot;2026-03-30&quot;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> yearStr <span class="op">=</span> date<span class="op">.</span><span class="fu">Substring</span><span class="op">(</span><span class="dv">0</span><span class="op">,</span> <span class="dv">4</span><span class="op">);</span>  <span class="co">// Allocation 1</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> monthStr <span class="op">=</span> date<span class="op">.</span><span class="fu">Substring</span><span class="op">(</span><span class="dv">5</span><span class="op">,</span> <span class="dv">2</span><span class="op">);</span> <span class="co">// Allocation 2</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> dayStr <span class="op">=</span> date<span class="op">.</span><span class="fu">Substring</span><span class="op">(</span><span class="dv">8</span><span class="op">,</span> <span class="dv">2</span><span class="op">);</span>   <span class="co">// Allocation 3</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> year <span class="op">=</span> <span class="dt">int</span><span class="op">.</span><span class="fu">Parse</span><span class="op">(</span>yearStr<span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> month <span class="op">=</span> <span class="dt">int</span><span class="op">.</span><span class="fu">Parse</span><span class="op">(</span>monthStr<span class="op">);</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> day <span class="op">=</span> <span class="dt">int</span><span class="op">.</span><span class="fu">Parse</span><span class="op">(</span>dayStr<span class="op">);</span></span></code></pre></div>
+<p>Using <code>ReadOnlySpan&lt;char&gt;</code>, the operation produces
+zero heap allocations:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Span approach: Zero heap allocations</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">string</span> date <span class="op">=</span> <span class="st">&quot;2026-03-30&quot;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>ReadOnlySpan<span class="op">&lt;</span><span class="dt">char</span><span class="op">&gt;</span> dateSpan <span class="op">=</span> date<span class="op">.</span><span class="fu">AsSpan</span><span class="op">();</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>ReadOnlySpan<span class="op">&lt;</span><span class="dt">char</span><span class="op">&gt;</span> yearSpan <span class="op">=</span> dateSpan<span class="op">.</span><span class="fu">Slice</span><span class="op">(</span><span class="dv">0</span><span class="op">,</span> <span class="dv">4</span><span class="op">);</span>  <span class="co">// View into original string</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>ReadOnlySpan<span class="op">&lt;</span><span class="dt">char</span><span class="op">&gt;</span> monthSpan <span class="op">=</span> dateSpan<span class="op">.</span><span class="fu">Slice</span><span class="op">(</span><span class="dv">5</span><span class="op">,</span> <span class="dv">2</span><span class="op">);</span> <span class="co">// View into original string</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>ReadOnlySpan<span class="op">&lt;</span><span class="dt">char</span><span class="op">&gt;</span> daySpan <span class="op">=</span> dateSpan<span class="op">.</span><span class="fu">Slice</span><span class="op">(</span><span class="dv">8</span><span class="op">,</span> <span class="dv">2</span><span class="op">);</span>   <span class="co">// View into original string</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// .NET parses directly from ReadOnlySpan&lt;char&gt;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> year <span class="op">=</span> <span class="dt">int</span><span class="op">.</span><span class="fu">Parse</span><span class="op">(</span>yearSpan<span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> month <span class="op">=</span> <span class="dt">int</span><span class="op">.</span><span class="fu">Parse</span><span class="op">(</span>monthSpan<span class="op">);</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> day <span class="op">=</span> <span class="dt">int</span><span class="op">.</span><span class="fu">Parse</span><span class="op">(</span>daySpan<span class="op">);</span></span></code></pre></div>
+<p>In this example, <code>dateSpan.Slice()</code> merely performs
+pointer arithmetic. No new memory is requested from the GC.</p>
+<h2 id="working-with-stack-allocated-and-native-memory">Working with
+Stack-Allocated and Native Memory</h2>
+<p><code>Span&lt;T&gt;</code> unifies memory access patterns across
+different memory types. For short-lived, small buffers, memory can be
+allocated directly on the stack to bypass the heap entirely:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Span<span class="op">&lt;</span><span class="dt">byte</span><span class="op">&gt;</span> buffer <span class="op">=</span> <span class="kw">stackalloc</span> <span class="dt">byte</span><span class="op">[</span><span class="dv">128</span><span class="op">];</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>buffer<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">=</span> <span class="dv">255</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>Span<span class="op">&lt;</span><span class="dt">byte</span><span class="op">&gt;</span> slice <span class="op">=</span> buffer<span class="op">.</span><span class="fu">Slice</span><span class="op">(</span><span class="dv">0</span><span class="op">,</span> <span class="dv">64</span><span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>slice<span class="op">.</span><span class="fu">Fill</span><span class="op">(</span><span class="dv">0</span><span class="op">);</span></span></code></pre></div>
+<p>Regardless of whether the data comes from a managed array, the
+execution stack, or native interop, APIs accepting
+<code>Span&lt;T&gt;</code> or <code>ReadOnlySpan&lt;T&gt;</code>
+interact with the memory identically.</p>
+<h2 id="constraints-of-spant">Constraints of Span&lt;T&gt;</h2>
+<p>Because <code>Span&lt;T&gt;</code> and
+<code>ReadOnlySpan&lt;T&gt;</code> can reference memory on the execution
+stack, the C# compiler enforces strict rules to prevent
+stack-use-after-return bugs:</p>
+<ul>
+<li><strong>Stack-only life cycle:</strong> <code>Span&lt;T&gt;</code>
+is a <code>ref struct</code> and can only exist on the thread
+stack.</li>
+<li><strong>No boxing:</strong> A span cannot be cast to
+<code>object</code>, <code>ValueType</code>, or any interface.</li>
+<li><strong>No class fields:</strong> A span cannot be a field of a
+regular class or a non-ref struct.</li>
+<li><strong>No asynchronous boundaries:</strong> Spans cannot be used
+across <code>await</code> expressions or within
+<code>yield return</code> iterators, as compiler-generated state
+machines move state to the heap.</li>
+</ul>
+<p>For asynchronous scenarios requiring heap-safe memory
+representations, .NET provides <code>Memory&lt;T&gt;</code> and
+<code>ReadOnlyMemory&lt;T&gt;</code>, which can live on the heap and be
+converted to spans on demand via <code>.Span</code>.</p></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/zero-allocation-memory-slicing-with-span-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lambda Default Parameters in Modern C# - cs</title>
+    <meta name="description" content="Modern C#, introduced in C# 12, allows developers to declare default values for lambda expression parameters just as they do with standard methods. This article explains how default parameter values in lambda expressions work, how type inference handles t">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/lambda-default-parameters-in-modern-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Lambda Default Parameters in Modern C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/lambda-default-parameters-in-modern-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Modern C#, introduced in C# 12, allows developers to declare default values for lambda expression parameters just as they do with standard methods. This article explains how default parameter values in lambda expressions work, how type inference handles t" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="lambda-default-parameters-in-modern-c">Lambda Default Parameters
+in Modern C</h1>
+<p>Modern C#, introduced in C# 12, allows developers to declare default
+values for lambda expression parameters just as they do with standard
+methods. This article explains how default parameter values in lambda
+expressions work, how type inference handles them, how they behave under
+the hood, and the rules governing their usage.</p>
+<h3 id="syntax-and-basic-usage">Syntax and Basic Usage</h3>
+<p>Prior to C# 12, lambda expressions could not declare default
+parameter values; all parameters had to be supplied explicitly during
+invocation. Starting with C# 12, you can assign default values to one or
+more parameters directly within the lambda parameter list.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> increment <span class="op">=</span> <span class="op">(</span><span class="dt">int</span> source<span class="op">,</span> <span class="dt">int</span> step <span class="op">=</span> <span class="dv">1</span><span class="op">)</span> <span class="op">=&gt;</span> source <span class="op">+</span> step<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="fu">increment</span><span class="op">(</span><span class="dv">5</span><span class="op">));</span>    <span class="co">// Outputs: 6</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="fu">increment</span><span class="op">(</span><span class="dv">5</span><span class="op">,</span> <span class="dv">3</span><span class="op">));</span> <span class="co">// Outputs: 8</span></span></code></pre></div>
+<p>Just like standard method declarations, default values must be
+compile-time constants, and optional parameters must appear after all
+required parameters in the parameter list.</p>
+<h3 id="type-inference-and-natural-delegate-types">Type Inference and
+Natural Delegate Types</h3>
+<p>The C# compiler determines how to handle default parameters based on
+whether the lambda is assigned to a implicitly typed variable
+(<code>var</code>) or an explicitly typed delegate.</p>
+<p>When you assign a lambda to <code>var</code>, the compiler generates
+a "natural delegate type" that includes metadata about the default
+parameter values:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> greet <span class="op">=</span> <span class="op">(</span><span class="dt">string</span> name <span class="op">=</span> <span class="st">&quot;Guest&quot;</span><span class="op">)</span> <span class="op">=&gt;</span> $<span class="st">&quot;Hello, {name}!&quot;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">greet</span><span class="op">();</span> <span class="co">// Valid: uses default &quot;Guest&quot;</span></span></code></pre></div>
+<p>However, if you explicitly assign the lambda expression to a standard
+<code>Func&lt;...&gt;</code> or <code>Action&lt;...&gt;</code> delegate,
+the default value functionality is lost at the call site:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Func<span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">string</span><span class="op">&gt;</span> greetFunc <span class="op">=</span> <span class="op">(</span><span class="dt">string</span> name <span class="op">=</span> <span class="st">&quot;Guest&quot;</span><span class="op">)</span> <span class="op">=&gt;</span> $<span class="st">&quot;Hello, {name}!&quot;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// greetFunc(); // Compilation Error: No overload for method &#39;Invoke&#39; takes 0 arguments</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">greetFunc</span><span class="op">(</span><span class="st">&quot;Alice&quot;</span><span class="op">);</span> <span class="co">// Valid</span></span></code></pre></div>
+<p>This happens because the predefined
+<code>Func&lt;T, TResult&gt;</code> delegate definition has no concept
+of default parameters on its <code>Invoke</code> method. To retain
+invocation with default values, rely on <code>var</code> or declare a
+custom delegate type that mirrors the default values.</p>
+<h3 id="compiler-implementation-under-the-hood">Compiler Implementation
+Under the Hood</h3>
+<p>When the compiler generates a natural delegate for a lambda with
+default parameters, it decorates the delegate's <code>Invoke</code>
+method parameters with the standard
+<code>[System.Runtime.InteropServices.Optional]</code> and
+<code>[System.Runtime.InteropServices.DefaultParameterValue]</code>
+attributes.</p>
+<p>At the call site, the compiler inspects the delegate signature. If an
+argument is omitted, the compiler substitutes the constant value defined
+in the metadata directly into the emitted Intermediate Language (IL)
+call instruction.</p>
+<h3 id="working-with-params-collections">Working with
+<code>params</code> Collections</h3>
+<p>Alongside default parameter values, modern C# also allows the
+<code>params</code> modifier inside lambda expressions. You can combine
+default parameters and parameter arrays within the same lambda:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">var</span> formatList <span class="op">=</span> <span class="op">(</span><span class="dt">string</span> prefix <span class="op">=</span> <span class="st">&quot;Item&quot;</span><span class="op">,</span> <span class="kw">params</span> <span class="dt">int</span><span class="op">[]</span> values<span class="op">)</span> <span class="op">=&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    $<span class="st">&quot;{prefix}: {string.Join(&quot;</span><span class="op">,</span> <span class="st">&quot;, values)}&quot;</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="fu">formatList</span><span class="op">());</span>                   <span class="co">// Outputs: Item: </span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="fu">formatList</span><span class="op">(</span><span class="st">&quot;Values&quot;</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">));</span>  <span class="co">// Outputs: Values: 1, 2, 3</span></span></code></pre></div>
+<h3 id="key-limitations-and-rules">Key Limitations and Rules</h3>
+<ul>
+<li><strong>Compile-Time Constants Only:</strong> Default parameter
+values must be resolvable at compile time (literals, <code>const</code>
+values, <code>default</code>, or <code>null</code>).</li>
+<li><strong>Trailing Position:</strong> Parameters with default values
+must always follow required parameters.</li>
+<li><strong>Expression Trees:</strong> Expression trees
+(<code>Expression&lt;TDelegate&gt;</code>) do not support lambdas with
+default parameter values or <code>params</code> arrays.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/lambda-default-parameters-in-modern-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

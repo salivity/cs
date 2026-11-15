@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prevent Out-of-Memory Errors with MemoryFailPoint in C# - cs</title>
+    <meta name="description" content="In high-throughput or data-intensive .NET applications, sudden memory exhaustion can lead to fatal OutOfMemoryException crashes that destabilize your entire process. The MemoryFailPoint class, located in the System.Runtime namespace, provides a proactive">
+    <link rel="canonical" href="https://salivity.github.io/cs/article/prevent-out-of-memory-errors-with-memory-fail-point-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="cs" href="/cs/opensearch.xml">
+    <link rel="icon" href="/cs/favicon.ico">
+    <link rel="stylesheet" href="/cs/css/style.css">
+    <link media="print" rel="stylesheet" href="/cs/css/print.css">
+    <script src="/cs/js/fuse.min.js"></script>
+    <script src="/cs/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Prevent Out-of-Memory Errors with MemoryFailPoint in C# - cs" />
+    <meta property="og:url" content="https://salivity.github.io/cs/article/prevent-out-of-memory-errors-with-memory-fail-point-in-c" />
+    <meta property="og:image" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/cs/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In high-throughput or data-intensive .NET applications, sudden memory exhaustion can lead to fatal OutOfMemoryException crashes that destabilize your entire process. The MemoryFailPoint class, located in the System.Runtime namespace, provides a proactive" />
+    <link rel="manifest" href="/cs/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/cs/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>cs</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/cs/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="prevent-out-of-memory-errors-with-memoryfailpoint-in-c">Prevent
+Out-of-Memory Errors with MemoryFailPoint in C</h1>
+<p>In high-throughput or data-intensive .NET applications, sudden memory
+exhaustion can lead to fatal <code>OutOfMemoryException</code> crashes
+that destabilize your entire process. The <code>MemoryFailPoint</code>
+class, located in the <code>System.Runtime</code> namespace, provides a
+proactive mechanism to check whether sufficient memory resources are
+available before executing an intensive operation. This article
+demonstrates how to implement <code>MemoryFailPoint</code> using a
+standard resource-gate pattern, handle memory shortages gracefully, and
+ensure predictable application stability.</p>
+<h3 id="what-is-memoryfailpoint">What is MemoryFailPoint?</h3>
+<p><code>MemoryFailPoint</code> acts as a gatekeeper. When instantiated,
+it estimates whether the operating system and the .NET runtime have
+enough physical memory and virtual address space to satisfy a specified
+allocation request (measured in megabytes).</p>
+<p>Instead of letting an operation run until an unrecoverable
+<code>OutOfMemoryException</code> occurs midway through execution,
+<code>MemoryFailPoint</code> throws an
+<code>InsufficientMemoryException</code> upfront if the target capacity
+cannot be guaranteed. This allows the application to postpone the
+operation, reduce batch size, or reject the request cleanly.</p>
+<h3 id="how-to-implement-memoryfailpoint">How to Implement
+MemoryFailPoint</h3>
+<p><code>MemoryFailPoint</code> implements the <code>IDisposable</code>
+interface. It temporarily reserves a capacity counter inside the runtime
+and releases that reservation once the <code>using</code> block
+exits.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> System<span class="op">.</span><span class="fu">Runtime</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> DataProcessor</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">ProcessLargeDataset</span><span class="op">(</span><span class="dt">byte</span><span class="op">[]</span> rawData<span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Estimate the required memory in megabytes (e.g., 500 MB)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> estimatedMemoryInMb <span class="op">=</span> <span class="dv">500</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">try</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>            <span class="kw">using</span> <span class="op">(</span><span class="kw">new</span> <span class="fu">MemoryFailPoint</span><span class="op">(</span>estimatedMemoryInMb<span class="op">))</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>                <span class="co">// Execute the memory-heavy workload</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>                <span class="fu">ExecuteIntensiveTask</span><span class="op">(</span>rawData<span class="op">);</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">catch</span> <span class="op">(</span>InsufficientMemoryException ex<span class="op">)</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Gracefully handle the shortage without crashing the application</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>            Console<span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">&quot;Operation aborted: Not enough memory available. {ex.Message}&quot;</span><span class="op">);</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>            <span class="fu">DeferTaskForLater</span><span class="op">(</span>rawData<span class="op">);</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">ExecuteIntensiveTask</span><span class="op">(</span><span class="dt">byte</span><span class="op">[]</span> data<span class="op">)</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Allocation and processing logic</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">DeferTaskForLater</span><span class="op">(</span><span class="dt">byte</span><span class="op">[]</span> data<span class="op">)</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Queue work to retry later or notify the caller</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="key-behaviors-and-considerations">Key Behaviors and
+Considerations</h3>
+<ol type="1">
+<li><strong>Gatekeeping, Not Allocation:</strong>
+<code>MemoryFailPoint</code> does not actually allocate the requested
+memory. It merely verifies availability and reserves a budget token
+within the CLR to prevent concurrent operations from simultaneously
+claiming the same pool of free memory.</li>
+<li><strong>Measurement Unit:</strong> The constructor argument accepts
+the allocation size exclusively in <strong>megabytes (MB)</strong>.
+Passing byte counts directly will lead to incorrect checks or immediate
+failures.</li>
+<li><strong>Mandatory Disposal:</strong> Always wrap
+<code>MemoryFailPoint</code> in a <code>using</code> statement or
+explicit <code>Dispose()</code> call. Failure to dispose of the instance
+leaves the internal reservation active, artificially lowering the memory
+available to future checks.</li>
+<li><strong>Distinction of Exceptions:</strong> Catch
+<code>InsufficientMemoryException</code>, not generic exceptions. An
+<code>InsufficientMemoryException</code> indicates a controlled refusal
+to start, meaning application state remains uncorrupted and safe to
+continue running.</li>
+</ol>
+<h3 id="common-use-cases">Common Use Cases</h3>
+<ul>
+<li><strong>Batch ETL Pipelines:</strong> Verifying system readiness
+before buffering large datasets into memory.</li>
+<li><strong>Image and Video Processing:</strong> Ensuring sufficient
+working memory before decoding high-resolution media buffers.</li>
+<li><strong>Multi-Tenant Services:</strong> Throttling or queuing
+resource-heavy tasks when system load spikes across concurrent worker
+threads.</li>
+</ul></article>
+        <div id='disqus_thread'></div>
+        <script>
+
+            var disqus_config = function () {
+                this.page.url =         'https://salivity.github.io/cs/article/prevent-out-of-memory-errors-with-memory-fail-point-in-c';  
+                //this.page.identifier =  PAGE_IDENTIFIER; 
+            };
+            
+            (function() {
+                var d = document, s = d.createElement('script');
+                s.src = 'https://salivity-github-io.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="https://smvc.dev/contact">Contact</a></li>
+                <li><a href="/cs/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/cs/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>
